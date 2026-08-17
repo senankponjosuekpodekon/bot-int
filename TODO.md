@@ -39,28 +39,45 @@
 
 ---
 
+## Sprint — Final QA & Launch (Juil 2026)
+
+1. **Sécurité & conformité**
+   - [ ] Résoudre les 32 vulnérabilités `npm audit` (API + Web) ou documenter les exceptions
+   - [ ] Vérifier que tous les secrets `.env` sont chiffrés/stockés (Vault, Doppler…)
+2. **Qualité & tests**
+   - [ ] Ajouter tests unitaires (AuthService, ChatService, LeadsService)
+   - [ ] Ajouter tests E2E (Playwright) pour le flow agent → chat → lead
+   - [ ] Mettre en place GitHub Actions (lint + test + build)
+3. **Observabilité & Ops**
+   - [ ] Ajouter logger structuré & traçage (NestJS interceptor + Sentry/LogRocket côté web)
+   - [ ] Script `make setup` (Docker + migrations + seed)
+4. **Expérience produit**
+   - [ ] Vue détaillée du lead (timeline, commentaires, pièces jointes)
+   - [ ] Export / partage transcript conversation (PDF / email)
+   - [ ] Filtres conversations par canal/date + recherche plein texte
+
+---
+
 ## Phase 2 — Core Features 🔄
 
-### Backend
-- [ ] 🔥 Add `clsx` dependency to web package.json
-- [ ] 🔥 DTO validation with `class-validator` on all endpoints
+- [x] 🔥 Add `clsx` dependency to web package.json
+- [ ] 🔥 DTO validation with `class-validator` on all endpoints (API partielle)
 - [ ] Agent `PATCH` endpoint — full update with DTO
 - [ ] Chat — inject knowledge base context into Ollama prompt (RAG)
-- [ ] Lead auto-creation from chat conversations
+- [x] Lead auto-creation from chat conversations
 - [ ] File upload for knowledge documents (PDF, DOCX)
 - [ ] Pagination on all list endpoints (`/agents`, `/leads`, `/knowledge`)
 - [ ] Webhook support — notify external systems on new lead/conversation
 - [ ] Rate limiting per tenant (`@nestjs/throttler`)
 - [ ] Swagger / OpenAPI documentation (`@nestjs/swagger`)
 
-### Frontend
-- [ ] 🔥 Leads page (`/dashboard/leads`)
-- [ ] 🔥 Knowledge base page (`/dashboard/knowledge`)
+- [x] 🔥 Leads page (`/dashboard/leads`)
+- [x] 🔥 Knowledge base page (`/dashboard/knowledge`)
 - [ ] Agent detail/edit page
-- [ ] Conversation history viewer
-- [ ] Lead detail page with status update
-- [ ] Toast notifications (success/error feedback)
-- [ ] Loading skeletons for data fetching
+- [x] Conversation history viewer
+- [ ] Lead detail page avec timeline/status
+- [x] Toast notifications (success/error feedback)
+- [ ] Loading skeletons pour toutes les pages (partiel — chat ok)
 - [ ] Responsive mobile layout
 
 ---
@@ -133,3 +150,76 @@
 - Ollama model default: `llama3.2` — change via `OLLAMA_MODEL` env var
 - TypeORM `synchronize: true` in dev — switch to migrations for production
 - All API endpoints require JWT except `POST /api/auth/register` and `POST /api/auth/login`
+
+
+à la suite de ce projet, je veux que lacombinaison soit un certifié de Google Digital Marketing & E-commerce, à un point ou si je connecte une entreprise, ils puissent tout gerer pour sa croissance, tout les 
+roles marketing pour une equipe marketing, pour la croissance de l'entreprise en fonction de l'evolution aussi, les news et autres meme en envoyant dess rapports au stackeholder.
+
+
+Foundations of Digital Marketing and E-commerce
+
+Course 1 of 8
+
+·
+
+Complete
+
+Attract and Engage Customers with Digital Marketing
+
+Course 2 of 8
+
+·
+
+Complete
+
+From Likes to Leads: Interact with Customers Online
+
+Course 3 of 8
+
+·
+
+Complete
+
+Think Outside the Inbox: Email Marketing
+
+Course 4 of 8
+
+·
+
+Complete
+
+Assess for Success: Marketing Analytics and Measurement
+
+Course 5 of 8
+
+·
+
+85% complete
+
+Other tools for data analytics and visualization
+
+Video (4 minutes)
+
+Make the Sale: Build, Launch, and Manage E-commerce Stores
+
+Course 6 of 8
+
+·
+
+Not started
+
+Satisfaction Guaranteed: Develop Customer Loyalty Online
+
+Course 7 of 8
+
+·
+
+Not started
+
+Accelerate Your Job Search with AI
+
+Course 8 of 8
+
+·
+
+Not started

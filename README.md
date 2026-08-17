@@ -157,14 +157,22 @@ sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE stiamond_agent TO sti
 sudo -u postgres psql -d stiamond_agent -c "GRANT ALL ON SCHEMA public TO stiamond;"
 ```
 
-### 5. Start Ollama and pull a model
+### 5. Run database migrations
+
+From the repo root, run the pending TypeORM migrations (the CLI automatically loads `apps/api/.env`).
+
+```bash
+npm run migration:run -w apps/api
+```
+
+### 6. Start Ollama and pull a model
 
 ```bash
 ollama serve
 ollama pull llama3.2
 ```
 
-### 6. Run the project
+### 7. Run the project
 
 ```bash
 npm run dev
@@ -189,6 +197,7 @@ DB_PASSWORD=stiamond123
 DB_NAME=stiamond_agent
 
 JWT_SECRET=your_very_long_random_secret_here
+REFRESH_TOKEN_TTL_MINUTES=10080 # 7 days
 
 OLLAMA_URL=http://localhost:11434
 OLLAMA_MODEL=llama3.2
@@ -203,7 +212,17 @@ OLLAMA_MODEL=llama3.2
 | Method | Endpoint | Description |
 |---|---|---|
 | POST | `/api/auth/register` | Create tenant + admin user |
-| POST | `/api/auth/login` | Get JWT token |
+| POST | `/api/auth/login` | Issue access + refresh tokens |
+| POST | `/api/auth/refresh` | Rotate refresh token, mint new JWT |
+| POST | `/api/auth/logout` | Revoke an active refresh token |
+
+#### Token lifecycle
+
+1. **Login/Register** returns `{ access_token, refresh_token, userId, tenantId }`.
+2. **Access token** (JWT) expires quickly (15 min by default) and is sent via `Authorization: Bearer`.
+3. **Refresh token** combines a public `tokenId` and secret (`tokenId.secret`). Store it securely (frontend keeps it in localStorage for now) and send it in the `refresh`/`logout` body as `{ refreshToken }`.
+4. Calling `/auth/refresh` verifies + revokes the previous token, then returns fresh credentials. Always replace both tokens client-side.
+5. `/auth/logout` simply revokes the provided refresh token so it can no longer mint JWTs.
 
 ### Agents
 
@@ -222,6 +241,15 @@ OLLAMA_MODEL=llama3.2
 | POST | `/api/chat/send` | Send message to agent |
 | GET | `/api/chat/conversations` | List conversations |
 | GET | `/api/chat/history/:id` | Get conversation history |
+| PATCH | `/api/chat/:id/lead` | Attach a conversation to an existing lead |
+| PATCH | `/api/chat/:id/status` | Update the status of a conversation (open/closed) |
+
+`GET /api/chat/conversations` accepts optional query params for pagination and filters:
+
+- `page` (default `1`) & `limit` (default `20`, max `100`)
+- `agentId` (UUID), `status` (`open`\|`closed`), `channel` (`web`\|`whatsapp`\|`api`)
+- `hasLead` (`true`/`false`) and `leadStatus` (`new`\|`contacted`\|`qualified`\|`converted`\|`lost`)
+
 
 ### Knowledge
 

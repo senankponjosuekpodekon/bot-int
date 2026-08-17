@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { agentsApi } from '@/lib/api';
 import { Bot, Plus, Pencil, Trash2, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Agent {
   id: string;
@@ -23,6 +24,8 @@ export default function AgentsPage() {
     try {
       const data = await agentsApi.list();
       setAgents(data);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Impossible de charger les agents');
     } finally {
       setLoading(false);
     }
@@ -35,9 +38,12 @@ export default function AgentsPage() {
     setSaving(true);
     try {
       await agentsApi.create(form);
+      toast.success('Agent créé avec succès');
       setShowForm(false);
       setForm({ name: '', type: 'general', systemPrompt: '', personality: '' });
       load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Erreur lors de la création de l'agent");
     } finally {
       setSaving(false);
     }
@@ -45,8 +51,13 @@ export default function AgentsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer cet agent ?')) return;
-    await agentsApi.delete(id);
-    load();
+    try {
+      await agentsApi.delete(id);
+      toast.success('Agent supprimé');
+      load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Suppression impossible");
+    }
   };
 
   return (

@@ -6,9 +6,9 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
-  OneToMany,
 } from 'typeorm';
 import { Agent } from '../agents/agent.entity';
+import { Lead } from '../leads/lead.entity';
 
 export enum ConversationStatus {
   OPEN = 'open',
@@ -38,6 +38,13 @@ export class Conversation {
 
   @Column({ nullable: true })
   visitorId: string;
+
+  @Column({ nullable: true })
+  leadId?: string;
+
+  @ManyToOne(() => Lead, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'leadId' })
+  lead?: Lead;
 
   @Column({
     type: 'enum',

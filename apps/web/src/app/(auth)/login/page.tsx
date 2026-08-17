@@ -19,7 +19,12 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const data = await authApi.login(form);
-      setAuth(data.access_token, data.userId, data.tenantId);
+      setAuth({
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        userId: data.userId,
+        tenantId: data.tenantId,
+      });
       router.push('/dashboard');
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Identifiants incorrects');

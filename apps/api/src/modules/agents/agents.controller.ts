@@ -11,6 +11,8 @@ import {
 } from '@nestjs/common';
 import { AgentsService } from './agents.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CreateAgentDto } from './dto/create-agent.dto';
+import { UpdateAgentDto } from './dto/update-agent.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('agents')
@@ -18,8 +20,8 @@ export class AgentsController {
   constructor(private readonly agentsService: AgentsService) {}
 
   @Post()
-  create(@Request() req, @Body() body: any) {
-    return this.agentsService.create(req.user.tenantId, body);
+  create(@Request() req, @Body() dto: CreateAgentDto) {
+    return this.agentsService.create(req.user.tenantId, dto);
   }
 
   @Get()
@@ -33,8 +35,8 @@ export class AgentsController {
   }
 
   @Patch(':id')
-  update(@Request() req, @Param('id') id: string, @Body() body: any) {
-    return this.agentsService.update(id, req.user.tenantId, body);
+  update(@Request() req, @Param('id') id: string, @Body() dto: UpdateAgentDto) {
+    return this.agentsService.update(id, req.user.tenantId, dto);
   }
 
   @Delete(':id')

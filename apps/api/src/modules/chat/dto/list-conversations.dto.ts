@@ -1,0 +1,43 @@
+import { Transform, Type } from 'class-transformer';
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsUUID, Min } from 'class-validator';
+import { ConversationChannel, ConversationStatus } from '../conversation.entity';
+import { LeadStatus } from '../../leads/lead.entity';
+
+export class ListConversationsDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  page?: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  limit?: number;
+
+  @IsUUID()
+  @IsOptional()
+  agentId?: string;
+
+  @IsEnum(ConversationStatus)
+  @IsOptional()
+  status?: ConversationStatus;
+
+  @IsEnum(ConversationChannel)
+  @IsOptional()
+  channel?: ConversationChannel;
+
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (typeof value === 'boolean') return value;
+    return value === 'true';
+  })
+  @IsBoolean()
+  @IsOptional()
+  hasLead?: boolean;
+
+  @IsEnum(LeadStatus)
+  @IsOptional()
+  leadStatus?: LeadStatus;
+}

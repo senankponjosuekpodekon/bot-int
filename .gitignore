@@ -23,3 +23,8 @@ npm-debug.log*
 
 # TypeScript incremental
 *.tsbuildinfo
+
+# Playwright
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/playwright/.cache/

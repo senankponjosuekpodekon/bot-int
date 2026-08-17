@@ -1,11 +1,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+type AuthCredentials = {
+  accessToken: string;
+  refreshToken: string;
+  userId: string;
+  tenantId: string;
+};
+
 interface AuthState {
-  token: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
   userId: string | null;
   tenantId: string | null;
-  setAuth: (token: string, userId: string, tenantId: string) => void;
+  setAuth: (_: AuthCredentials) => void;
   logout: () => void;
   isAuthenticated: () => boolean;
 }
@@ -13,18 +21,21 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      token: null,
+      accessToken: null,
+      refreshToken: null,
       userId: null,
       tenantId: null,
-      setAuth: (token, userId, tenantId) => {
-        localStorage.setItem('access_token', token);
-        set({ token, userId, tenantId });
+      setAuth: ({ accessToken, refreshToken, userId, tenantId }: AuthCredentials) => {
+        localStorage.setItem('access_token', accessToken);
+        localStorage.setItem('refresh_token', refreshToken);
+        set({ accessToken, refreshToken, userId, tenantId });
       },
       logout: () => {
         localStorage.removeItem('access_token');
-        set({ token: null, userId: null, tenantId: null });
+        localStorage.removeItem('refresh_token');
+        set({ accessToken: null, refreshToken: null, userId: null, tenantId: null });
       },
-      isAuthenticated: () => !!get().token,
+      isAuthenticated: () => !!get().accessToken,
     }),
     { name: 'auth-storage' },
   ),

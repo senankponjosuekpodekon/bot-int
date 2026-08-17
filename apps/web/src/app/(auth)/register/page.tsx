@@ -19,7 +19,12 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const data = await authApi.register(form);
-      setAuth(data.access_token, data.userId, data.tenantId);
+      setAuth({
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        userId: data.userId,
+        tenantId: data.tenantId,
+      });
       router.push('/dashboard');
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Erreur lors de la création du compte');

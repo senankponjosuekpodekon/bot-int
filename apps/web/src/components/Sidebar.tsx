@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Bot, MessageSquare, Users, BookOpen, LayoutDashboard, LogOut } from 'lucide-react';
+import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { clsx } from 'clsx';
 
@@ -16,11 +17,19 @@ const nav = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuthStore();
+  const { logout, refreshToken } = useAuthStore();
 
-  const handleLogout = () => {
-    logout();
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      if (refreshToken) {
+        await authApi.logout(refreshToken);
+      }
+    } catch (error) {
+      console.error('Failed to logout', error);
+    } finally {
+      logout();
+      router.push('/login');
+    }
   };
 
   return (

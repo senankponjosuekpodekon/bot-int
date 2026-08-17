@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import Sidebar from '@/components/Sidebar';
@@ -7,14 +7,33 @@ import Sidebar from '@/components/Sidebar';
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
+  const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {
+    const persist = useAuthStore.persist;
+    if (persist?.hasHydrated?.()) {
+      setHasHydrated(true);
+      return;
+    }
+    persist?.onFinishHydration?.(() => {
+      setHasHydrated(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydrated) return;
     if (!isAuthenticated()) {
       router.push('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [hasHydrated, isAuthenticated, router]);
 
-  if (!isAuthenticated()) return null;
+  if (!hasHydrated || !isAuthenticated()) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-sm text-gray-500">Chargement du tableau de bord…</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">

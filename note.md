@@ -14,7 +14,7 @@ Plateforme SaaS multi-tenant où chaque entreprise possède :
 * une base de connaissance
 * des canaux de diffusion (web, WhatsApp, Instagram, API)
 * un dashboard d’analyse et contrôle
-
+l'objectif est de pouvoir integrer le bot a n'importe quel site web et n'importe quel canal de communication
 ---
 
 ## 1.2 Architecture logique
