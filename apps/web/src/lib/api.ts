@@ -173,6 +173,12 @@ export const chatApi = {
     api.post(`/chat/${conversationId}/handoff`, { agentId }).then((r) => r.data),
   take: (conversationId: string) =>
     api.post(`/chat/${conversationId}/take`).then((r) => r.data),
+  feedback: (data: { agentId: string; userMessage: string; originalReply: string; correctedReply: string; reason?: string }) =>
+    api.post('/chat/feedback', data).then((r) => r.data),
+  getFeedback: (agentId?: string) =>
+    api.get('/chat/feedback', { params: { agentId } }).then((r) => r.data),
+  deleteFeedback: (id: string) =>
+    api.delete(`/chat/feedback/${id}`).then((r) => r.data),
 };
 
 export const leadsApi = {

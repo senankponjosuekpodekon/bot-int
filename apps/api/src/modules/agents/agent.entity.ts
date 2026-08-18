@@ -46,6 +46,21 @@ export class Agent {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ type: 'jsonb', nullable: true, default: '{}' })
+  personalityConfig: {
+    tone?: 'professional' | 'friendly' | 'formal' | 'casual';
+    discloseAI?: boolean;
+    aiDisclosureMessage?: string;
+    pacingEnabled?: boolean;
+    minDelayMs?: number;
+    maxDelayMs?: number;
+    businessHours?: { start: string; end: string; days: number[] };
+    autoReplyMode?: 'always' | 'business_hours' | 'off_hours_only';
+    audience?: 'all' | 'new_only' | 'returning_only';
+    escalationTopics?: string[];
+    forbiddenTopics?: string[];
+  };
+
   @CreateDateColumn()
   createdAt: Date;
 

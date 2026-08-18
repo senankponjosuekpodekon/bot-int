@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Conversation } from './conversation.entity';
 import { Message } from './message.entity';
+import { AgentFeedback } from './agent-feedback.entity';
 import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
 import { ChatGateway } from './chat.gateway';
@@ -15,7 +16,7 @@ import { FlowsModule } from '../flows/flows.module';
 import { IntelligenceModule } from '../intelligence/intelligence.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Conversation, Message]), AgentsModule, LeadsModule, forwardRef(() => KnowledgeModule), ProductsModule, IntegrationsModule, FlowsModule, IntelligenceModule],
+  imports: [TypeOrmModule.forFeature([Conversation, Message, AgentFeedback]), AgentsModule, LeadsModule, forwardRef(() => KnowledgeModule), ProductsModule, IntegrationsModule, FlowsModule, IntelligenceModule],
   providers: [ChatService, OllamaService, ChatGateway],
   controllers: [ChatController],
   exports: [ChatService, OllamaService],

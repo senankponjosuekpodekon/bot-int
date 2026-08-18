@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { agentsApi, chatApi, leadsApi } from '@/lib/api';
-import { Send, Bot, User, RefreshCw, MessageSquare, ArrowUpRight, Info, Copy, CheckCircle2 } from 'lucide-react';
+import { Send, Bot, User, RefreshCw, MessageSquare, ArrowUpRight, Info, Copy, CheckCircle2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import clsx from 'clsx';
 
@@ -704,6 +704,26 @@ export default function ChatPage() {
                   )}
                 >
                   {msg.content}
+                  {msg.role === 'assistant' && selectedConversation && (
+                    <button
+                      onClick={() => {
+                        const corrected = prompt('Corrigez la réponse de l\'agent. Cette correction sera apprise par l\'IA:', msg.content);
+                        if (corrected && corrected.trim() !== msg.content) {
+                          const prevMsg = messages[i - 1];
+                          chatApi.feedback({
+                            agentId: selectedAgent || agents[0]?.id || '',
+                            userMessage: prevMsg?.content || '',
+                            originalReply: msg.content,
+                            correctedReply: corrected.trim(),
+                          }).then(() => toast.success('Correction enregistrée. L\'agent apprendra de cette erreur.'))
+                            .catch(() => toast.error('Erreur lors de l\'enregistrement'));
+                        }
+                      }}
+                      className="mt-2 flex items-center gap-1 text-xs text-gray-400 hover:text-primary-600"
+                    >
+                      <Pencil className="w-3 h-3" /> Corriger
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bot, MessageSquare, Users, BookOpen, LayoutDashboard, LogOut, Package, KanbanSquare, BarChart3, Settings, Brain, FileText, Headphones, Code2 } from 'lucide-react';
+import { Bot, MessageSquare, Users, BookOpen, LayoutDashboard, LogOut, Package, KanbanSquare, BarChart3, Settings, Brain, FileText, Headphones, Code2, Sparkles } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { clsx } from 'clsx';
@@ -9,6 +9,7 @@ import { clsx } from 'clsx';
 const nav = [
   { href: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/dashboard/agents', label: 'Agents', icon: Bot },
+  { href: '/dashboard/personality', label: 'Personnalité', icon: Sparkles },
   { href: '/dashboard/chat', label: 'Conversations', icon: MessageSquare },
   { href: '/dashboard/operator', label: 'Opérateur', icon: Headphones },
   { href: '/dashboard/leads', label: 'Leads', icon: Users },

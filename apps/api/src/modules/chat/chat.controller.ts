@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Request, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -76,5 +76,30 @@ export class ChatController {
       mimetype: file.mimetype,
       url: `/uploads/${file.filename}`,
     };
+  }
+
+  @Post('feedback')
+  createFeedback(
+    @Request() req,
+    @Body() body: { agentId: string; userMessage: string; originalReply: string; correctedReply: string; reason?: string },
+  ) {
+    return this.chatService.createFeedback(
+      req.user.tenantId,
+      body.agentId,
+      body.userMessage,
+      body.originalReply,
+      body.correctedReply,
+      body.reason,
+    );
+  }
+
+  @Get('feedback')
+  getFeedback(@Request() req, @Query('agentId') agentId?: string) {
+    return this.chatService.getFeedback(req.user.tenantId, agentId);
+  }
+
+  @Delete('feedback/:id')
+  deleteFeedback(@Request() req, @Param('id') id: string) {
+    return this.chatService.deleteFeedback(id, req.user.tenantId);
   }
 }

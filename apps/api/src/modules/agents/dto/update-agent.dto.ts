@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString, MinLength, IsArray, IsObject } from 'class-validator';
 import { AgentType } from '../agent.entity';
 
 export class UpdateAgentDto {
@@ -20,7 +20,15 @@ export class UpdateAgentDto {
   @IsOptional()
   personality?: string;
 
+  @IsArray()
+  @IsOptional()
+  iceBreakers?: string[];
+
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @IsObject()
+  @IsOptional()
+  personalityConfig?: Record<string, any>;
 }
