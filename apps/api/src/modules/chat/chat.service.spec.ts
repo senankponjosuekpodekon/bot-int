@@ -6,6 +6,7 @@ import { Message, MessageRole } from './message.entity';
 import { OllamaService } from './ollama.service';
 import { AgentsService } from '../agents/agents.service';
 import { LeadsService } from '../leads/leads.service';
+import { LeadTagService } from '../leads/lead-tag.service';
 import { Agent } from '../agents/agent.entity';
 import { Lead } from '../leads/lead.entity';
 import { AgentFeedback } from './agent-feedback.entity';
@@ -45,6 +46,7 @@ describe('ChatService', () => {
       agentsService as unknown as AgentsService,
       ollamaService as unknown as OllamaService,
       leadsService as unknown as LeadsService,
+      new LeadTagService(),
       noopService() as any, // knowledgeService
       noopService() as any, // productsService
       noopService() as any, // integrationsService

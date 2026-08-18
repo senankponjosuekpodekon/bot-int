@@ -7,6 +7,7 @@ import { AgentFeedback } from './agent-feedback.entity';
 import { AgentsService } from '../agents/agents.service';
 import { OllamaService, OllamaMessage } from './ollama.service';
 import { LeadsService } from '../leads/leads.service';
+import { LeadTagService } from '../leads/lead-tag.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ProductsService } from '../products/products.service';
 import { IntegrationsService } from '../integrations/integrations.service';
@@ -56,6 +57,7 @@ export class ChatService {
     private readonly agentsService: AgentsService,
     private readonly ollamaService: OllamaService,
     private readonly leadsService: LeadsService,
+    private readonly leadTagService: LeadTagService,
     @Inject(forwardRef(() => KnowledgeService))
     private readonly knowledgeService: KnowledgeService,
     private readonly productsService: ProductsService,
@@ -179,9 +181,18 @@ export class ChatService {
       }).catch(() => {});
 
       if (captureLead !== false) {
+        const autoTags = this.leadTagService.autoTag({
+          message: userMessage,
+          source: 'chat',
+          acquisitionChannel: conversation.acquisitionChannel,
+          channel: 'web',
+          language: regionContext?.browserLanguage,
+          agentType: agent.type,
+        });
         const lead = await this.leadsService.create(tenantId, {
           agentId,
           source: 'chat',
+          tags: autoTags,
           metadata: {
             conversationId: conversation.id,
             visitorId,
@@ -387,6 +398,24 @@ export class ChatService {
     if (newIntentScore !== conversation.intentScore) {
       await this.convRepo.update(conversation.id, { intentScore: newIntentScore });
       conversation.intentScore = newIntentScore;
+    }
+
+    if (conversation.leadId) {
+      const messageTags = this.leadTagService.autoTag({
+        message: userMessage,
+        funnelStage: conversation.funnelStage,
+      });
+      if (messageTags.length > 0) {
+        try {
+          const lead = await this.leadsService.findById(conversation.leadId, tenantId);
+          const merged = this.leadTagService.mergeTags(lead.tags, messageTags);
+          if (merged.length !== (lead.tags || []).length) {
+            await this.leadsService.update(conversation.leadId, tenantId, { tags: merged });
+          }
+        } catch {
+          // Lead not found — skip tagging
+        }
+      }
     }
 
     // Inject funnel-stage-aware system prompt
