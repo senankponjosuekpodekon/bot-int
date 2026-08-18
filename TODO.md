@@ -109,7 +109,7 @@
 - [ ] File upload for knowledge documents (PDF, DOCX)
 - [x] Pagination on all list endpoints (`/agents`, `/leads`, `/knowledge`)
 - [x] Webhook support — notify external systems on new lead/conversation
-- [ ] Swagger / OpenAPI documentation (`@nestjs/swagger`)
+- [x] Swagger / OpenAPI documentation (`@nestjs/swagger`)
 
 ### Frontend
 - [x] 🔥 Leads page (`/dashboard/leads`)
