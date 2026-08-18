@@ -107,8 +107,8 @@
 - [x] Agent `PATCH` endpoint — full update with DTO
 - [ ] Chat — inject knowledge base context into Ollama prompt (RAG)
 - [ ] File upload for knowledge documents (PDF, DOCX)
-- [ ] Pagination on all list endpoints (`/agents`, `/leads`, `/knowledge`)
-- [ ] Webhook support — notify external systems on new lead/conversation
+- [x] Pagination on all list endpoints (`/agents`, `/leads`, `/knowledge`)
+- [x] Webhook support — notify external systems on new lead/conversation
 - [ ] Swagger / OpenAPI documentation (`@nestjs/swagger`)
 
 ### Frontend
