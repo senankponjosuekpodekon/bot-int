@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { IsNotEmpty, IsNumber, IsOptional, IsString, IsBoolean, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
 import { AutoSyncService } from './auto-sync.service';
 import { IntegrationsService } from '../integrations/integrations.service';
@@ -62,6 +63,8 @@ class ListProductsDto {
   @Type(() => Number) @IsOptional() limit?: number;
 }
 
+@ApiTags('products')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('products')
 export class ProductsController {
@@ -73,12 +76,16 @@ export class ProductsController {
   ) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create a product' })
+  @ApiResponse({ status: 201, description: 'Product created' })
   create(@Request() req, @Body() dto: CreateProductDto) {
     this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
     return this.productsService.create(req.user.tenantId, dto);
   }
 
   @Get()
+  @ApiOperation({ summary: 'List products (paginated, filterable)' })
+  @ApiResponse({ status: 200, description: 'Paginated list of products' })
   async findAll(@Request() req, @Query() query: ListProductsDto) {
     const cacheKey = `products:${req.user.tenantId}:${JSON.stringify(query)}`;
     const cached = this.cacheService.get(cacheKey);
@@ -89,6 +96,8 @@ export class ProductsController {
   }
 
   @Get('categories')
+  @ApiOperation({ summary: 'List product categories' })
+  @ApiResponse({ status: 200, description: 'List of categories' })
   async getCategories(@Request() req) {
     const cacheKey = `products:${req.user.tenantId}:categories`;
     const cached = this.cacheService.get(cacheKey);
@@ -99,53 +108,73 @@ export class ProductsController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get product by ID' })
+  @ApiResponse({ status: 200, description: 'Product details' })
   findOne(@Request() req, @Param('id') id: string) {
     return this.productsService.findById(id, req.user.tenantId);
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update product by ID' })
+  @ApiResponse({ status: 200, description: 'Product updated' })
   update(@Request() req, @Param('id') id: string, @Body() dto: UpdateProductDto) {
     this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
     return this.productsService.update(id, req.user.tenantId, dto);
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete product by ID' })
+  @ApiResponse({ status: 200, description: 'Product deleted' })
   remove(@Request() req, @Param('id') id: string) {
     this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
     return this.productsService.delete(id, req.user.tenantId);
   }
 
   @Post('import/shopify')
+  @ApiOperation({ summary: 'Import products from Shopify' })
+  @ApiResponse({ status: 201, description: 'Products imported' })
   importShopify(@Request() req, @Body() dto: ImportShopifyDto) {
     return this.productsService.importFromShopify(req.user.tenantId, dto.shopDomain, dto.accessToken);
   }
 
   @Post('import/woocommerce')
+  @ApiOperation({ summary: 'Import products from WooCommerce' })
+  @ApiResponse({ status: 201, description: 'Products imported' })
   importWooCommerce(@Request() req, @Body() dto: ImportWooCommerceDto) {
     return this.productsService.importFromWooCommerce(req.user.tenantId, dto.siteUrl, dto.consumerKey, dto.consumerSecret);
   }
 
   @Post('import/feed')
+  @ApiOperation({ summary: 'Import products from public feed' })
+  @ApiResponse({ status: 201, description: 'Products imported' })
   importPublicFeed(@Request() req, @Body() dto: ImportPublicFeedDto) {
     return this.productsService.importFromShopifyPublicFeed(req.user.tenantId, dto.shopUrl);
   }
 
   @Post('import/csv')
+  @ApiOperation({ summary: 'Import products from CSV' })
+  @ApiResponse({ status: 201, description: 'Products imported' })
   importCsv(@Request() req, @Body() dto: ImportCsvDto) {
     return this.productsService.importFromCsv(req.user.tenantId, dto.csvContent, dto.format as any);
   }
 
   @Post('import/google-merchant')
+  @ApiOperation({ summary: 'Import products from Google Merchant CSV' })
+  @ApiResponse({ status: 201, description: 'Products imported' })
   importGoogleMerchant(@Request() req, @Body() dto: ImportCsvDto) {
     return this.productsService.importFromGoogleMerchantCsv(req.user.tenantId, dto.csvContent);
   }
 
   @Post('import/sitemap')
+  @ApiOperation({ summary: 'Import products from sitemap' })
+  @ApiResponse({ status: 201, description: 'Products imported' })
   importSitemap(@Request() req, @Body() dto: ImportSitemapDto) {
     return this.productsService.importFromSitemap(req.user.tenantId, dto.sitemapUrl);
   }
 
   @Post('sync')
+  @ApiOperation({ summary: 'Sync products from all integrations' })
+  @ApiResponse({ status: 200, description: 'Sync results' })
   async sync(@Request() req) {
     const tenantId = req.user.tenantId;
     const integrations = await this.integrationsService.findAll(tenantId);
@@ -164,6 +193,8 @@ export class ProductsController {
   }
 
   @Post('auto-sync')
+  @ApiOperation({ summary: 'Trigger auto-sync for tenant' })
+  @ApiResponse({ status: 200, description: 'Auto-sync results' })
   async triggerAutoSync(@Request() req) {
     return this.autoSyncService.syncTenant(req.user.tenantId);
   }
