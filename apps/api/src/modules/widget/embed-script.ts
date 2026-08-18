@@ -279,6 +279,23 @@ export const EMBED_SCRIPT = `
       .then(function(survey) {
         if (!survey || !survey.id || !survey.isActive) return;
         if (sessionStorage.getItem('stiamond_survey_' + survey.id)) return;
+        
+        // Page-based targeting
+        if (survey.triggerConfig && survey.triggerConfig.showOnPages && survey.triggerConfig.showOnPages.length > 0) {
+          var currentPath = window.location.pathname;
+          var matched = survey.triggerConfig.showOnPages.some(function(pattern) {
+            if (pattern === '*') return true;
+            if (pattern.endsWith('*')) return currentPath.startsWith(pattern.slice(0, -1));
+            return currentPath === pattern;
+          });
+          if (!matched) return;
+        }
+        
+        // Custom threshold from config
+        if (survey.triggerConfig && survey.triggerConfig.showAfterMessages) {
+          if (messageCount < survey.triggerConfig.showAfterMessages) return;
+        }
+        
         showSurveyInWidget(survey);
       })
       .catch(function() {});
@@ -304,10 +321,31 @@ export const EMBED_SCRIPT = `
     }
 
     var answers = {};
+    var questionDivs = {};
+
+    function shouldShowQuestion(q) {
+      if (!q.skipLogic) return true;
+      var dep = answers[q.skipLogic.dependsOn];
+      if (dep === undefined) return false;
+      var val = Array.isArray(dep) ? dep.join(',') : String(dep);
+      if (q.skipLogic.operator === 'equals') return val === q.skipLogic.value;
+      if (q.skipLogic.operator === 'contains') return val.indexOf(q.skipLogic.value) !== -1;
+      if (q.skipLogic.operator === 'not_equals') return val !== q.skipLogic.value;
+      return true;
+    }
+
+    function refreshVisibility() {
+      survey.questions.forEach(function(q) {
+        if (questionDivs[q.id]) {
+          questionDivs[q.id].style.display = shouldShowQuestion(q) ? '' : 'none';
+        }
+      });
+    }
 
     survey.questions.forEach(function(q) {
       var qDiv = document.createElement('div');
       qDiv.style.cssText = 'margin-bottom:10px;';
+      questionDivs[q.id] = qDiv;
 
       var label = document.createElement('div');
       label.style.cssText = 'font-size:12px;color:#333;margin-bottom:4px;';
@@ -328,6 +366,7 @@ export const EMBED_SCRIPT = `
               btn.style.background = primaryColor;
               btn.style.color = 'white';
               answers[q.id] = val;
+              refreshVisibility();
             };
             btnRow.appendChild(btn);
           })(i);
@@ -341,7 +380,7 @@ export const EMBED_SCRIPT = `
           radio.type = 'radio';
           radio.name = 'survey_' + q.id;
           radio.style.cssText = 'margin-right:6px;';
-          radio.onchange = function() { answers[q.id] = opt; };
+          radio.onchange = function() { answers[q.id] = opt; refreshVisibility(); };
           lbl.appendChild(radio);
           lbl.appendChild(document.createTextNode(opt));
           qDiv.appendChild(lbl);
@@ -361,6 +400,7 @@ export const EMBED_SCRIPT = `
             } else {
               answers[q.id] = answers[q.id].filter(function(v) { return v !== opt; });
             }
+            refreshVisibility();
           };
           lbl.appendChild(cb);
           lbl.appendChild(document.createTextNode(opt));
@@ -370,12 +410,14 @@ export const EMBED_SCRIPT = `
         var input = document.createElement(q.type === 'textarea' ? 'textarea' : 'input');
         input.placeholder = q.placeholder || '';
         input.style.cssText = 'width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;box-sizing:border-box;';
-        input.oninput = function() { answers[q.id] = input.value; };
+        input.oninput = function() { answers[q.id] = input.value; refreshVisibility(); };
         qDiv.appendChild(input);
       }
 
       surveyDiv.appendChild(qDiv);
     });
+
+    refreshVisibility();
 
     var submitBtn = document.createElement('button');
     submitBtn.textContent = 'Envoyer';

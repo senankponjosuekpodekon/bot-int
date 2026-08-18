@@ -17,7 +17,6 @@ import { ProductsService } from './products.service';
 import { AutoSyncService } from './auto-sync.service';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-
 class CreateProductDto {
   @IsString() @IsNotEmpty() name: string;
   @IsString() @IsOptional() description?: string;
@@ -151,12 +150,5 @@ export class ProductsController {
   @Post('auto-sync')
   async triggerAutoSync(@Request() req) {
     return this.autoSyncService.syncTenant(req.user.tenantId);
-  }
-
-  @Post('webhook/shopify/:tenantId')
-  async shopifyWebhook(@Param('tenantId') tenantId: string, @Headers() headers: any, @Body() body: any) {
-    const topic = headers['x-shopify-topic'] || '';
-    await this.productsService.handleShopifyWebhook(tenantId, topic, body);
-    return { received: true };
   }
 }

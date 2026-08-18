@@ -33,6 +33,12 @@ export interface SurveyQuestion {
   required: boolean;
   options?: string[];
   placeholder?: string;
+  skipLogic?: {
+    dependsOn: string;
+    operator: 'equals' | 'contains' | 'not_equals';
+    value: string;
+  };
+  variant?: 'A' | 'B';
 }
 
 export interface SurveyResponseAnswer {

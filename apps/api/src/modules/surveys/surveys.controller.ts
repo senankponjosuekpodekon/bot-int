@@ -8,12 +8,14 @@ import {
   Post,
   Query,
   Request,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { SurveysService } from './surveys.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SurveyType } from './survey.entity';
 import { IsBoolean, IsEnum, IsNotEmpty, IsObject, IsOptional, IsString, IsArray } from 'class-validator';
+import { Response } from 'express';
 
 class CreateSurveyDto {
   @IsString() @IsNotEmpty() title: string;
@@ -100,5 +102,13 @@ export class SurveysController {
     @Body() body: { leadId: string; email: string },
   ) {
     return this.surveysService.sendPostPurchaseEmail(req.user.tenantId, body.leadId, body.email, id);
+  }
+
+  @Get(':id/export')
+  async exportResults(@Request() req, @Param('id') id: string, @Res() res: Response) {
+    const csv = await this.surveysService.exportCsv(id, req.user.tenantId);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="survey-${id}.csv"`);
+    res.send(csv);
   }
 }

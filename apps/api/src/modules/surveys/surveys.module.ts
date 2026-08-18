@@ -4,6 +4,7 @@ import { Survey } from './survey.entity';
 import { SurveyResponse } from './survey-response.entity';
 import { SurveysService } from './surveys.service';
 import { SurveysController } from './surveys.controller';
+import { SurveysPublicController } from './surveys-public.controller';
 import { LeadsModule } from '../leads/leads.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
 
@@ -14,7 +15,7 @@ import { IntegrationsModule } from '../integrations/integrations.module';
     IntegrationsModule,
   ],
   providers: [SurveysService],
-  controllers: [SurveysController],
+  controllers: [SurveysController, SurveysPublicController],
   exports: [SurveysService],
 })
 export class SurveysModule {}

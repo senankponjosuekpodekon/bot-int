@@ -300,4 +300,5 @@ export const surveysApi = {
   submit: (id: string, answers: any[], opts?: any) => api.post(`/surveys/${id}/submit`, { answers, ...opts }).then((r) => r.data),
   results: (id: string) => api.get(`/surveys/${id}/results`).then((r) => r.data),
   sendEmail: (id: string, leadId: string, email: string) => api.post(`/surveys/${id}/send-email`, { leadId, email }).then((r) => r.data),
+  exportCsv: (id: string) => api.get(`/surveys/${id}/export`, { responseType: 'blob' }).then((r) => r.data),
 };

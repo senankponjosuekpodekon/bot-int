@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { surveysApi, agentsApi } from '@/lib/api';
-import { ClipboardList, Plus, Trash2, Save, BarChart3, Eye, Copy, X, ChevronDown, ChevronUp, Star } from 'lucide-react';
+import { ClipboardList, Plus, Trash2, Save, BarChart3, Eye, Copy, X, ChevronDown, ChevronUp, Star, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 const QUESTION_TYPES = [
@@ -104,6 +104,21 @@ export default function SurveysPage() {
     }
   };
 
+  const handleExportCsv = async (survey: any) => {
+    try {
+      const blob = await surveysApi.exportCsv(survey.id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `survey-${survey.title.replace(/\s+/g, '_')}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success('Export CSV téléchargé');
+    } catch {
+      toast.error('Erreur lors de l\'export');
+    }
+  };
+
   const addQuestion = () => {
     setEditing({
       ...editing,
@@ -166,6 +181,9 @@ export default function SurveysPage() {
               <div className="flex gap-2">
                 <button onClick={() => handleResults(s)} className="p-2 rounded-lg hover:bg-gray-100" title="Voir les résultats">
                   <BarChart3 className="w-4 h-4 text-gray-500" />
+                </button>
+                <button onClick={() => handleExportCsv(s)} className="p-2 rounded-lg hover:bg-gray-100" title="Export CSV">
+                  <Download className="w-4 h-4 text-gray-500" />
                 </button>
                 <button onClick={() => { setEditing(s); setShowBuilder(true); }} className="p-2 rounded-lg hover:bg-gray-100" title="Éditer">
                   <Eye className="w-4 h-4 text-gray-500" />
@@ -257,11 +275,93 @@ export default function SurveysPage() {
                             Options automatiques: {q.type === 'demographic_age' ? AGE_OPTIONS.join(', ') : LOCATION_OPTIONS.join(', ')}
                           </p>
                         )}
+
+                        {/* Skip logic */}
+                        <div className="mt-2 border-t border-gray-100 pt-2">
+                          <details className="text-xs">
+                            <summary className="cursor-pointer text-gray-500 hover:text-gray-700">Logique de saut conditionnel</summary>
+                            <div className="mt-2 space-y-2 p-2 bg-gray-50 rounded">
+                              <div className="flex gap-2">
+                                <select
+                                  value={q.skipLogic?.dependsOn || ''}
+                                  onChange={(e) => updateQuestion(idx, 'skipLogic', { ...q.skipLogic, dependsOn: e.target.value, operator: q.skipLogic?.operator || 'equals', value: q.skipLogic?.value || '' })}
+                                  className="flex-1 px-2 py-1 rounded border border-gray-200 text-xs"
+                                >
+                                  <option value="">Dépend de...</option>
+                                  {editing.questions.filter((oq: any, oi: number) => oi !== idx).map((oq: any, oi: number) => (
+                                    <option key={oq.id} value={oq.id}>{oq.label || `Question ${oi + 1}`}</option>
+                                  ))}
+                                </select>
+                                <select
+                                  value={q.skipLogic?.operator || 'equals'}
+                                  onChange={(e) => updateQuestion(idx, 'skipLogic', { ...q.skipLogic, dependsOn: q.skipLogic?.dependsOn || '', operator: e.target.value, value: q.skipLogic?.value || '' })}
+                                  className="px-2 py-1 rounded border border-gray-200 text-xs"
+                                >
+                                  <option value="equals">égal à</option>
+                                  <option value="contains">contient</option>
+                                  <option value="not_equals">différent de</option>
+                                </select>
+                                <input
+                                  value={q.skipLogic?.value || ''}
+                                  onChange={(e) => updateQuestion(idx, 'skipLogic', { ...q.skipLogic, dependsOn: q.skipLogic?.dependsOn || '', operator: q.skipLogic?.operator || 'equals', value: e.target.value })}
+                                  placeholder="valeur"
+                                  className="w-20 px-2 py-1 rounded border border-gray-200 text-xs"
+                                />
+                              </div>
+                              {q.skipLogic?.dependsOn && (
+                                <button
+                                  onClick={() => updateQuestion(idx, 'skipLogic', undefined)}
+                                  className="text-red-400 text-xs"
+                                >Supprimer la condition</button>
+                              )}
+                            </div>
+                          </details>
+                        </div>
+
+                        {/* A/B variant */}
+                        <div className="mt-1 flex items-center gap-2 text-xs">
+                          <span className="text-gray-500">Variante A/B:</span>
+                          <select
+                            value={q.variant || 'A'}
+                            onChange={(e) => updateQuestion(idx, 'variant', e.target.value)}
+                            className="px-2 py-0.5 rounded border border-gray-200 text-xs"
+                          >
+                            <option value="A">A (défaut)</option>
+                            <option value="B">B (alternative)</option>
+                          </select>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
+
+              {/* Pre-purchase targeting config */}
+              {editing.type === 'pre_purchase' && (
+                <div className="bg-blue-50 rounded-lg p-3 space-y-3">
+                  <p className="text-sm font-medium text-blue-800">Ciblage d'affichage (widget)</p>
+                  <div>
+                    <label className="text-xs text-gray-600">Afficher après X messages</label>
+                    <input
+                      type="number"
+                      value={editing.triggerConfig?.showAfterMessages || 3}
+                      onChange={(e) => setEditing({ ...editing, triggerConfig: { ...editing.triggerConfig, showAfterMessages: parseInt(e.target.value) || 3 } })}
+                      className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"
+                      min={1}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600">Pages où afficher (séparées par virgule, * = toutes)</label>
+                    <input
+                      value={(editing.triggerConfig?.showOnPages || []).join(', ')}
+                      onChange={(e) => setEditing({ ...editing, triggerConfig: { ...editing.triggerConfig, showOnPages: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean) } })}
+                      placeholder="/checkout, /cart, /products/*"
+                      className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Laisser vide = toutes les pages. * = wildcard (ex: /products/*)</p>
+                  </div>
+                </div>
+              )}
 
               {/* Post-purchase email config */}
               {editing.type === 'post_purchase' && (
@@ -298,6 +398,23 @@ export default function SurveysPage() {
               <p className="text-2xl font-bold text-primary-700">{results.totalResponses}</p>
               <p className="text-sm text-primary-600">réponses au total</p>
             </div>
+
+            {/* A/B variant breakdown */}
+            {results.variants && (
+              <div className="mb-4 p-3 bg-purple-50 rounded-lg">
+                <p className="text-sm font-medium text-purple-800 mb-2">A/B Testing</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white rounded-lg p-2 text-center">
+                    <p className="text-lg font-bold text-purple-600">{results.variants.variantA.count}</p>
+                    <p className="text-xs text-gray-500">Variante A</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-2 text-center">
+                    <p className="text-lg font-bold text-purple-600">{results.variants.variantB.count}</p>
+                    <p className="text-xs text-gray-500">Variante B</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-4">
               {results.analysis.map((a: any, idx: number) => (
