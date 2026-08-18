@@ -150,22 +150,29 @@ export const agentsApi = {
 };
 
 export const chatApi = {
-  send: (data: {
-    agentId: string;
-    message: string;
-    conversationId?: string;
-    visitorId?: string;
-    captureLead?: boolean;
-  }) =>
-    api.post('/chat/send', data).then((r) => r.data),
-  conversations: (params?: Record<string, any>) =>
+  send: (agentIdOrObj: string | any, message?: string, conversationId?: string, captureLead?: boolean) => {
+    if (typeof agentIdOrObj === 'object') {
+      return api.post('/chat/send', agentIdOrObj).then((r) => r.data);
+    }
+    return api.post('/chat/send', { agentId: agentIdOrObj, message, conversationId, captureLead }).then((r) => r.data);
+  },
+  conversations: (params?: { status?: string; agentId?: string; page?: number; limit?: number }) =>
     api.get('/chat/conversations', { params }).then((r) => r.data),
   history: (conversationId: string) =>
     api.get(`/chat/history/${conversationId}`).then((r) => r.data),
   attachLead: (conversationId: string, leadId: string) =>
     api.patch(`/chat/${conversationId}/lead`, { leadId }).then((r) => r.data),
-  updateStatus: (conversationId: string, status: 'open' | 'handed_off' | 'closed') =>
+  updateStatus: (conversationId: string, status: string) =>
     api.patch(`/chat/${conversationId}/status`, { status }).then((r) => r.data),
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/chat/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data);
+  },
+  handoff: (conversationId: string, agentId: string) =>
+    api.post(`/chat/${conversationId}/handoff`, { agentId }).then((r) => r.data),
+  take: (conversationId: string) =>
+    api.post(`/chat/${conversationId}/take`).then((r) => r.data),
 };
 
 export const leadsApi = {

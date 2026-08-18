@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Request, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
@@ -61,5 +62,19 @@ export class ChatController {
     @Body() dto: UpdateConversationStatusDto,
   ) {
     return this.chatService.updateStatus(id, req.user.tenantId, dto.status);
+  }
+
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: 10 * 1024 * 1024 },
+  }))
+  uploadFile(@UploadedFile() file: any) {
+    if (!file) return { error: 'No file provided' };
+    return {
+      filename: file.originalname,
+      size: file.size,
+      mimetype: file.mimetype,
+      url: `/uploads/${file.filename}`,
+    };
   }
 }

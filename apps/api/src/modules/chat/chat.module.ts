@@ -4,6 +4,7 @@ import { Conversation } from './conversation.entity';
 import { Message } from './message.entity';
 import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
+import { ChatGateway } from './chat.gateway';
 import { OllamaService } from './ollama.service';
 import { AgentsModule } from '../agents/agents.module';
 import { LeadsModule } from '../leads/leads.module';
@@ -15,7 +16,7 @@ import { IntelligenceModule } from '../intelligence/intelligence.module';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Conversation, Message]), AgentsModule, LeadsModule, forwardRef(() => KnowledgeModule), ProductsModule, IntegrationsModule, FlowsModule, IntelligenceModule],
-  providers: [ChatService, OllamaService],
+  providers: [ChatService, OllamaService, ChatGateway],
   controllers: [ChatController],
   exports: [ChatService, OllamaService],
 })

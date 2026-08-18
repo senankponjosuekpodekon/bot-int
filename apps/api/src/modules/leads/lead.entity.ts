@@ -11,6 +11,7 @@ import { Tenant } from '../tenants/tenant.entity';
 
 export enum LeadStatus {
   NEW = 'new',
+  HOT = 'hot',
   CONTACTED = 'contacted',
   QUALIFIED = 'qualified',
   CONVERTED = 'converted',
@@ -61,6 +62,9 @@ export class Lead {
 
   @Column({ nullable: true })
   notes: string;
+
+  @Column({ default: false })
+  notified: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

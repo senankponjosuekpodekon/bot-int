@@ -32,6 +32,39 @@ export class OllamaService {
     }
   }
 
+  async *chatStream(messages: OllamaMessage[]): AsyncGenerator<string> {
+    try {
+      const response = await axios.post(`${this.baseUrl}/api/chat`, {
+        model: this.model,
+        messages,
+        stream: true,
+      }, { responseType: 'stream' });
+
+      const stream = response.data;
+      let buffer = '';
+
+      for await (const chunk of stream) {
+        buffer += chunk.toString('utf8');
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const parsed = JSON.parse(line);
+            if (parsed.message?.content) {
+              yield parsed.message.content;
+            }
+            if (parsed.done) return;
+          } catch { /* skip invalid JSON */ }
+        }
+      }
+    } catch (error: any) {
+      this.logger.error('Ollama stream failed', error?.message);
+      throw new Error('AI streaming unavailable');
+    }
+  }
+
   async embed(text: string): Promise<number[]> {
     try {
       const response = await axios.post(`${this.baseUrl}/api/embeddings`, {
