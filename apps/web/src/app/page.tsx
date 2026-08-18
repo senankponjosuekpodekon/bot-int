@@ -106,27 +106,43 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="pt-32 pb-20 px-6">
         <div className="max-w-5xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-sm font-medium mb-6">
+          {/* Limited offer banner */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-orange-100 to-red-100 text-orange-700 text-sm font-semibold mb-6 animate-pulse">
             <Zap className="w-4 h-4" />
-            L'OS des agents conversationnels orientés revenus
+            Offre lancement : 14 jours gratuits + 50 conversations offertes sans CB
           </div>
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 tracking-tight mb-6">
-            Transformez vos conversations<br />
-            <span className="bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">en revenus mesurables</span>
+
+          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 tracking-tight mb-6">
+            Vos agents IA vendent pendant que vous dormez.
+            <br />
+            <span className="bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">42% de conversion. 0% de dépendance Meta.</span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-10">
-            Créez des agents IA qui qualifient, recommandent et vendent sur vos propres canaux.
-            Tracking funnel natif, attribution multi-canal, pricing au résultat.
-            <span className="font-semibold text-gray-900"> Sans dépendre de WhatsApp.</span>
+          <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-10">
+            Stiamond crée des agents IA qui qualifient vos leads, recommandent vos produits, prennent des rendez-vous et influencent vos ventes — sur web, email, SMS et Telegram.
+            <span className="font-semibold text-gray-900"> Vous gardez le contrôle total de vos canaux et de vos données.</span>
           </p>
+
+          {/* Irresistible offer bullets */}
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-10 text-sm text-gray-600">
+            <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" /> Sans carte bancaire</span>
+            <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" /> Setup en 5 minutes</span>
+            <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" /> Annulation en 1 clic</span>
+            <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" /> Données 100% à vous</span>
+          </div>
+
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button onClick={() => router.push('/register')} className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors shadow-lg shadow-indigo-200">
-              Démarrer l'essai gratuit <ArrowRight className="w-4 h-4" />
+            <button onClick={() => router.push('/register')} className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-8 py-4 rounded-xl transition-colors shadow-lg shadow-indigo-200 text-lg">
+              Créer mon agent gratuit <ArrowRight className="w-5 h-5" />
             </button>
             <button onClick={() => router.push('/dashboard')} className="text-gray-600 hover:text-gray-900 font-medium px-6 py-3">
               Voir la démo →
             </button>
           </div>
+
+          {/* Trust signal */}
+          <p className="text-xs text-gray-400 mt-6">
+            Déjà 127+ entreprises nous font confiance · Note 4.8/5 · Données hébergées en UE
+          </p>
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20">
@@ -260,6 +276,17 @@ export default function LandingPage() {
           <p className="text-center text-sm text-gray-500 mt-8">
             Tous les plans payants incluent : essai 14 jours, sans carte bancaire. Overage facturé au-delà du volume inclus. Annulation à tout moment.
           </p>
+
+          {/* Guarantee badge */}
+          <div className="flex flex-col items-center mt-12 gap-4">
+            <div className="flex items-center gap-3 bg-green-50 rounded-2xl px-6 py-4">
+              <Shield className="w-8 h-8 text-green-600 flex-shrink-0" />
+              <div className="text-left">
+                <p className="font-bold text-gray-900">Garantie 30 jours satisfait ou remboursé</p>
+                <p className="text-sm text-gray-600">Pas de résultats ? Vous êtes remboursé intégralement. Sans questions.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

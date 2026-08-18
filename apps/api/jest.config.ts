@@ -12,6 +12,12 @@ const config: Config = {
   transform: {
     '^.+\\.(t|j)s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!puppeteer|cheerio|puppeteer-core)',
+  ],
+  moduleNameMapper: {
+    'puppeteer': '<rootDir>/src/__mocks__/puppeteer.ts',
+  },
 };
 
 export default config;

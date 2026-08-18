@@ -1,0 +1,48 @@
+{
+  "name": "Stiamond — Agents IA",
+  "short_name": "Stiamond",
+  "description": "Agents IA autonomes qui qualifient, recommandent, bookent et vendent.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0a1e",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "description": "Accéder au tableau de bord"
+    },
+    {
+      "name": "Conversations",
+      "url": "/dashboard/chat",
+      "description": "Voir les conversations"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
