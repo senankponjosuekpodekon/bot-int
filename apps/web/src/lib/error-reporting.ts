@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/nextjs';
+
 type ErrorContext = Record<string, unknown>;
 
 function isProduction(): boolean {
@@ -10,11 +12,11 @@ export function reportError(error: unknown, context?: ErrorContext): void {
     return;
   }
 
-  // TODO: wire Sentry / LogRocket here
-  // Example: Sentry.captureException(error, { extra: context });
+  Sentry.captureException(error, context ? { extra: context } : undefined);
   console.error('[Error Reporting]', error, context);
 }
 
-export function setErrorContext(_context: ErrorContext): void {
-  // TODO: set Sentry user / tags
+export function setErrorContext(context: ErrorContext): void {
+  if (!isProduction()) return;
+  Sentry.setContext('app', context);
 }

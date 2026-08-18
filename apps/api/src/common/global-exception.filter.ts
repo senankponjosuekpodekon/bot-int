@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { captureException } from './sentry';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -39,8 +40,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         `Unhandled exception: ${exception.message}`,
         exception.stack,
       );
+      captureException(exception, { path: request.url, method: request.method });
     } else {
       this.logger.error('Unknown exception', JSON.stringify(exception));
+      captureException(new Error('Unknown exception'), { raw: JSON.stringify(exception), path: request.url });
     }
 
     // Don't leak internal errors in production

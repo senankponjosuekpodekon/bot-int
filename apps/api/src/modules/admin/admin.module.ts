@@ -15,7 +15,15 @@ import { Lead } from '../leads/lead.entity';
   imports: [
     TypeOrmModule.forFeature([User, Tenant, Subscription, Conversation, Agent, Lead]),
     JwtModule.registerAsync({
-      useFactory: () => ({ secret: process.env.JWT_SECRET }),
+      useFactory: () => ({
+        secret:
+          process.env.JWT_SECRET ||
+          (process.env.NODE_ENV !== 'production'
+            ? 'dev_only_secret_change_me'
+            : (() => {
+                throw new Error('JWT_SECRET env var is required in production');
+              })()),
+      }),
     }),
   ],
   providers: [AdminService, SuperAdminGuard],
