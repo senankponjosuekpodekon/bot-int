@@ -17,6 +17,7 @@ import { ProductsService } from './products.service';
 import { AutoSyncService } from './auto-sync.service';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CacheService } from '../../common/cache.service';
 class CreateProductDto {
   @IsString() @IsNotEmpty() name: string;
   @IsString() @IsOptional() description?: string;
@@ -67,21 +68,33 @@ export class ProductsController {
     private readonly productsService: ProductsService,
     private readonly autoSyncService: AutoSyncService,
     private readonly integrationsService: IntegrationsService,
+    private readonly cacheService: CacheService,
   ) {}
 
   @Post()
   create(@Request() req, @Body() dto: CreateProductDto) {
+    this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
     return this.productsService.create(req.user.tenantId, dto);
   }
 
   @Get()
-  findAll(@Request() req, @Query() query: ListProductsDto) {
-    return this.productsService.findByTenant(req.user.tenantId, query);
+  async findAll(@Request() req, @Query() query: ListProductsDto) {
+    const cacheKey = `products:${req.user.tenantId}:${JSON.stringify(query)}`;
+    const cached = this.cacheService.get(cacheKey);
+    if (cached) return cached;
+    const result = await this.productsService.findByTenant(req.user.tenantId, query);
+    this.cacheService.set(cacheKey, result, 60);
+    return result;
   }
 
   @Get('categories')
-  getCategories(@Request() req) {
-    return this.productsService.getCategories(req.user.tenantId);
+  async getCategories(@Request() req) {
+    const cacheKey = `products:${req.user.tenantId}:categories`;
+    const cached = this.cacheService.get(cacheKey);
+    if (cached) return cached;
+    const result = await this.productsService.getCategories(req.user.tenantId);
+    this.cacheService.set(cacheKey, result, 300);
+    return result;
   }
 
   @Get(':id')
@@ -91,11 +104,13 @@ export class ProductsController {
 
   @Patch(':id')
   update(@Request() req, @Param('id') id: string, @Body() dto: Partial<CreateProductDto>) {
+    this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
     return this.productsService.update(id, req.user.tenantId, dto);
   }
 
   @Delete(':id')
   remove(@Request() req, @Param('id') id: string) {
+    this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
     return this.productsService.delete(id, req.user.tenantId);
   }
 

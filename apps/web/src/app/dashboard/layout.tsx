@@ -30,7 +30,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!hasHydrated || !isAuthenticated()) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-sm text-gray-500">Chargement du tableau de bord…</div>
+        <div className="text-sm text-gray-500">Loading dashboard…</div>
       </div>
     );
   }

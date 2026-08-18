@@ -23,6 +23,7 @@ import { SiteModule } from './modules/site/site.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { LoggingMiddleware } from './common/logging.middleware';
+import { CacheModule } from './common/cache.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { LoggingMiddleware } from './common/logging.middleware';
         },
       }),
     }),
+    CacheModule,
     AuthModule,
     TenantsModule,
     AgentsModule,

@@ -27,12 +27,13 @@ export const metadata: Metadata = {
     languages: {
       'en-US': '/',
       'fr-FR': '/fr',
+      'de-DE': '/de',
     },
   },
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    alternateLocale: 'fr_FR',
+    alternateLocale: ['fr_FR', 'de_DE'],
     url: SITE_URL,
     siteName: 'Stiamond',
     title: 'Stiamond — AI Agents That Sell, Not Just Chat',

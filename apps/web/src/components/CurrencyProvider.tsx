@@ -26,12 +26,27 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       setCurrencyState(saved);
       return;
     }
-    // Auto-detect from browser locale
-    if (typeof navigator !== 'undefined') {
-      const lang = navigator.language || '';
-      if (lang.startsWith('fr') || lang.startsWith('de') || lang.startsWith('es') || lang.startsWith('it') || lang.startsWith('nl')) {
-        setCurrencyState('EUR');
-      }
+
+    // 1. Try IP-based geolocation (more accurate than browser locale)
+    if (typeof window !== 'undefined') {
+      fetch('https://ipapi.co/json/')
+        .then((res) => res.json())
+        .then((data: { currency?: string; country?: string }) => {
+          if (data.currency === 'EUR' || data.country === 'FR' || data.country === 'DE' || data.country === 'ES' || data.country === 'IT' || data.country === 'NL' || data.country === 'BE' || data.country === 'PT' || data.country === 'AT' || data.country === 'IE') {
+            setCurrencyState('EUR');
+          } else {
+            setCurrencyState('USD');
+          }
+        })
+        .catch(() => {
+          // 2. Fallback: detect from browser locale
+          if (typeof navigator !== 'undefined') {
+            const lang = navigator.language || '';
+            if (lang.startsWith('fr') || lang.startsWith('de') || lang.startsWith('es') || lang.startsWith('it') || lang.startsWith('nl') || lang.startsWith('pt') || lang.startsWith('be') || lang.startsWith('at') || lang.startsWith('ie')) {
+              setCurrencyState('EUR');
+            }
+          }
+        });
     }
   }, []);
 
