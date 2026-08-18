@@ -12,6 +12,7 @@ export enum DocumentType {
   PDF = 'pdf',
   TEXT = 'text',
   URL = 'url',
+  DOCX = 'docx',
 }
 
 @Entity('knowledge_documents')

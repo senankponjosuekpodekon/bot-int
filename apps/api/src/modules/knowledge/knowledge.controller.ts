@@ -58,18 +58,24 @@ export class KnowledgeController {
   }
 
   @Post('upload')
-  @ApiOperation({ summary: 'Upload file to knowledge base (PDF or text)' })
+  @ApiOperation({ summary: 'Upload file to knowledge base (PDF, DOCX, or text)' })
   @ApiResponse({ status: 201, description: 'File uploaded and processed' })
   @ApiResponse({ status: 400, description: 'No file provided' })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
   async uploadFile(@Request() req, @UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('Aucun fichier fourni');
     const isPdf = file.mimetype === 'application/pdf' || file.originalname.endsWith('.pdf');
-    if (!isPdf) {
-      const content = file.buffer.toString('utf-8');
-      return this.knowledgeService.addText(req.user.tenantId, content, file.originalname);
+    const isDocx =
+      file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      file.originalname.endsWith('.docx');
+    if (isPdf) {
+      return this.knowledgeService.addPdf(req.user.tenantId, file.buffer, file.originalname);
     }
-    return this.knowledgeService.addPdf(req.user.tenantId, file.buffer, file.originalname);
+    if (isDocx) {
+      return this.knowledgeService.addDocx(req.user.tenantId, file.buffer, file.originalname);
+    }
+    const content = file.buffer.toString('utf-8');
+    return this.knowledgeService.addText(req.user.tenantId, content, file.originalname);
   }
 
   @Post('url')

@@ -6,6 +6,7 @@ import { KnowledgeChunk } from './knowledge-chunk.entity';
 import { OllamaService } from '../chat/ollama.service';
 import { PaginatedResult } from '../../common/pagination.dto';
 import { PDFParse } from 'pdf-parse';
+import * as mammoth from 'mammoth';
 import * as cheerio from 'cheerio';
 import axios from 'axios';
 import puppeteer, { Browser } from 'puppeteer';
@@ -56,6 +57,22 @@ export class KnowledgeService {
     const doc = this.docRepo.create({
       tenantId,
       type: DocumentType.PDF,
+      content,
+      filename,
+    });
+    const saved = await this.docRepo.save(doc);
+    await this.chunkAndEmbed(saved.id, tenantId, content);
+    return saved;
+  }
+
+  async addDocx(tenantId: string, fileBuffer: Buffer, filename: string): Promise<KnowledgeDocument> {
+    const result = await mammoth.extractRawText({ buffer: fileBuffer });
+    const content = (result.value || '').trim();
+    if (!content) throw new Error('DOCX vide ou illisible');
+
+    const doc = this.docRepo.create({
+      tenantId,
+      type: DocumentType.DOCX,
       content,
       filename,
     });
