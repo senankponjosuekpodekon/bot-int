@@ -8,12 +8,13 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { OllamaService } from './ollama.service';
 
 @WebSocketGateway({
-  cors: { origin: '*' },
+  cors: { origin: true, credentials: true },
   namespace: '/chat',
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -25,6 +26,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly chatService: ChatService,
     private readonly ollamaService: OllamaService,
+    private readonly config: ConfigService,
   ) {}
 
   handleConnection(client: Socket) {
@@ -43,7 +45,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('send')
   async handleSend(
-    @MessageBody() data: { tenantId: string; agentId: string; message: string; conversationId?: string; visitorId?: string },
+    @MessageBody() data: { tenantId: string; agentId: string; message: string; conversationId?: string; visitorId?: string; utmParams?: any; referrerUrl?: string; landingPageUrl?: string },
     @ConnectedSocket() client: Socket,
   ) {
     try {
@@ -54,6 +56,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.conversationId,
         data.visitorId,
         true,
+        { utmParams: data.utmParams, referrerUrl: data.referrerUrl, landingPageUrl: data.landingPageUrl },
       );
 
       if (result.conversationId) {
@@ -64,6 +67,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         conversationId: result.conversationId,
         leadId: result.leadId,
         flow: result.flow,
+        funnelStage: result.funnelStage,
+        intentScore: result.intentScore,
       });
 
       // Stream the reply token by token
@@ -83,10 +88,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('send-public')
   async handlePublicSend(
-    @MessageBody() data: { agentId: string; message: string; visitorId: string; conversationId?: string },
+    @MessageBody() data: { agentId: string; message: string; visitorId: string; conversationId?: string; utmParams?: any; referrerUrl?: string; landingPageUrl?: string },
     @ConnectedSocket() client: Socket,
   ) {
     try {
+      // Look up tenant from agent
       const result = await this.chatService.sendMessage(
         undefined as any,
         data.agentId,
@@ -94,6 +100,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.conversationId,
         data.visitorId,
         true,
+        { utmParams: data.utmParams, referrerUrl: data.referrerUrl, landingPageUrl: data.landingPageUrl },
       );
 
       if (result.conversationId) {
@@ -104,6 +111,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         conversationId: result.conversationId,
         leadId: result.leadId,
         flow: result.flow,
+        funnelStage: result.funnelStage,
+        intentScore: result.intentScore,
       });
 
       const fullReply = result.reply;

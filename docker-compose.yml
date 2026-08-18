@@ -6,46 +6,69 @@ services:
     container_name: stiamond_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: stiamond
-      POSTGRES_PASSWORD: stiamond123
-      POSTGRES_DB: stiamond_agent
+      POSTGRES_USER: ${DB_USER:-stiamond}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-stiamond123}
+      POSTGRES_DB: ${DB_NAME:-stiamond_agent}
     ports:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-stiamond}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: stiamond_redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   api:
     build:
-      context: ./apps/api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.api
     container_name: stiamond_api
     restart: unless-stopped
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
     environment:
-      PORT: 3001
-      NODE_ENV: development
+      NODE_ENV: production
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USER: stiamond
-      DB_PASSWORD: stiamond123
-      DB_NAME: stiamond_agent
-      JWT_SECRET: changeme_secret_in_production
+      REDIS_URL: redis://redis:6379
       OLLAMA_URL: http://host.docker.internal:11434
-      OLLAMA_MODEL: llama3.2
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
     ports:
       - '3001:3001'
+    healthcheck:
+      test: ['CMD', 'node', '-e', "require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   web:
     build:
-      context: ./apps/web
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.web
     container_name: stiamond_web
     restart: unless-stopped
     depends_on:
-      - api
+      api:
+        condition: service_started
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3001/api
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
+      NODE_ENV: production
     ports:
       - '3000:3000'
 

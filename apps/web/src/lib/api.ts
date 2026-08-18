@@ -318,3 +318,11 @@ export const siteApi = {
     getByDomain: (domain: string) => api.get(`/site/public/domain/${domain}`).then((r) => r.data),
   },
 };
+
+export const billingApi = {
+  subscription: () => api.get('/billing/subscription').then((r) => r.data),
+  usage: () => api.get('/billing/usage').then((r) => r.data),
+  checkout: (plan: string) => api.post('/billing/checkout', { plan }).then((r) => r.data),
+  changePlan: (plan: string) => api.post('/billing/change-plan', { plan }).then((r) => r.data),
+  cancel: () => api.post('/billing/cancel').then((r) => r.data),
+};

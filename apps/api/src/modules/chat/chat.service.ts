@@ -12,6 +12,7 @@ import { ProductsService } from '../products/products.service';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { FlowsService } from '../flows/flows.service';
 import { IntelligenceService } from '../intelligence/intelligence.service';
+import { BillingService } from '../billing/billing.service';
 import { ListConversationsDto } from './dto/list-conversations.dto';
 
 const EMAIL_REGEX = /[\w.+-]+@[\w-]+\.[\w.-]+/gi;
@@ -58,6 +59,7 @@ export class ChatService {
     private readonly integrationsService: IntegrationsService,
     private readonly flowsService: FlowsService,
     private readonly intelligenceService: IntelligenceService,
+    private readonly billingService: BillingService,
   ) {}
 
   async sendMessage(
@@ -76,6 +78,22 @@ export class ChatService {
   ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: { id: string; title: string; fields: any[] } | null; products?: any[]; funnelStage?: FunnelStage; intentScore?: number }> {
     const agent = await this.agentsService.findById(agentId, tenantId);
     const personalityConfig = agent.personalityConfig || {};
+
+    // Billing quota check
+    try {
+      const quota = await this.billingService.checkQuota(tenantId);
+      if (!quota.allowed) {
+        const limitReply = `Notre service est temporairement limité. Veuillez nous contacter pour continuer la conversation.`;
+        const tempConv = await this.convRepo.save(
+          this.convRepo.create({ agentId, tenantId, visitorId }),
+        );
+        await this.msgRepo.save(this.msgRepo.create({ conversationId: tempConv.id, role: MessageRole.USER, content: userMessage }));
+        await this.msgRepo.save(this.msgRepo.create({ conversationId: tempConv.id, role: MessageRole.ASSISTANT, content: limitReply }));
+        return { reply: limitReply, conversationId: tempConv.id, leadId: undefined };
+      }
+    } catch (err: any) {
+      this.logger.warn(`Billing check skipped: ${err?.message}`);
+    }
 
     // Business hours check
     if (personalityConfig.autoReplyMode && personalityConfig.autoReplyMode !== 'always') {
@@ -442,6 +460,13 @@ export class ChatService {
       );
     } catch {
       // Intelligence recording is optional
+    }
+
+    // Billing metering: increment usage
+    try {
+      await this.billingService.incrementUsage(tenantId);
+    } catch (err: any) {
+      this.logger.warn(`Billing metering skipped: ${err?.message}`);
     }
 
     return { reply: finalReply, conversationId: conversation.id, leadId: responseLeadId, flow: flowData, products: carouselProducts.length > 0 ? carouselProducts : undefined, funnelStage: conversation.funnelStage, intentScore: conversation.intentScore };

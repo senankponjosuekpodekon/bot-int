@@ -18,7 +18,7 @@ import { TenantsModule } from '../tenants/tenants.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get('JWT_SECRET', 'changeme_secret'),
+        secret: config.get<string>('JWT_SECRET') || (process.env.NODE_ENV !== 'production' ? 'dev_only_secret_change_me' : (() => { throw new Error('JWT_SECRET env var is required in production'); })()),
         signOptions: { expiresIn: '7d' },
       }),
     }),

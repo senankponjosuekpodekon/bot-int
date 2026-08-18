@@ -1,0 +1,40 @@
+# Web Dockerfile
+FROM node:20-slim AS builder
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
+
+RUN npm ci --silent
+
+COPY apps/api ./apps/api
+COPY apps/web ./apps/web
+
+# Build web
+RUN cd apps/web && npx next build
+
+# --- Production stage ---
+FROM node:20-slim AS production
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY apps/web/package.json ./apps/web/
+
+RUN npm ci --omit=dev --silent
+
+COPY --from=builder /app/apps/web/.next ./apps/web/.next
+COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder /app/apps/web/next.config.ts ./apps/web/next.config.ts
+COPY --from=builder /app/apps/web/tsconfig.json ./apps/web/tsconfig.json
+COPY --from=builder /app/apps/web/src ./apps/web/src
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+
+WORKDIR /app/apps/web
+CMD ["npx", "next", "start"]

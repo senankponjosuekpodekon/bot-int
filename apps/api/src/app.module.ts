@@ -2,6 +2,8 @@ import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './modules/auth/auth.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { AgentsModule } from './modules/agents/agents.module';
@@ -18,12 +20,21 @@ import { WidgetModule } from './modules/widget/widget.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SurveysModule } from './modules/surveys/surveys.module';
 import { SiteModule } from './modules/site/site.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { LoggingMiddleware } from './common/logging.middleware';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [{
+        ttl: config.get<number>('THROTTLE_TTL', 60000),
+        limit: config.get<number>('THROTTLE_LIMIT', 100),
+      }],
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -37,6 +48,11 @@ import { LoggingMiddleware } from './common/logging.middleware';
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: config.get('NODE_ENV') !== 'production',
         logging: config.get('NODE_ENV') === 'development',
+        poolSize: config.get<number>('DB_POOL_SIZE', 20),
+        extra: {
+          max: config.get<number>('DB_POOL_SIZE', 20),
+          connectionTimeoutMillis: 10000,
+        },
       }),
     }),
     AuthModule,
@@ -55,6 +71,10 @@ import { LoggingMiddleware } from './common/logging.middleware';
     NotificationsModule,
     SurveysModule,
     SiteModule,
+    BillingModule,
+  ],
+  providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule implements NestModule {

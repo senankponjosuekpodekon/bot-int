@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Agent } from '../agents/agent.entity';
 import { Lead } from '../leads/lead.entity';
@@ -52,6 +53,11 @@ export enum AcquisitionChannel {
 }
 
 @Entity('conversations')
+@Index(['tenantId', 'createdAt'])
+@Index(['tenantId', 'status'])
+@Index(['tenantId', 'funnelStage'])
+@Index(['tenantId', 'acquisitionChannel'])
+@Index(['agentId', 'visitorId'])
 export class Conversation {
   @PrimaryGeneratedColumn('uuid')
   id: string;
