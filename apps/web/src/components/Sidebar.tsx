@@ -1,7 +1,8 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bot, MessageSquare, Users, BookOpen, LayoutDashboard, LogOut, Package, KanbanSquare, BarChart3, Settings, Brain, FileText, Headphones, Code2, Sparkles, ClipboardList, Globe, CreditCard, Crown } from 'lucide-react';
+import { Bot, MessageSquare, Users, BookOpen, LayoutDashboard, LogOut, Package, KanbanSquare, BarChart3, Settings, Brain, FileText, Headphones, Code2, Sparkles, ClipboardList, Globe, CreditCard, Crown, Menu, X } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { clsx } from 'clsx';
@@ -34,6 +35,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout, refreshToken } = useAuthStore();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -49,7 +51,30 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-gray-900 text-white flex flex-col min-h-screen">
+    <>
+      {/* Mobile hamburger button */}
+      <button
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-gray-900 text-white rounded-lg shadow-md"
+        onClick={() => setMobileOpen(!mobileOpen)}
+        aria-label="Toggle menu"
+      >
+        {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+      </button>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      <aside
+        className={clsx(
+          'bg-gray-900 text-white flex flex-col min-h-screen w-64 fixed lg:static z-50 transition-transform duration-300',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+        )}
+      >
       <div className="flex items-center gap-2 p-5 border-b border-gray-800">
         <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
           <Bot className="w-5 h-5 text-white" />
@@ -62,6 +87,7 @@ export default function Sidebar() {
           <Link
             key={href}
             href={href}
+            onClick={() => setMobileOpen(false)}
             className={clsx(
               'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
               pathname === href
@@ -77,6 +103,7 @@ export default function Sidebar() {
           <Link
             key={href}
             href={href}
+            onClick={() => setMobileOpen(false)}
             className={clsx(
               'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
               pathname === href
@@ -100,5 +127,6 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }

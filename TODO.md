@@ -239,7 +239,7 @@
 
 ## Notes
 
-- Ollama model default: `llama3.2` — change via `OLLAMA_MODEL` env var
+- Ollama model default: `llama3.1` — change via `OLLAMA_MODEL` env var
 - TypeORM `synchronize: true` in dev — switch to migrations for production
 - All API endpoints require JWT except `POST /api/auth/register` and `POST /api/auth/login`
 - Cache TTL: 300s (default), 60s (products), 30s (billing)
