@@ -31,6 +31,21 @@ export class IntelligenceController {
     return this.service.autoEnrichKnowledge(req.user.tenantId, body.keyword);
   }
 
+  @Post('auto-adjust-scoring')
+  autoAdjustScoring() {
+    return this.service.autoAdjustLeadScoring();
+  }
+
+  @Post('auto-optimize-prompts')
+  autoOptimizePrompts() {
+    return this.service.autoOptimizePrompts();
+  }
+
+  @Post('auto-enrich-unanswered')
+  autoEnrichUnanswered() {
+    return this.service.autoEnrichUnansweredKnowledge();
+  }
+
   @Get('platform/dashboard')
   platformDashboard() {
     return this.service.getPlatformDashboard();

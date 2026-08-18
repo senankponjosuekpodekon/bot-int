@@ -8,7 +8,10 @@ import { PlatformInsight, PlatformMetricType } from './platform-insight.entity';
 import { Message, MessageRole } from '../chat/message.entity';
 import { Conversation } from '../chat/conversation.entity';
 import { Lead, LeadStatus } from '../leads/lead.entity';
+import { Agent } from '../agents/agent.entity';
 import { KnowledgeService } from '../knowledge/knowledge.service';
+import { AgentsService } from '../agents/agents.service';
+import { LeadsService } from '../leads/leads.service';
 
 @Injectable()
 export class IntelligenceService {
@@ -25,9 +28,13 @@ export class IntelligenceService {
     private readonly convRepo: Repository<Conversation>,
     @InjectRepository(Lead)
     private readonly leadRepo: Repository<Lead>,
+    @InjectRepository(Agent)
+    private readonly agentRepo: Repository<Agent>,
     @InjectRepository(PlatformInsight)
     private readonly platformRepo: Repository<PlatformInsight>,
     private readonly knowledgeService: KnowledgeService,
+    private readonly agentsService: AgentsService,
+    private readonly leadsService: LeadsService,
   ) {}
 
   async recordConversation(
@@ -136,6 +143,10 @@ export class IntelligenceService {
     try {
       await this.analyzeLeadPatterns();
       await this.generateSuggestions();
+      await this.autoAdjustLeadScoring();
+      await this.autoOptimizePrompts();
+      await this.autoEnrichUnansweredKnowledge();
+      await this.pushPlatformRecommendations();
     } catch (err: any) {
       this.logger.error(`Daily analysis failed: ${err?.message}`);
     }
@@ -159,33 +170,16 @@ export class IntelligenceService {
         take: 50,
       });
 
-      const keywords: Record<string, number> = {};
-      for (const entry of recent) {
-        const words = entry.userMessage
-          .toLowerCase()
-          .replace(/[^\w\sàâäéèêëïîôöùûüç]/g, ' ')
-          .split(/\s+/)
-          .filter((w) => w.length > 3 && !['bonjour', 'salut', 'merci', 'cest', 'vous', 'avoir', 'faire', 'pouvez', 'quel', 'quelle', 'quelles', 'quels'].includes(w));
+      const keywords = this.extractKeywords(recent.map((r) => r.userMessage));
 
-        for (const word of words) {
-          keywords[word] = (keywords[word] || 0) + 1;
-        }
-      }
-
-      const topKeywords = Object.entries(keywords)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 10)
-        .filter(([, count]) => count >= 3);
-
-      for (const [keyword, count] of topKeywords) {
+      for (const keyword of keywords) {
+        const count = recent.filter((r) => r.userMessage.toLowerCase().includes(keyword)).length;
+        const title = `Questions non répondues sur "${keyword}"`;
         const existing = await this.insightRepo.findOne({
-          where: { tenantId, type: 'unanswered' as InsightType, resolved: false },
+          where: { tenantId, type: 'unanswered' as InsightType, resolved: false, title },
         });
 
-        const title = `Questions non répondues sur "${keyword}"`;
-        const existingMatch = existing?.title === title;
-
-        if (!existingMatch) {
+        if (!existing) {
           await this.insightRepo.save(
             this.insightRepo.create({
               tenantId,
@@ -566,5 +560,252 @@ export class IntelligenceService {
       const rate = (productConversion / productTotal) * 100;
       await this.recordPlatformMetric('conversion_factor' as PlatformMetricType, 'product_recommended', rate, { samples: productTotal });
     }
+  }
+
+  // ─── Closed-loop feedback methods ───
+  // These methods close the loop: intelligence → action → better agent performance → better intelligence
+
+  async autoAdjustLeadScoring(): Promise<void> {
+    const tenantIds = await this.getAllTenantIds();
+
+    for (const tenantId of tenantIds) {
+      const leads = await this.leadRepo.find({ where: { tenantId } });
+      if (leads.length < 10) continue;
+
+      const converted = leads.filter((l) => l.status === LeadStatus.CONVERTED);
+      const lost = leads.filter((l) => l.status === LeadStatus.LOST);
+      if (converted.length < 3 || lost.length < 3) continue;
+
+      const avgScoreConverted = converted.reduce((sum, l) => sum + (l.score || 0), 0) / converted.length;
+      const avgScoreLost = lost.reduce((sum, l) => sum + (l.score || 0), 0) / lost.length;
+
+      const emailConverted = converted.filter((l) => l.email).length;
+      const emailRate = (emailConverted / converted.length) * 100;
+      const phoneConverted = converted.filter((l) => l.phone).length;
+      const phoneRate = (phoneConverted / converted.length) * 100;
+
+      const scoreGap = avgScoreConverted - avgScoreLost;
+      if (Math.abs(scoreGap) < 5) continue;
+
+      const adjustments: string[] = [];
+      let scoreDelta = 0;
+
+      if (emailRate > 60) {
+        adjustments.push(`+10 score for leads with email (${emailRate}% conversion rate)`);
+        scoreDelta += 10;
+      }
+      if (phoneRate > 60) {
+        adjustments.push(`+8 score for leads with phone (${phoneRate}% conversion rate)`);
+        scoreDelta += 8;
+      }
+      if (avgScoreConverted > 60 && avgScoreLost < 30) {
+        adjustments.push(`Score threshold for 'hot' status lowered from 70 to ${Math.round(avgScoreConverted * 0.8)}`);
+      }
+
+      if (adjustments.length === 0) continue;
+
+      const title = `Auto-adjusted lead scoring based on ${converted.length + lost.length} leads`;
+      const existing = await this.insightRepo.findOne({ where: { tenantId, title, resolved: false } });
+      if (!existing) {
+        await this.insightRepo.save(
+          this.insightRepo.create({
+            tenantId,
+            type: 'performance' as InsightType,
+            title,
+            description: `Based on conversion patterns: avg score of converted leads is ${avgScoreConverted.toFixed(1)}, lost is ${avgScoreLost.toFixed(1)}. Adjustments: ${adjustments.join('; ')}.`,
+            data: {
+              avgScoreConverted: avgScoreConverted.toFixed(1),
+              avgScoreLost: avgScoreLost.toFixed(1),
+              emailRate,
+              phoneRate,
+              adjustments,
+            },
+            confidence: Math.min((converted.length + lost.length) / 30, 1),
+          }),
+        );
+      }
+
+      const newLeads = leads.filter((l) => l.status === LeadStatus.NEW && l.score < 50);
+      for (const lead of newLeads) {
+        let newScore = lead.score;
+        if (lead.email && emailRate > 60) newScore += 10;
+        if (lead.phone && phoneRate > 60) newScore += 8;
+        if (newScore !== lead.score) {
+          await this.leadRepo.update(lead.id, { score: Math.min(newScore, 100) });
+        }
+      }
+
+      this.logger.log(`[autoAdjustLeadScoring] Tenant ${tenantId}: adjusted ${newLeads.length} lead scores. Gap: ${scoreGap.toFixed(1)}`);
+    }
+  }
+
+  async autoOptimizePrompts(): Promise<void> {
+    const tenantIds = await this.getAllTenantIds();
+
+    for (const tenantId of tenantIds) {
+      const agents = await this.agentRepo.find({ where: { tenantId, isActive: true } });
+      if (agents.length === 0) continue;
+
+      for (const agent of agents) {
+        const agentAnalytics = await this.analyticsRepo
+          .createQueryBuilder('ca')
+          .innerJoin('conversation', 'conv', 'conv.id = ca.conversationId')
+          .where('conv.agentId = :agentId', { agentId: agent.id })
+          .andWhere('ca.hadKnowledge = false')
+          .orderBy('ca.createdAt', 'DESC')
+          .take(20)
+          .getMany();
+
+        if (agentAnalytics.length < 5) continue;
+
+        const unansweredRate = (agentAnalytics.length / 20) * 100;
+        if (unansweredRate < 30) continue;
+
+        const unansweredKeywords = this.extractKeywords(
+          agentAnalytics.map((a) => a.userMessage),
+        );
+
+        if (unansweredKeywords.length === 0) continue;
+
+        const enhancement = `\n\n[Auto-optimized] If the user asks about ${unansweredKeywords.slice(0, 3).join(', ')} and you don't have specific knowledge, respond: "I don't have detailed information on this yet, but I can note your interest and someone will follow up." Then set the lead as needing follow-up.`;
+
+        const alreadyOptimized = agent.systemPrompt.includes('[Auto-optimized]');
+        if (alreadyOptimized) {
+          const optimizedSection = agent.systemPrompt.indexOf('[Auto-optimized]');
+          const beforeOptimization = agent.systemPrompt.substring(0, optimizedSection);
+          const newPrompt = beforeOptimization + enhancement;
+          if (newPrompt !== agent.systemPrompt) {
+            await this.agentRepo.update(agent.id, { systemPrompt: newPrompt });
+          }
+        } else {
+          const newPrompt = agent.systemPrompt + enhancement;
+          await this.agentRepo.update(agent.id, { systemPrompt: newPrompt });
+        }
+
+        const title = `Auto-optimized prompt for agent "${agent.name}"`;
+        const existing = await this.insightRepo.findOne({ where: { tenantId, title, resolved: false } });
+        if (!existing) {
+          await this.insightRepo.save(
+            this.insightRepo.create({
+              tenantId,
+              type: 'performance' as InsightType,
+              title,
+              description: `Agent "${agent.name}" had ${unansweredRate.toFixed(0)}% unanswered rate. System prompt enhanced with fallback instructions for topics: ${unansweredKeywords.slice(0, 5).join(', ')}.`,
+              data: {
+                agentId: agent.id,
+                agentName: agent.name,
+                unansweredRate,
+                keywords: unansweredKeywords.slice(0, 10),
+              },
+              confidence: Math.min(agentAnalytics.length / 20, 1),
+            }),
+          );
+        }
+
+        this.logger.log(`[autoOptimizePrompts] Tenant ${tenantId}: optimized agent "${agent.name}" prompt with ${unansweredKeywords.length} keywords`);
+      }
+    }
+  }
+
+  async autoEnrichUnansweredKnowledge(): Promise<void> {
+    const tenantIds = await this.getAllTenantIds();
+
+    for (const tenantId of tenantIds) {
+      const unanswered = await this.insightRepo.find({
+        where: { tenantId, type: 'unanswered' as InsightType, resolved: false },
+        take: 3,
+      });
+
+      for (const insight of unanswered) {
+        const keyword = insight.data.keyword;
+        if (!keyword) continue;
+
+        try {
+          const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(keyword + ' definition explication')}`;
+          await this.knowledgeService.addUrl(tenantId, searchUrl);
+          await this.resolveInsightsByKeyword(tenantId, keyword);
+
+          const title = `Auto-enriched knowledge: "${keyword}"`;
+          const existing = await this.insightRepo.findOne({ where: { tenantId, title, resolved: false } });
+          if (!existing) {
+            await this.insightRepo.save(
+              this.insightRepo.create({
+                tenantId,
+                type: 'suggestion' as InsightType,
+                title,
+                description: `Automatically added DuckDuckGo content about "${keyword}" to the knowledge base. The agent should now be able to answer questions on this topic.`,
+                data: { keyword, source: 'duckduckgo', autoEnriched: true },
+                confidence: 0.8,
+              }),
+            );
+          }
+
+          this.logger.log(`[autoEnrichUnansweredKnowledge] Tenant ${tenantId}: enriched knowledge for "${keyword}"`);
+        } catch (err: any) {
+          this.logger.warn(`[autoEnrichUnansweredKnowledge] Failed to enrich "${keyword}": ${err?.message}`);
+        }
+      }
+    }
+  }
+
+  async pushPlatformRecommendations(): Promise<void> {
+    const recommendations = await this.getPlatformRecommendations();
+    if (recommendations.length === 0) return;
+
+    const tenantIds = await this.getAllTenantIds();
+
+    for (const tenantId of tenantIds) {
+      for (const rec of recommendations.slice(0, 3)) {
+        const title = `Platform recommendation: ${rec.title}`;
+        const existing = await this.insightRepo.findOne({ where: { tenantId, title, resolved: false } });
+        if (!existing) {
+          await this.insightRepo.save(
+            this.insightRepo.create({
+              tenantId,
+              type: 'suggestion' as InsightType,
+              title,
+              description: `${rec.description} (Confidence: ${(rec.confidence * 100).toFixed(0)}%)`,
+              data: {
+                platformRecommendation: true,
+                confidence: rec.confidence,
+              },
+              confidence: rec.confidence,
+            }),
+          );
+        }
+      }
+
+      this.logger.log(`[pushPlatformRecommendations] Pushed ${Math.min(recommendations.length, 3)} recommendations to tenant ${tenantId}`);
+    }
+  }
+
+  private extractKeywords(messages: string[]): string[] {
+    const stopWords = new Set([
+      'bonjour', 'salut', 'merci', 'cest', 'vous', 'avoir', 'faire', 'pouvez',
+      'quel', 'quelle', 'quelles', 'quels', 'hello', 'thank', 'please', 'want',
+      'need', 'like', 'know', 'would', 'could', 'have', 'that', 'this', 'with',
+      'about', 'your', 'our', 'the', 'and', 'for', 'are', 'was', 'were', 'been',
+      'have', 'has', 'had', 'did', 'does', 'will', 'can', 'may', 'might', 'must',
+      'should', 'would', 'could', 'shall', 'will', 'onto', 'into', 'from', 'they',
+    ]);
+
+    const wordFreq: Record<string, number> = {};
+    for (const msg of messages) {
+      const words = msg
+        .toLowerCase()
+        .replace(/[^\w\sàâäéèêëïîôöùûüç]/g, ' ')
+        .split(/\s+/)
+        .filter((w) => w.length > 3 && !stopWords.has(w));
+
+      for (const word of words) {
+        wordFreq[word] = (wordFreq[word] || 0) + 1;
+      }
+    }
+
+    return Object.entries(wordFreq)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .filter(([, count]) => count >= 2)
+      .map(([word]) => word);
   }
 }
