@@ -22,9 +22,9 @@ Stiamond transforms business conversations into measurable revenue. Unlike tradi
 | Plan | Price | Conversations/month | Agents | Key Features |
 |------|-------|---------------------|--------|--------------|
 | Free | 0€ | 50 | 1 | Web chat only, no API |
-| Starter | 29€ | 1,000 | 2 | Email + SMS, 0.03€ overage |
-| Growth | 99€ | 5,000 | 5 | Multi-channel, API access, 0.02€ overage |
-| Scale | 249€ | 15,000 | Unlimited | MCP Server, outcome tracking, 0.015€ overage |
+| Starter | 49€ | 1,000 | 3 | Web + email, 0.08€ overage |
+| Growth | 149€ | 5,000 | Unlimited | Multi-channel, API access, 0.05€ overage |
+| Scale | 399€ | 20,000 | Unlimited | MCP Server, outcome tracking, 0.03€ overage |
 | Enterprise | Custom | Unlimited | Unlimited | SLA, dedicated deployment, priority support |
 
 ## Differentiators vs Competitors

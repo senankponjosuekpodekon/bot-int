@@ -16,9 +16,9 @@
 ## Pricing Plans
 
 - **Free** : 0€/mois — 50 conversations/mois, 1 agent, web chat uniquement. Sans carte bancaire
-- **Starter** : 29€/mois — 1 000 conversations/mois, 2 agents, email + SMS. Overage 0,03€/conversation
-- **Growth** : 99€/mois — 5 000 conversations/mois, 5 agents, multi-canal, API access. Overage 0,02€/conversation. 14 jours d'essai
-- **Scale** : 249€/mois — 15 000 conversations/mois, agents illimités, MCP Server, outcome tracking. Overage 0,015€/conversation. 14 jours d'essai
+- **Starter** : 49€/mois — 1 000 conversations/mois, 3 agents, web + email. Overage 0,08€/conversation
+- **Growth** : 149€/mois — 5 000 conversations/mois, agents illimités, multi-canal, API access. Overage 0,05€/conversation. 14 jours d'essai
+- **Scale** : 399€/mois — 20 000 conversations/mois, agents illimités, MCP Server, outcome tracking. Overage 0,03€/conversation. 14 jours d'essai
 - **Enterprise** : Sur devis — Volume illimité, SLA, déploiement dédié, support prioritaire
 
 ## How It Works

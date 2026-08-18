@@ -60,7 +60,7 @@ export const PLAN_LIMITS: Record<PlanType, {
     mcpServer: false,
     outcomeTracking: false,
     overagePerConversation: 8,
-    priceMonthly: 7900,
+    priceMonthly: 4900,
     trialDays: 14,
   },
   [PlanType.GROWTH]: {
@@ -73,7 +73,7 @@ export const PLAN_LIMITS: Record<PlanType, {
     mcpServer: false,
     outcomeTracking: false,
     overagePerConversation: 5,
-    priceMonthly: 24900,
+    priceMonthly: 14900,
     trialDays: 14,
   },
   [PlanType.SCALE]: {
@@ -86,7 +86,7 @@ export const PLAN_LIMITS: Record<PlanType, {
     mcpServer: true,
     outcomeTracking: true,
     overagePerConversation: 3,
-    priceMonthly: 69900,
+    priceMonthly: 39900,
     trialDays: 14,
   },
   [PlanType.ENTERPRISE]: {

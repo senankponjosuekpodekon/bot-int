@@ -34,7 +34,7 @@ export default function LandingPage() {
     },
     {
       name: 'Starter',
-      price: billingCycle === 'monthly' ? 79 : 63,
+      price: billingCycle === 'monthly' ? 49 : 39,
       desc: 'Pour les solopreneurs et TPE',
       features: ['3 agents IA', '1 000 conversations/mois', 'Web chat + email', 'Funnel tracking', 'Landing page', 'Support email'],
       cta: 'Essayer 14 jours',
@@ -43,7 +43,7 @@ export default function LandingPage() {
     },
     {
       name: 'Growth',
-      price: billingCycle === 'monthly' ? 249 : 199,
+      price: billingCycle === 'monthly' ? 149 : 119,
       desc: 'Pour les PME en croissance',
       features: ['Agents illimités', '5 000 conversations/mois', 'Multi-canal (SMS, Telegram)', 'Acquisition analytics', 'Domaine personnalisé', 'API access', 'Stripe + Calendly'],
       cta: 'Essayer 14 jours',
@@ -52,7 +52,7 @@ export default function LandingPage() {
     },
     {
       name: 'Scale',
-      price: billingCycle === 'monthly' ? 699 : 559,
+      price: billingCycle === 'monthly' ? 399 : 319,
       desc: 'Pour le mid-market',
       features: ['Tout Growth +', '20 000 conversations/mois', 'MCP Server inclus', 'Outcome tracking', 'White-label', 'API + webhooks', 'SLA 99.9%', 'Priority support'],
       cta: 'Essayer 14 jours',
@@ -399,10 +399,10 @@ export default function LandingPage() {
             <div>
               <h3 className="text-white font-semibold mb-3">Tarification</h3>
               <p>
-                Stiamond propose 5 plans : Free (0€, 50 conversations/mois), Starter (29€, 1 000 conversations),
-                Growth (99€, 5 000 conversations + API), Scale (249€, 15 000 conversations + MCP Server),
+                Stiamond propose 5 plans : Free (0€, 50 conversations/mois), Starter (49€, 1 000 conversations),
+                Growth (149€, 5 000 conversations + API), Scale (399€, 20 000 conversations + MCP Server),
                 Enterprise (sur devis). L'overage est facturé au-delà du volume inclus :
-                0,03€/conversation en Starter, 0,02€ en Growth, 0,015€ en Scale.
+                0,08€/conversation en Starter, 0,05€ en Growth, 0,03€ en Scale.
                 Essai gratuit de 14 jours sans carte bancaire. Garantie 30 jours satisfait ou remboursé.
               </p>
             </div>

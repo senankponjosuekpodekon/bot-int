@@ -44,7 +44,7 @@ export default function BillingPage() {
     {
       id: 'starter',
       name: 'Starter',
-      price: 79,
+      price: 49,
       icon: Zap,
       color: 'blue',
       features: ['3 agents', '1 000 conv/mois', 'Web + email', 'Funnel tracking', '0,08€/conv overage'],
@@ -52,7 +52,7 @@ export default function BillingPage() {
     {
       id: 'growth',
       name: 'Growth',
-      price: 249,
+      price: 149,
       icon: Crown,
       color: 'indigo',
       features: ['Agents illimités', '5 000 conv/mois', 'Multi-canal', 'API access', 'Domaine custom', '0,05€/conv overage'],
@@ -60,7 +60,7 @@ export default function BillingPage() {
     {
       id: 'scale',
       name: 'Scale',
-      price: 699,
+      price: 399,
       icon: Building2,
       color: 'purple',
       features: ['20 000 conv/mois', 'MCP Server', 'Outcome tracking', 'White-label', 'SLA 99.9%', '0,03€/conv overage'],
