@@ -22,6 +22,7 @@ import { SurveysModule } from './modules/surveys/surveys.module';
 import { SiteModule } from './modules/site/site.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { RegionsModule } from './modules/regions/regions.module';
 import { LoggingMiddleware } from './common/logging.middleware';
 import { CacheModule } from './common/cache.module';
 
@@ -76,6 +77,7 @@ import { CacheModule } from './common/cache.module';
     SiteModule,
     BillingModule,
     AdminModule,
+    RegionsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

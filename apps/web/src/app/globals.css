@@ -13,6 +13,17 @@
 }
 
 @layer components {
+  .font-arabic {
+    font-family: "Noto Sans Arabic", "Segoe UI", Tahoma, sans-serif;
+    font-feature-settings: "liga" 1;
+    letter-spacing: 0;
+  }
+  [dir="rtl"] {
+    text-align: right;
+  }
+  [dir="rtl"] .ltr-force {
+    direction: ltr;
+  }
   .btn-primary {
     @apply bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
   }

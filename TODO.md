@@ -1,6 +1,7 @@
 # TODO — Bot-Int AI Agent Platform
 
 > Legend: ✅ Done · 🔄 In Progress · ⬜ Pending · 🔥 Priority
+> Dernière mise à jour : 18 août 2026
 
 ---
 
@@ -23,6 +24,17 @@
 - [x] **Chat module** — Conversation + Message entities, OllamaService, ChatService
 - [x] **Knowledge module** — Document ingestion, text search
 - [x] **Leads module** — Lead entity, status pipeline, CRUD
+- [x] **Products module** — CRUD, import (Shopify, WooCommerce, CSV, sitemap, feed)
+- [x] **Billing module** — Stripe, plans, usage, API keys, webhooks
+- [x] **Intelligence module** — Conversation analytics, insights, platform metrics
+- [x] **Flows module** — Conversation flow builder
+- [x] **Quotes module** — Automated quote generation
+- [x] **Widget module** — Embeddable chat widget
+- [x] **Notifications module** — Email, SMS, Telegram notifications
+- [x] **Surveys module** — Customer satisfaction surveys
+- [x] **Site module** — Landing page builder
+- [x] **Admin module** — Admin dashboard
+- [x] **Integrations module** — External integrations
 
 ### Frontend — Next.js
 - [x] Next.js 14 app router setup
@@ -36,16 +48,40 @@
 - [x] Dashboard overview page (stats)
 - [x] Agents management page (list, create, delete)
 - [x] Chat testing page (real-time conversation with agent)
+- [x] Leads page (`/dashboard/leads`)
+- [x] Knowledge base page (`/dashboard/knowledge`)
+- [x] Conversation history viewer
+- [x] Toast notifications (success/error feedback)
+- [x] CurrencyProvider (USD/EUR with IP-based geo-detection)
+- [x] LocaleSwitcher (EN/FR/DE)
+
+### Landing Pages & i18n
+- [x] English landing page (`/`) — hero, features, use cases, comparison, pricing, testimonials, FAQ, CTA, GEO block, footer, newsletter, sticky mobile CTA
+- [x] French landing page (`/fr`) — full translation
+- [x] German landing page (`/de`) — full translation
+- [x] Sitemap avec toutes les routes (EN/FR/DE + legal pages)
+- [x] hreflang alternates (en-US, fr-FR, de-DE)
+- [x] OpenGraph metadata + alternateLocale
+- [x] schema.org markup (HowTo, FAQPage)
+
+### Legal Pages
+- [x] `/terms` — Terms of Service (EN) — 11 sections
+- [x] `/privacy` — Privacy Policy (EN) — 11 sections
+- [x] `/gdpr` — GDPR Compliance (EN) — DPA, sub-processors, breach notification
+- [x] `/fr/terms` — CGU (FR)
+- [x] `/fr/privacy` — Politique de confidentialité (FR)
+- [x] `/fr/gdpr` — Conformité RGPD (FR)
 
 ---
 
-## Sprint — Final QA & Launch (Juil 2026)
+## Sprint — Final QA & Launch
 
 1. **Sécurité & conformité**
    - [ ] Résoudre les 32 vulnérabilités `npm audit` (API + Web) ou documenter les exceptions
    - [ ] Vérifier que tous les secrets `.env` sont chiffrés/stockés (Vault, Doppler…)
 2. **Qualité & tests**
-   - [ ] Ajouter tests unitaires (AuthService, ChatService, LeadsService)
+   - [ ] 🔥 Fixer les 5 tests échoués (leads.service.spec.ts, chat.service.spec.ts) — préexistants
+   - [ ] Ajouter tests unitaires (AuthService ✅, ChatService, LeadsService, IntelligenceService)
    - [ ] Ajouter tests E2E (Playwright) pour le flow agent → chat → lead
    - [ ] Mettre en place GitHub Actions (lint + test + build)
 3. **Observabilité & Ops**
@@ -60,25 +96,49 @@
 
 ## Phase 2 — Core Features 🔄
 
+### Backend
 - [x] 🔥 Add `clsx` dependency to web package.json
+- [x] Lead auto-creation from chat conversations
+- [x] Rate limiting per tenant (`@nestjs/throttler` — ThrottlerGuard 100 req/min)
+- [x] Cache API (CacheService in-memory, CacheModule global) — products + billing
 - [ ] 🔥 DTO validation with `class-validator` on all endpoints (API partielle)
 - [ ] Agent `PATCH` endpoint — full update with DTO
 - [ ] Chat — inject knowledge base context into Ollama prompt (RAG)
-- [x] Lead auto-creation from chat conversations
 - [ ] File upload for knowledge documents (PDF, DOCX)
 - [ ] Pagination on all list endpoints (`/agents`, `/leads`, `/knowledge`)
 - [ ] Webhook support — notify external systems on new lead/conversation
-- [ ] Rate limiting per tenant (`@nestjs/throttler`)
 - [ ] Swagger / OpenAPI documentation (`@nestjs/swagger`)
 
+### Frontend
 - [x] 🔥 Leads page (`/dashboard/leads`)
 - [x] 🔥 Knowledge base page (`/dashboard/knowledge`)
-- [ ] Agent detail/edit page
 - [x] Conversation history viewer
-- [ ] Lead detail page avec timeline/status
 - [x] Toast notifications (success/error feedback)
-- [ ] Loading skeletons pour toutes les pages (partiel — chat ok)
+- [x] Dashboard loading skeleton (`dashboard/loading.tsx`)
+- [ ] Agent detail/edit page
+- [ ] Lead detail page avec timeline/status
+- [ ] Loading skeletons pour toutes les pages (partiel — dashboard + chat ok)
 - [ ] Responsive mobile layout
+
+### Intelligence — Boucle fermée ✅
+- [x] recordConversation() — enregistre chaque échange (intent, knowledge, products)
+- [x] detectUnansweredQuestions() — cron horaire, extraction mots-clés bilingue
+- [x] detectTrends() — cron horaire, intents sur 24h
+- [x] analyzeLeadPatterns() — cron quotidien, patterns de conversion
+- [x] generateSuggestions() — cron quotidien, suggestions d'enrichissement
+- [x] autoAdjustLeadScoring() — ajuste les scores des leads en DB selon patterns
+- [x] autoOptimizePrompts() — modifie les system prompts des agents en DB
+- [x] autoEnrichUnansweredKnowledge() — enrichit la KB via DuckDuckGo automatiquement
+- [x] pushPlatformRecommendations() — pousse les best practices cross-tenant
+- [x] extractKeywords() — bilingue (FR + EN stop words)
+- [x] Endpoints manuels : auto-adjust-scoring, auto-optimize-prompts, auto-enrich-unanswered
+- [x] Platform dashboard + recommendations endpoints
+
+### Geo & Currency
+- [x] IP-based currency detection (ipapi.co → EUR/USD)
+- [x] Fallback navigator.language
+- [x] localStorage priority over auto-detection
+- [x] EU country detection (FR, DE, ES, IT, NL, BE, PT, AT, IE)
 
 ---
 
@@ -101,10 +161,10 @@
 
 ## Phase 4 — Multi-Channel Deployment ⬜
 
-- [ ] Embeddable chat widget (JavaScript snippet)
+- [ ] Embeddable chat widget (JavaScript snippet) — Widget module exists, needs frontend snippet
 - [ ] WhatsApp integration (via Meta API)
-- [ ] Telegram bot integration
-- [ ] Email channel
+- [ ] Telegram bot integration — Notifications module exists, needs bot setup
+- [ ] Email channel — SendGrid integration in notifications module
 - [ ] REST API for custom channel integration
 - [ ] Analytics dashboard (message volume, response time, lead conversion)
 
@@ -121,6 +181,10 @@
 - [ ] SSL/TLS setup
 
 ### Security & Compliance
+- [x] Legal pages (Terms, Privacy, GDPR — EN + FR)
+- [x] EU hosting trust badge on landing pages
+- [x] ThrottlerGuard (100 req/min)
+- [x] JWT auth + bcrypt + Helmet headers
 - [ ] Refresh token rotation
 - [ ] Role-based access control (admin, agent, viewer)
 - [ ] Tenant data encryption at rest
@@ -128,15 +192,30 @@
 - [ ] GDPR data export/delete endpoints
 
 ### Scalability
-- [ ] Redis for session/cache
+- [x] In-memory cache (CacheService — products 60s, billing 30s, categories 300s)
+- [x] Cache invalidation on mutations (create/update/delete)
+- [x] Dashboard lazy loading (Suspense fallback)
+- [ ] Redis for session/cache (in-memory cache implemented, Redis pas encore)
 - [ ] BullMQ for async job queue (document processing, emails)
 - [ ] Horizontal scaling with load balancer
 - [ ] Database connection pooling (PgBouncer)
 
 ---
 
+## i18n — Internationalisation
+
+- [x] English (root `/`) — landing page + legal pages
+- [x] French (`/fr`) — landing page + legal pages
+- [x] German (`/de`) — landing page
+- [ ] German legal pages (`/de/terms`, `/de/privacy`, `/de/gdpr`)
+- [ ] Arabic RTL (`/ar`) — workflow documenté dans `.devin/workflows/arabic-rtl.md` (Phase 2, mois 3-6)
+- [ ] i18n framework (next-intl ou react-i18next) pour factoriser les traductions
+
+---
+
 ## Bugs & Technical Debt
 
+- [ ] 🔥 Fix: 5 tests échoués (leads.service.spec.ts, chat.service.spec.ts) — préexistants
 - [ ] Fix: `clsx` missing from `apps/web/package.json` (used in Sidebar)
 - [ ] Fix: Next.js upgrade to 15 (security patch for 14.2.0)
 - [ ] Fix: npm audit — address high severity vulnerabilities
@@ -150,76 +229,37 @@
 - Ollama model default: `llama3.2` — change via `OLLAMA_MODEL` env var
 - TypeORM `synchronize: true` in dev — switch to migrations for production
 - All API endpoints require JWT except `POST /api/auth/register` and `POST /api/auth/login`
+- Cache TTL: 300s (default), 60s (products), 30s (billing)
+- Intelligence cron: hourly (unanswered, trends) + daily 3am (patterns, suggestions, auto-adjust, auto-optimize, auto-enrich, platform push) + daily 4am (platform analysis)
+- Default locale: English at root (`/`), French at `/fr`, German at `/de`
+- Default currency: USD, with EUR auto-detection via IP geolocation
 
+---
 
-à la suite de ce projet, je veux que lacombinaison soit un certifié de Google Digital Marketing & E-commerce, à un point ou si je connecte une entreprise, ils puissent tout gerer pour sa croissance, tout les 
-roles marketing pour une equipe marketing, pour la croissance de l'entreprise en fonction de l'evolution aussi, les news et autres meme en envoyant dess rapports au stackeholder.
+## Vision — Google Digital Marketing & E-commerce
 
+> Objectif : Stiamond doit devenir une plateforme tout-en-un où une entreprise connectée peut gérer toute sa croissance marketing, tous les rôles d'une équipe marketing, avec rapports automatiques aux stakeholders.
 
-Foundations of Digital Marketing and E-commerce
+### Cursus Google Digital Marketing & E-commerce (8 cours)
 
-Course 1 of 8
+- [x] Course 1 — Foundations of Digital Marketing and E-commerce ✅
+- [x] Course 2 — Attract and Engage Customers with Digital Marketing ✅
+- [x] Course 3 — From Likes to Leads: Interact with Customers Online ✅
+- [x] Course 4 — Think Outside the Inbox: Email Marketing ✅
+- [ ] Course 5 — Assess for Success: Marketing Analytics and Measurement (85% — en cours)
+- [ ] Course 6 — Make the Sale: Build, Launch, and Manage E-commerce Stores
+- [ ] Course 7 — Satisfaction Guaranteed: Develop Customer Loyalty Online
+- [ ] Course 8 — Accelerate Your Job Search with AI
 
-·
+### Modules Stiamond à implémenter pour couvrir la vision
 
-Complete
-
-Attract and Engage Customers with Digital Marketing
-
-Course 2 of 8
-
-·
-
-Complete
-
-From Likes to Leads: Interact with Customers Online
-
-Course 3 of 8
-
-·
-
-Complete
-
-Think Outside the Inbox: Email Marketing
-
-Course 4 of 8
-
-·
-
-Complete
-
-Assess for Success: Marketing Analytics and Measurement
-
-Course 5 of 8
-
-·
-
-85% complete
-
-Other tools for data analytics and visualization
-
-Video (4 minutes)
-
-Make the Sale: Build, Launch, and Manage E-commerce Stores
-
-Course 6 of 8
-
-·
-
-Not started
-
-Satisfaction Guaranteed: Develop Customer Loyalty Online
-
-Course 7 of 8
-
-·
-
-Not started
-
-Accelerate Your Job Search with AI
-
-Course 8 of 8
-
-·
-
-Not started
+- [ ] **Marketing Analytics Dashboard** — ROI par canal, CAC, LTV, attribution multi-touch
+- [ ] **Email Marketing Automation** — campagnes, séquences, A/B testing (SendGrid)
+- [ ] **E-commerce Store Builder** — storefront, panier, checkout (Stripe)
+- [ ] **Customer Loyalty Program** — points, rewards, NPS surveys
+- [ ] **Social Media Management** — scheduling, analytics, listening
+- [ ] **SEO Tools** — keyword tracking, content optimization
+- [ ] **Stakeholder Reports** — rapports automatiques PDF/email hebdomadaires
+- [ ] **Marketing Funnel Builder** — visual funnel with conversion rates
+- [ ] **Ad Campaign Manager** — Meta Ads, Google Ads integration
+- [ ] **Customer Journey Mapping** — touchpoint tracking across channels

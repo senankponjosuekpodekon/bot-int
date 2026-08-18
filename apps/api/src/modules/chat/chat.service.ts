@@ -13,6 +13,8 @@ import { IntegrationsService } from '../integrations/integrations.service';
 import { FlowsService } from '../flows/flows.service';
 import { IntelligenceService } from '../intelligence/intelligence.service';
 import { BillingService } from '../billing/billing.service';
+import { RegionsService } from '../regions/regions.service';
+import { RegionCode } from '../regions/region-profile.types';
 import { ListConversationsDto } from './dto/list-conversations.dto';
 
 const EMAIL_REGEX = /[\w.+-]+@[\w-]+\.[\w.-]+/gi;
@@ -60,6 +62,7 @@ export class ChatService {
     private readonly flowsService: FlowsService,
     private readonly intelligenceService: IntelligenceService,
     private readonly billingService: BillingService,
+    private readonly regionsService: RegionsService,
   ) {}
 
   async sendMessage(
@@ -75,9 +78,30 @@ export class ChatService {
       landingPageUrl?: string;
       acquisitionChannel?: AcquisitionChannel;
     },
-  ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: { id: string; title: string; fields: any[] } | null; products?: any[]; funnelStage?: FunnelStage; intentScore?: number }> {
+    regionContext?: {
+      ip?: string;
+      phone?: string;
+      browserLanguage?: string;
+      timezone?: string;
+      userSelectedRegion?: RegionCode;
+    },
+  ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: { id: string; title: string; fields: any[] } | null; products?: any[]; funnelStage?: FunnelStage; intentScore?: number; region?: RegionCode }> {
     const agent = await this.agentsService.findById(agentId, tenantId);
     const personalityConfig = agent.personalityConfig || {};
+
+    // Detect region for regional adaptation
+    let detectedRegion: RegionCode = 'international';
+    try {
+      detectedRegion = await this.regionsService.detectRegion({
+        ip: regionContext?.ip,
+        phone: regionContext?.phone,
+        browserLanguage: regionContext?.browserLanguage,
+        timezone: regionContext?.timezone,
+        userSelectedRegion: regionContext?.userSelectedRegion,
+      });
+    } catch {
+      // Region detection is optional — fallback to international
+    }
 
     // Billing quota check
     try {
@@ -223,7 +247,7 @@ export class ChatService {
     });
 
     const messages: OllamaMessage[] = [
-      { role: 'system', content: agent.systemPrompt },
+      { role: 'system', content: this.regionsService.buildSystemPrompt(agent.systemPrompt, detectedRegion) },
       ...history.map((m) => ({
         role: m.role as 'user' | 'assistant' | 'system',
         content: m.content,
@@ -469,7 +493,7 @@ export class ChatService {
       this.logger.warn(`Billing metering skipped: ${err?.message}`);
     }
 
-    return { reply: finalReply, conversationId: conversation.id, leadId: responseLeadId, flow: flowData, products: carouselProducts.length > 0 ? carouselProducts : undefined, funnelStage: conversation.funnelStage, intentScore: conversation.intentScore };
+    return { reply: finalReply, conversationId: conversation.id, leadId: responseLeadId, flow: flowData, products: carouselProducts.length > 0 ? carouselProducts : undefined, funnelStage: conversation.funnelStage, intentScore: conversation.intentScore, region: detectedRegion };
   }
 
   async getHistory(conversationId: string, tenantId: string) {

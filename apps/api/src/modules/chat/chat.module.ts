@@ -15,9 +15,10 @@ import { IntegrationsModule } from '../integrations/integrations.module';
 import { FlowsModule } from '../flows/flows.module';
 import { IntelligenceModule } from '../intelligence/intelligence.module';
 import { BillingModule } from '../billing/billing.module';
+import { RegionsModule } from '../regions/regions.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Conversation, Message, AgentFeedback]), AgentsModule, LeadsModule, forwardRef(() => KnowledgeModule), ProductsModule, IntegrationsModule, FlowsModule, IntelligenceModule, BillingModule],
+  imports: [TypeOrmModule.forFeature([Conversation, Message, AgentFeedback]), AgentsModule, LeadsModule, forwardRef(() => KnowledgeModule), ProductsModule, IntegrationsModule, FlowsModule, IntelligenceModule, BillingModule, RegionsModule],
   providers: [ChatService, OllamaService, ChatGateway],
   controllers: [ChatController],
   exports: [ChatService, OllamaService],

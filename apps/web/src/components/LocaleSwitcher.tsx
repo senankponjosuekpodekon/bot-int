@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, DollarSign, Euro } from 'lucide-react';
 import Link from 'next/link';
 
-export default function LocaleSwitcher({ currentLocale = 'en' }: { currentLocale?: 'en' | 'fr' | 'de' }) {
+export default function LocaleSwitcher({ currentLocale = 'en' }: { currentLocale?: 'en' | 'fr' | 'de' | 'ar' }) {
   const { currency, setCurrency } = useCurrency();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -23,7 +23,7 @@ export default function LocaleSwitcher({ currentLocale = 'en' }: { currentLocale
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-gray-100"
       >
-        <span className="font-medium">{currentLocale === 'fr' ? 'FR' : currentLocale === 'de' ? 'DE' : 'EN'}</span>
+        <span className="font-medium">{currentLocale === 'fr' ? 'FR' : currentLocale === 'de' ? 'DE' : currentLocale === 'ar' ? 'AR' : 'EN'}</span>
         <span className="text-gray-300">|</span>
         <span className="flex items-center gap-0.5">
           {currency === 'USD' ? <DollarSign className="w-3.5 h-3.5" /> : <Euro className="w-3.5 h-3.5" />}
@@ -58,6 +58,14 @@ export default function LocaleSwitcher({ currentLocale = 'en' }: { currentLocale
           >
             <span className={currentLocale === 'de' ? 'text-indigo-600 font-medium' : ''}>Deutsch</span>
             {currentLocale === 'de' && <span className="ml-auto text-indigo-600">✓</span>}
+          </Link>
+          <Link
+            href="/ar"
+            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            onClick={() => setOpen(false)}
+          >
+            <span className={currentLocale === 'ar' ? 'text-indigo-600 font-medium' : ''}>العربية</span>
+            {currentLocale === 'ar' && <span className="ml-auto text-indigo-600">✓</span>}
           </Link>
 
           <div className="border-t border-gray-100 my-1" />

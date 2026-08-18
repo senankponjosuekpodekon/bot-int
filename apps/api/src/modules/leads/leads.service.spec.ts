@@ -11,6 +11,7 @@ const createRepositoryMock = <T extends ObjectLiteral>(): RepositoryMock<T> => (
   find: jest.fn(),
   findOne: jest.fn(),
   update: jest.fn(),
+  createQueryBuilder: jest.fn(),
 });
 
 describe('LeadsService', () => {
@@ -39,12 +40,20 @@ describe('LeadsService', () => {
   describe('findByTenant', () => {
     it('lists leads ordered by creation date desc', async () => {
       const leads = [{ id: 'lead-1' }] as Lead[];
-      leadRepo.find?.mockResolvedValue(leads);
+      const queryBuilder = {
+        where: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(leads),
+      };
+      leadRepo.createQueryBuilder?.mockReturnValue(queryBuilder);
 
       const result = await service.findByTenant('t-1');
 
       expect(result).toBe(leads);
-      expect(leadRepo.find).toHaveBeenCalledWith({ where: { tenantId: 't-1' }, order: { createdAt: 'DESC' } });
+      expect(leadRepo.createQueryBuilder).toHaveBeenCalledWith('lead');
+      expect(queryBuilder.where).toHaveBeenCalledWith('lead.tenantId = :tenantId', { tenantId: 't-1' });
+      expect(queryBuilder.orderBy).toHaveBeenCalledWith('lead.createdAt', 'DESC');
     });
   });
 

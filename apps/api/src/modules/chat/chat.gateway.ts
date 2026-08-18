@@ -45,7 +45,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('send')
   async handleSend(
-    @MessageBody() data: { tenantId: string; agentId: string; message: string; conversationId?: string; visitorId?: string; utmParams?: any; referrerUrl?: string; landingPageUrl?: string },
+    @MessageBody() data: { tenantId: string; agentId: string; message: string; conversationId?: string; visitorId?: string; utmParams?: any; referrerUrl?: string; landingPageUrl?: string; regionContext?: { ip?: string; phone?: string; browserLanguage?: string; timezone?: string; userSelectedRegion?: string } },
     @ConnectedSocket() client: Socket,
   ) {
     try {
@@ -57,6 +57,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.visitorId,
         true,
         { utmParams: data.utmParams, referrerUrl: data.referrerUrl, landingPageUrl: data.landingPageUrl },
+        data.regionContext as any,
       );
 
       if (result.conversationId) {
@@ -69,6 +70,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         flow: result.flow,
         funnelStage: result.funnelStage,
         intentScore: result.intentScore,
+        region: result.region,
       });
 
       // Stream the reply token by token
@@ -88,7 +90,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('send-public')
   async handlePublicSend(
-    @MessageBody() data: { agentId: string; message: string; visitorId: string; conversationId?: string; utmParams?: any; referrerUrl?: string; landingPageUrl?: string },
+    @MessageBody() data: { agentId: string; message: string; visitorId: string; conversationId?: string; utmParams?: any; referrerUrl?: string; landingPageUrl?: string; regionContext?: { ip?: string; phone?: string; browserLanguage?: string; timezone?: string; userSelectedRegion?: string } },
     @ConnectedSocket() client: Socket,
   ) {
     try {
@@ -101,6 +103,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         data.visitorId,
         true,
         { utmParams: data.utmParams, referrerUrl: data.referrerUrl, landingPageUrl: data.landingPageUrl },
+        data.regionContext as any,
       );
 
       if (result.conversationId) {
@@ -113,6 +116,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         flow: result.flow,
         funnelStage: result.funnelStage,
         intentScore: result.intentScore,
+        region: result.region,
       });
 
       const fullReply = result.reply;

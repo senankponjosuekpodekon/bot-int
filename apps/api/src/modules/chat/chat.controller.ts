@@ -17,6 +17,8 @@ class SendMessageDto {
   @IsBoolean()
   @IsOptional()
   captureLead?: boolean;
+  @IsOptional()
+  regionContext?: { ip?: string; phone?: string; browserLanguage?: string; timezone?: string; userSelectedRegion?: string };
 }
 
 @UseGuards(JwtAuthGuard)
@@ -33,6 +35,8 @@ export class ChatController {
       dto.conversationId,
       dto.visitorId,
       dto.captureLead,
+      undefined,
+      dto.regionContext as any,
     );
   }
 

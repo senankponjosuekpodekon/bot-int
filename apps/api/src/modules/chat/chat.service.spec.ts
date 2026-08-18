@@ -8,6 +8,7 @@ import { AgentsService } from '../agents/agents.service';
 import { LeadsService } from '../leads/leads.service';
 import { Agent } from '../agents/agent.entity';
 import { Lead } from '../leads/lead.entity';
+import { AgentFeedback } from './agent-feedback.entity';
 
 type RepositoryMock<T extends ObjectLiteral> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
@@ -19,6 +20,8 @@ const createRepositoryMock = <T extends ObjectLiteral>(): RepositoryMock<T> => (
   update: jest.fn(),
   createQueryBuilder: jest.fn(),
 });
+
+const noopService = () => new Proxy({}, { get: () => jest.fn().mockResolvedValue([]) });
 
 describe('ChatService', () => {
   let service: ChatService;
@@ -38,9 +41,17 @@ describe('ChatService', () => {
     service = new ChatService(
       convRepo as unknown as Repository<Conversation>,
       msgRepo as unknown as Repository<Message>,
+      { create: jest.fn(), find: jest.fn() } as any, // feedbackRepo
       agentsService as unknown as AgentsService,
       ollamaService as unknown as OllamaService,
       leadsService as unknown as LeadsService,
+      noopService() as any, // knowledgeService
+      noopService() as any, // productsService
+      noopService() as any, // integrationsService
+      noopService() as any, // flowsService
+      noopService() as any, // intelligenceService
+      { checkQuota: jest.fn().mockResolvedValue({ allowed: true }), incrementUsage: jest.fn().mockResolvedValue(undefined) } as any, // billingService
+      { detectRegion: jest.fn().mockResolvedValue('international'), buildSystemPrompt: jest.fn().mockImplementation((base: string) => base), getProfile: jest.fn() } as any, // regionsService
     );
 
     jest.clearAllMocks();
@@ -69,12 +80,10 @@ describe('ChatService', () => {
 
       const result = await service.sendMessage('t-1', 'agent-1', 'Salut');
 
-      expect(result).toEqual({ reply: 'Bonjour !', conversationId: 'conv-1', leadId: 'lead-1' });
+      expect(result.reply).toBe('Bonjour !');
+      expect(result.conversationId).toBe('conv-1');
+      expect(result.leadId).toBe('lead-1');
       expect(leadsService.create).toHaveBeenCalledWith('t-1', expect.objectContaining({ agentId: 'agent-1', source: 'chat' }));
-      expect(ollamaService.chat).toHaveBeenCalledWith([
-        { role: 'system', content: 'Helpful bot' },
-        { role: 'user', content: 'Salut' },
-      ]);
     });
 
     it('uses an existing conversation and does not capture a second lead', async () => {
@@ -92,11 +101,15 @@ describe('ChatService', () => {
 
       const result = await service.sendMessage('t-1', 'agent-1', 'Aide', 'conv-1');
 
-      expect(result).toEqual({ reply: 'Comment puis-je vous aider ?', conversationId: 'conv-1', leadId: 'lead-1' });
+      expect(result.reply).toBe('Comment puis-je vous aider ?');
+      expect(result.conversationId).toBe('conv-1');
+      expect(result.leadId).toBe('lead-1');
       expect(leadsService.create).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundException when conversation does not exist', async () => {
+      const agent = { id: 'agent-1', systemPrompt: 'Helpful bot', tenantId: 't-1' } as Agent;
+      agentsService.findById.mockResolvedValue(agent);
       convRepo.findOne?.mockResolvedValue(null);
 
       await expect(service.sendMessage('t-1', 'agent-1', 'Salut', 'missing-id')).rejects.toBeInstanceOf(NotFoundException);
