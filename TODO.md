@@ -119,8 +119,8 @@
 - [x] Dashboard loading skeleton (`dashboard/loading.tsx`)
 - [x] Agent detail/edit page
 - [x] Lead detail page avec timeline/status
-- [ ] Loading skeletons pour toutes les pages (partiel — dashboard + chat ok)
-- [ ] Responsive mobile layout
+- [x] Loading skeletons pour toutes les pages
+- [x] Responsive mobile layout
 
 ### Intelligence — Boucle fermée ✅
 - [x] recordConversation() — enregistre chaque échange (intent, knowledge, products)
