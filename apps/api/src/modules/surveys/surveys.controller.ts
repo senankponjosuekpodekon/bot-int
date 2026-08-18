@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SurveyType } from './survey.entity';
 import { IsBoolean, IsEnum, IsNotEmpty, IsObject, IsOptional, IsString, IsArray } from 'class-validator';
 import { Response } from 'express';
+import { SendSurveyEmailDto } from './dto/send-survey-email.dto';
 
 class CreateSurveyDto {
   @IsString() @IsNotEmpty() title: string;
@@ -99,9 +100,9 @@ export class SurveysController {
   sendEmail(
     @Request() req,
     @Param('id') id: string,
-    @Body() body: { leadId: string; email: string },
+    @Body() dto: SendSurveyEmailDto,
   ) {
-    return this.surveysService.sendPostPurchaseEmail(req.user.tenantId, body.leadId, body.email, id);
+    return this.surveysService.sendPostPurchaseEmail(req.user.tenantId, dto.leadId, dto.email, id);
   }
 
   @Get(':id/export')

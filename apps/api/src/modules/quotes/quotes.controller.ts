@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Res, Request, UseGuards } from '@nestjs/common';
-import { IsString, IsNotEmpty, IsOptional, IsArray, IsNumber } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsArray, IsNumber, IsObject } from 'class-validator';
 import { QuotesService } from './quotes.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Response } from 'express';
@@ -26,7 +26,7 @@ class CreateQuoteDto {
 
 class CreateFromFlowDto {
   @IsString() @IsNotEmpty() leadId: string;
-  responses: Record<string, string>;
+  @IsObject() responses: Record<string, string>;
 }
 
 class UpdateStatusDto {

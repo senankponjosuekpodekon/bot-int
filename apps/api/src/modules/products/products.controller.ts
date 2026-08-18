@@ -18,6 +18,7 @@ import { AutoSyncService } from './auto-sync.service';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CacheService } from '../../common/cache.service';
+import { UpdateProductDto } from './dto/update-product.dto';
 class CreateProductDto {
   @IsString() @IsNotEmpty() name: string;
   @IsString() @IsOptional() description?: string;
@@ -103,7 +104,7 @@ export class ProductsController {
   }
 
   @Patch(':id')
-  update(@Request() req, @Param('id') id: string, @Body() dto: Partial<CreateProductDto>) {
+  update(@Request() req, @Param('id') id: string, @Body() dto: UpdateProductDto) {
     this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
     return this.productsService.update(id, req.user.tenantId, dto);
   }

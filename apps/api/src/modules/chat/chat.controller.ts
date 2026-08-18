@@ -7,6 +7,7 @@ import { Type } from 'class-transformer';
 import { AttachLeadDto } from './dto/attach-lead.dto';
 import { ListConversationsDto } from './dto/list-conversations.dto';
 import { UpdateConversationStatusDto } from './dto/update-conversation-status.dto';
+import { CreateFeedbackDto } from './dto/create-feedback.dto';
 
 class SendMessageDto {
   @IsString() @IsNotEmpty() agentId: string;
@@ -85,15 +86,15 @@ export class ChatController {
   @Post('feedback')
   createFeedback(
     @Request() req,
-    @Body() body: { agentId: string; userMessage: string; originalReply: string; correctedReply: string; reason?: string },
+    @Body() dto: CreateFeedbackDto,
   ) {
     return this.chatService.createFeedback(
       req.user.tenantId,
-      body.agentId,
-      body.userMessage,
-      body.originalReply,
-      body.correctedReply,
-      body.reason,
+      dto.agentId,
+      dto.userMessage,
+      dto.originalReply,
+      dto.correctedReply,
+      dto.reason,
     );
   }
 

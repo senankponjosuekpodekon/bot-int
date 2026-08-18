@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Request, UseGuards }
 import { IsString, IsNotEmpty, IsArray, IsOptional, IsBoolean, IsObject } from 'class-validator';
 import { FlowsService } from './flows.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UpdateFlowDto } from './dto/update-flow.dto';
 
 class FlowFieldDto {
   @IsString() id: string;
@@ -51,7 +52,7 @@ export class FlowsController {
   }
 
   @Patch(':id')
-  update(@Request() req, @Param('id') id: string, @Body() dto: Partial<CreateFlowDto>) {
+  update(@Request() req, @Param('id') id: string, @Body() dto: UpdateFlowDto) {
     return this.service.update(id, req.user.tenantId, dto);
   }
 
