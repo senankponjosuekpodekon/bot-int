@@ -103,8 +103,8 @@
 - [x] Lead auto-creation from chat conversations
 - [x] Rate limiting per tenant (`@nestjs/throttler` — ThrottlerGuard 100 req/min)
 - [x] Cache API (CacheService in-memory, CacheModule global) — products + billing
-- [ ] 🔥 DTO validation with `class-validator` on all endpoints (API partielle)
-- [ ] Agent `PATCH` endpoint — full update with DTO
+- [x] 🔥 DTO validation with `class-validator` on all endpoints (API complète)
+- [x] Agent `PATCH` endpoint — full update with DTO
 - [ ] Chat — inject knowledge base context into Ollama prompt (RAG)
 - [ ] File upload for knowledge documents (PDF, DOCX)
 - [ ] Pagination on all list endpoints (`/agents`, `/leads`, `/knowledge`)
