@@ -218,6 +218,8 @@ export const productsApi = {
 export const analyticsApi = {
   dashboard: () => api.get('/analytics/dashboard').then((r) => r.data),
   timeline: (days?: number) => api.get('/analytics/timeline', { params: { days } }).then((r) => r.data),
+  funnel: () => api.get('/analytics/funnel').then((r) => r.data),
+  acquisition: () => api.get('/analytics/acquisition').then((r) => r.data),
 };
 
 export const integrationsApi = {

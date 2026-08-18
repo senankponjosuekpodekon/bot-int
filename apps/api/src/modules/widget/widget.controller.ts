@@ -12,6 +12,9 @@ class PublicSendMessageDto {
   @IsString() @IsNotEmpty() message: string;
   @IsString() @IsOptional() conversationId?: string;
   @IsString() @IsNotEmpty() visitorId: string;
+  @IsOptional() utmParams?: { source?: string; medium?: string; campaign?: string; term?: string; content?: string };
+  @IsString() @IsOptional() referrerUrl?: string;
+  @IsString() @IsOptional() landingPageUrl?: string;
 }
 
 class PublicFlowResponseDto {
@@ -46,7 +49,7 @@ export class WidgetController {
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @Post('send')
   send(@Body() dto: PublicSendMessageDto) {
-    return this.service.sendPublicMessage(dto.agentId, dto.message, dto.visitorId, dto.conversationId);
+    return this.service.sendPublicMessage(dto.agentId, dto.message, dto.visitorId, dto.conversationId, dto.utmParams, dto.referrerUrl, dto.landingPageUrl);
   }
 
   @Get('history/:agentId')

@@ -23,6 +23,18 @@ export const EMBED_SCRIPT = `
   var messages = [];
   var conversationId = null;
 
+  // UTM and referrer tracking
+  var utmParams = {};
+  try {
+    var urlParams = new URLSearchParams(window.location.search);
+    ['source', 'medium', 'campaign', 'term', 'content'].forEach(function(k) {
+      var v = urlParams.get('utm_' + k);
+      if (v) utmParams[k] = v;
+    });
+  } catch(e) {}
+  var referrerUrl = document.referrer || '';
+  var landingPageUrl = window.location.href || '';
+
   function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
   function createBubble() {
@@ -248,7 +260,7 @@ export const EMBED_SCRIPT = `
     fetch(apiUrl + '/widget/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agentId: agentId, message: text, visitorId: visitorId, conversationId: conversationId })
+      body: JSON.stringify({ agentId: agentId, message: text, visitorId: visitorId, conversationId: conversationId, utmParams: utmParams, referrerUrl: referrerUrl, landingPageUrl: landingPageUrl })
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {

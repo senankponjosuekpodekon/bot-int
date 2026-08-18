@@ -6,6 +6,17 @@ import { siteApi } from '@/lib/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
+function getUtmParams() {
+  if (typeof window === 'undefined') return {};
+  const params: any = {};
+  const sp = new URLSearchParams(window.location.search);
+  ['source', 'medium', 'campaign', 'term', 'content'].forEach((k) => {
+    const v = sp.get('utm_' + k);
+    if (v) params[k] = v;
+  });
+  return params;
+}
+
 export default function PublicSitePage() {
   const params = useParams();
   const slug = params.slug as string;
@@ -62,7 +73,7 @@ export default function PublicSitePage() {
       const res = await fetch(`${API_BASE}/widget/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: site.agentId, message: text, visitorId, conversationId: conversationId || undefined }),
+        body: JSON.stringify({ agentId: site.agentId, message: text, visitorId, conversationId: conversationId || undefined, utmParams: getUtmParams(), referrerUrl: typeof window !== 'undefined' ? document.referrer : '', landingPageUrl: typeof window !== 'undefined' ? window.location.href : '' }),
       });
       const data = await res.json();
       if (data.conversationId) setConversationId(data.conversationId);

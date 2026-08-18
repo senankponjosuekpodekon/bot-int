@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Conversation, ConversationStatus } from '../chat/conversation.entity';
+import { Conversation, ConversationStatus, FunnelStage, AcquisitionChannel } from '../chat/conversation.entity';
 import { Message } from '../chat/message.entity';
 import { Lead, LeadStatus } from '../leads/lead.entity';
 import { Product } from '../products/product.entity';
@@ -114,5 +114,149 @@ export class AnalyticsService {
       .getRawMany();
 
     return conversations.map((c) => ({ date: c.date, count: c.count }));
+  }
+
+  async getFunnelAnalytics(tenantId: string) {
+    const conversations = await this.convRepo.find({ where: { tenantId } });
+    const leads = await this.leadRepo.find({ where: { tenantId } });
+
+    const stageCounts: Record<string, number> = {};
+    const stageIntents: Record<string, number[]> = {};
+    Object.values(FunnelStage).forEach((s) => { stageCounts[s] = 0; stageIntents[s] = []; });
+
+    conversations.forEach((c) => {
+      const stage = c.funnelStage || FunnelStage.AWARENESS;
+      stageCounts[stage] = (stageCounts[stage] || 0) + 1;
+      if (c.intentScore !== undefined && c.intentScore !== null) {
+        stageIntents[stage].push(c.intentScore);
+      }
+    });
+
+    const stages = [
+      { stage: FunnelStage.AWARENESS, label: 'Awareness', color: '#3b82f6' },
+      { stage: FunnelStage.INTEREST, label: 'Intérêt', color: '#8b5cf6' },
+      { stage: FunnelStage.QUALIFICATION, label: 'Qualification', color: '#f97316' },
+      { stage: FunnelStage.CONSIDERATION, label: 'Considération', color: '#ec4899' },
+      { stage: FunnelStage.DECISION, label: 'Décision', color: '#ef4444' },
+      { stage: FunnelStage.CLOSED_WON, label: 'Gagné', color: '#10b981' },
+      { stage: FunnelStage.CLOSED_LOST, label: 'Perdu', color: '#6b7280' },
+    ];
+
+    const funnelData = stages.map((s) => {
+      const intents = stageIntents[s.stage] || [];
+      const avgIntent = intents.length > 0 ? Math.round(intents.reduce((a, b) => a + b, 0) / intents.length) : 0;
+      return {
+        stage: s.stage,
+        label: s.label,
+        color: s.color,
+        count: stageCounts[s.stage] || 0,
+        avgIntentScore: avgIntent,
+      };
+    });
+
+    const totalConv = conversations.length;
+    const wonCount = stageCounts[FunnelStage.CLOSED_WON] || 0;
+    const lostCount = stageCounts[FunnelStage.CLOSED_LOST] || 0;
+    const decisionCount = stageCounts[FunnelStage.DECISION] || 0;
+    const conversionRate = totalConv > 0 ? Math.round((wonCount / totalConv) * 100) : 0;
+    const dropoffRates = funnelData.map((s, i) => {
+      if (i === 0) return 0;
+      const prev = funnelData[i - 1].count;
+      return prev > 0 ? Math.round(((prev - s.count) / prev) * 100) : 0;
+    });
+
+    const highIntentLeads = leads.filter((l) => l.score >= 50).length;
+    const avgLeadScore = leads.length > 0 ? Math.round(leads.reduce((s, l) => s + l.score, 0) / leads.length) : 0;
+
+    return {
+      stages: funnelData.map((s, i) => ({ ...s, dropoffRate: dropoffRates[i] })),
+      summary: {
+        totalConversations: totalConv,
+        conversionRate,
+        wonCount,
+        lostCount,
+        decisionCount,
+        highIntentLeads,
+        avgLeadScore,
+      },
+    };
+  }
+
+  async getAcquisitionAnalytics(tenantId: string) {
+    const conversations = await this.convRepo.find({ where: { tenantId } });
+    const leads = await this.leadRepo.find({ where: { tenantId } });
+
+    const channelCounts: Record<string, number> = {};
+    const channelConversions: Record<string, number> = {};
+    const channelIntents: Record<string, number[]> = {};
+    Object.values(AcquisitionChannel).forEach((c) => {
+      channelCounts[c] = 0;
+      channelConversions[c] = 0;
+      channelIntents[c] = [];
+    });
+
+    conversations.forEach((c) => {
+      const ch = c.acquisitionChannel || AcquisitionChannel.UNKNOWN;
+      channelCounts[ch] = (channelCounts[ch] || 0) + 1;
+      if (c.funnelStage === FunnelStage.CLOSED_WON) {
+        channelConversions[ch] = (channelConversions[ch] || 0) + 1;
+      }
+      if (c.intentScore) channelIntents[ch].push(c.intentScore);
+    });
+
+    const channels = [
+      { channel: AcquisitionChannel.META_ADS, label: 'Meta Ads', color: '#1877f2' },
+      { channel: AcquisitionChannel.GOOGLE_ADS, label: 'Google Ads', color: '#ea4335' },
+      { channel: AcquisitionChannel.ORGANIC, label: 'Organique', color: '#10b981' },
+      { channel: AcquisitionChannel.SOCIAL, label: 'Social', color: '#8b5cf6' },
+      { channel: AcquisitionChannel.DIRECT, label: 'Direct', color: '#6b7280' },
+      { channel: AcquisitionChannel.REFERRAL, label: 'Referral', color: '#f97316' },
+      { channel: AcquisitionChannel.EMAIL, label: 'Email', color: '#3b82f6' },
+      { channel: AcquisitionChannel.QR_CODE, label: 'QR Code', color: '#ec4899' },
+      { channel: AcquisitionChannel.LANDING_PAGE, label: 'Landing Page', color: '#14b8a6' },
+      { channel: AcquisitionChannel.WEB_CHAT, label: 'Web Chat', color: '#6366f1' },
+      { channel: AcquisitionChannel.PUBLIC_LINK, label: 'Lien Public', color: '#a855f7' },
+      { channel: AcquisitionChannel.UNKNOWN, label: 'Inconnu', color: '#9ca3af' },
+    ];
+
+    const channelData = channels
+      .filter((c) => channelCounts[c.channel] > 0)
+      .map((c) => {
+        const count = channelCounts[c.channel];
+        const conversions = channelConversions[c.channel] || 0;
+        const intents = channelIntents[c.channel] || [];
+        const avgIntent = intents.length > 0 ? Math.round(intents.reduce((a, b) => a + b, 0) / intents.length) : 0;
+        return {
+          ...c,
+          count,
+          conversions,
+          conversionRate: count > 0 ? Math.round((conversions / count) * 100) : 0,
+          avgIntentScore: avgIntent,
+        };
+      })
+      .sort((a, b) => b.count - a.count);
+
+    // UTM campaign breakdown
+    const utmCampaigns: Record<string, number> = {};
+    conversations.forEach((c) => {
+      const camp = c.utmParams?.campaign;
+      if (camp) utmCampaigns[camp] = (utmCampaigns[camp] || 0) + 1;
+    });
+
+    const topCampaigns = Object.entries(utmCampaigns)
+      .map(([campaign, count]) => ({ campaign, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    return {
+      channels: channelData,
+      topCampaigns,
+      summary: {
+        totalTracked: conversations.filter((c) => c.acquisitionChannel !== AcquisitionChannel.UNKNOWN).length,
+        totalUntracked: conversations.filter((c) => c.acquisitionChannel === AcquisitionChannel.UNKNOWN).length,
+        bestChannel: channelData[0]?.channel || null,
+        bestConversionChannel: channelData.sort((a, b) => b.conversionRate - a.conversionRate)[0]?.channel || null,
+      },
+    };
   }
 }

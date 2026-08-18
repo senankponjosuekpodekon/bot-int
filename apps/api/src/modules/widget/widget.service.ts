@@ -47,6 +47,9 @@ export class WidgetService {
     message: string,
     visitorId: string,
     conversationId?: string,
+    utmParams?: { source?: string; medium?: string; campaign?: string; term?: string; content?: string },
+    referrerUrl?: string,
+    landingPageUrl?: string,
   ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: any }> {
     const agent = await this.agentRepo.findOne({ where: { id: agentId, isActive: true } });
     if (!agent) throw new NotFoundException('Agent not found');
@@ -58,6 +61,7 @@ export class WidgetService {
       conversationId,
       visitorId,
       true,
+      { utmParams, referrerUrl, landingPageUrl },
     );
   }
 

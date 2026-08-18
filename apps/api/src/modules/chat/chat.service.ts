@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, MoreThan } from 'typeorm';
-import { Conversation, ConversationStatus } from './conversation.entity';
+import { Conversation, ConversationStatus, FunnelStage, AcquisitionChannel } from './conversation.entity';
 import { Message, MessageRole } from './message.entity';
 import { AgentFeedback } from './agent-feedback.entity';
 import { AgentsService } from '../agents/agents.service';
@@ -67,7 +67,13 @@ export class ChatService {
     conversationId?: string,
     visitorId?: string,
     captureLead = true,
-  ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: { id: string; title: string; fields: any[] } | null; products?: any[] }> {
+    tracking?: {
+      utmParams?: { source?: string; medium?: string; campaign?: string; term?: string; content?: string };
+      referrerUrl?: string;
+      landingPageUrl?: string;
+      acquisitionChannel?: AcquisitionChannel;
+    },
+  ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: { id: string; title: string; fields: any[] } | null; products?: any[]; funnelStage?: FunnelStage; intentScore?: number }> {
     const agent = await this.agentsService.findById(agentId, tenantId);
     const personalityConfig = agent.personalityConfig || {};
 
@@ -109,7 +115,16 @@ export class ChatService {
       }
 
       conversation = await this.convRepo.save(
-        this.convRepo.create({ agentId, tenantId, visitorId }),
+        this.convRepo.create({
+          agentId, tenantId, visitorId,
+          utmParams: tracking?.utmParams || {},
+          referrerUrl: tracking?.referrerUrl || null,
+          landingPageUrl: tracking?.landingPageUrl || null,
+          acquisitionChannel: tracking?.acquisitionChannel || this.detectAcquisitionChannel(tracking),
+          funnelStage: FunnelStage.AWARENESS,
+          intentScore: 0,
+          stageHistory: [FunnelStage.AWARENESS],
+        }),
       );
 
       if (captureLead !== false) {
@@ -301,6 +316,30 @@ export class ChatService {
       // Products search is optional
     }
 
+    // Funnel stage detection and agent behavior adaptation
+    const detectedStage = this.detectFunnelStage(userMessage, conversation.funnelStage);
+    if (detectedStage !== conversation.funnelStage) {
+      const stageHistory = [...(conversation.stageHistory || []), detectedStage];
+      await this.convRepo.update(conversation.id, { funnelStage: detectedStage, stageHistory });
+      conversation.funnelStage = detectedStage;
+    }
+
+    // Intent score calculation
+    const newIntentScore = this.calculateIntentScore(userMessage, conversation.intentScore);
+    if (newIntentScore !== conversation.intentScore) {
+      await this.convRepo.update(conversation.id, { intentScore: newIntentScore });
+      conversation.intentScore = newIntentScore;
+    }
+
+    // Inject funnel-stage-aware system prompt
+    const stageGuidance = this.getStageGuidance(conversation.funnelStage);
+    if (stageGuidance) {
+      messages.splice(1, 0, {
+        role: 'system',
+        content: stageGuidance,
+      });
+    }
+
     const reply = await this.ollamaService.chat(messages);
 
     let finalReply = reply;
@@ -405,7 +444,7 @@ export class ChatService {
       // Intelligence recording is optional
     }
 
-    return { reply: finalReply, conversationId: conversation.id, leadId: responseLeadId, flow: flowData, products: carouselProducts.length > 0 ? carouselProducts : undefined };
+    return { reply: finalReply, conversationId: conversation.id, leadId: responseLeadId, flow: flowData, products: carouselProducts.length > 0 ? carouselProducts : undefined, funnelStage: conversation.funnelStage, intentScore: conversation.intentScore };
   }
 
   async getHistory(conversationId: string, tenantId: string) {
@@ -453,6 +492,14 @@ export class ChatService {
 
     if (params.leadStatus) {
       qb.andWhere('lead.status = :leadStatus', { leadStatus: params.leadStatus });
+    }
+
+    if (params.funnelStage) {
+      qb.andWhere('conversation.funnelStage = :funnelStage', { funnelStage: params.funnelStage });
+    }
+
+    if (params.acquisitionChannel) {
+      qb.andWhere('conversation.acquisitionChannel = :acquisitionChannel', { acquisitionChannel: params.acquisitionChannel });
     }
 
     const [data, total] = await qb.getManyAndCount();
@@ -605,5 +652,109 @@ export class ChatService {
 
   async deleteFeedback(id: string, tenantId: string): Promise<void> {
     await this.feedbackRepo.delete({ id, tenantId });
+  }
+
+  // ─── Funnel stage detection ───
+  private detectFunnelStage(message: string, currentStage: FunnelStage): FunnelStage {
+    const msg = message.toLowerCase();
+    const stageOrder = [
+      FunnelStage.AWARENESS,
+      FunnelStage.INTEREST,
+      FunnelStage.QUALIFICATION,
+      FunnelStage.CONSIDERATION,
+      FunnelStage.DECISION,
+    ];
+    const currentIndex = stageOrder.indexOf(currentStage);
+
+    // Decision signals — ready to buy/book
+    if (/acheter|payer|commander|checkout|payment|je prends|je veux|valider|confirmer|c'est parti|go|ok je|parfait/.test(msg)) {
+      return FunnelStage.DECISION;
+    }
+
+    // Consideration signals — asking for quotes, comparisons, recommendations
+    if (/devis|tarif|prix|combien|co[uû]te|compar|recommand|lequel|quelle option|diff[eé]rence|avantage/.test(msg)) {
+      return Math.max(currentIndex, 3) >= 3 ? FunnelStage.CONSIDERATION : FunnelStage.CONSIDERATION;
+    }
+
+    // Qualification signals — sharing info about themselves, budget, needs
+    if (/budget|j'ai besoin|je cherche|mon projet|ma situation|urgence|d[eé]lai|quand|pour quand|mon besoin/.test(msg)) {
+      return Math.max(currentIndex, 2) >= 2 ? FunnelStage.QUALIFICATION : FunnelStage.QUALIFICATION;
+    }
+
+    // Interest signals — asking questions about product/service
+    if (/comment|pourquoi|qu'est-ce|c'est quoi|fonctionne|vous faites|vous proposez|service|produit|capacit[eé]|possible de/.test(msg)) {
+      return Math.max(currentIndex, 1) >= 1 ? FunnelStage.INTEREST : FunnelStage.INTEREST;
+    }
+
+    return currentStage;
+  }
+
+  // ─── Intent score calculation (0-100) ───
+  private calculateIntentScore(message: string, currentScore: number): number {
+    const msg = message.toLowerCase();
+    let delta = 0;
+
+    // High intent signals
+    if (/acheter|payer|commander|checkout|je prends|je veux bien|valider|confirmer/.test(msg)) delta += 15;
+    if (/devis|tarif|prix|combien|co[uû]te/.test(msg)) delta += 10;
+    if (/rendez-vous|rdv|appointment|meeting|consultation|d[eé]mo/.test(msg)) delta += 10;
+    if (/budget|j'ai besoin|urgence|d[eé]lai/.test(msg)) delta += 8;
+    if (/contact|t[eé]l[eé]phone|email|appeler|recontacter/.test(msg)) delta += 5;
+    if (/int[eé]ress[eé]|plut[^o]t|j'aime|bien|parfait/.test(msg)) delta += 5;
+
+    // Negative signals
+    if (/trop cher|pas maintenant|je r[eé]fl[eé]chis|plus tard|pas int[eé]ress[eé]/.test(msg)) delta -= 10;
+    if (/au revoir|merci|c'est tout|rien d'autre/.test(msg)) delta -= 3;
+
+    return Math.max(0, Math.min(100, currentScore + delta));
+  }
+
+  // ─── Acquisition channel detection from tracking data ───
+  private detectAcquisitionChannel(tracking?: {
+    utmParams?: { source?: string; medium?: string; campaign?: string };
+    referrerUrl?: string;
+    landingPageUrl?: string;
+  }): AcquisitionChannel {
+    if (!tracking) return AcquisitionChannel.UNKNOWN;
+
+    const utm = tracking.utmParams;
+    if (utm?.source) {
+      const src = utm.source.toLowerCase();
+      if (src.includes('facebook') || src.includes('instagram') || src.includes('meta')) return AcquisitionChannel.META_ADS;
+      if (src.includes('google') || src.includes('adwords')) return AcquisitionChannel.GOOGLE_ADS;
+      if (src.includes('newsletter') || src.includes('email')) return AcquisitionChannel.EMAIL;
+      if (utm.medium === 'social' || src.includes('social')) return AcquisitionChannel.SOCIAL;
+      if (src.includes('referral')) return AcquisitionChannel.REFERRAL;
+    }
+
+    if (tracking.referrerUrl) {
+      const ref = tracking.referrerUrl.toLowerCase();
+      if (ref.includes('facebook') || ref.includes('instagram')) return AcquisitionChannel.SOCIAL;
+      if (ref.includes('google.')) return AcquisitionChannel.ORGANIC;
+      if (ref.includes('t.co') || ref.includes('twitter') || ref.includes('linkedin')) return AcquisitionChannel.SOCIAL;
+    }
+
+    if (tracking.landingPageUrl) {
+      const landing = tracking.landingPageUrl.toLowerCase();
+      if (landing.includes('/site/')) return AcquisitionChannel.LANDING_PAGE;
+      if (landing.includes('/chat/')) return AcquisitionChannel.PUBLIC_LINK;
+      if (landing.includes('qr=')) return AcquisitionChannel.QR_CODE;
+    }
+
+    return AcquisitionChannel.UNKNOWN;
+  }
+
+  // ─── Stage-specific guidance for the agent ───
+  private getStageGuidance(stage: FunnelStage): string | null {
+    const guidance: Record<FunnelStage, string> = {
+      [FunnelStage.AWARENESS]: `Le visiteur découvre votre entreprise. Sois accueillant, pose des questions ouvertes pour comprendre son besoin. Ne sois pas commercial. Objectif: comprendre ce qu'il cherche et l'orienter.`,
+      [FunnelStage.INTEREST]: `Le visiteur montre de l'intérêt. Renseigne-le sur vos services/produits, explique les bénéfices clés. Pose des questions pour qualifier son besoin (contexte, usage attendu). Objectif: approfondir la conversation.`,
+      [FunnelStage.QUALIFICATION]: `Le visiteur partage des informations sur son besoin/budget/délai. Qualifie-le: budget, urgence, décisionnaire, critères. Si le profil correspond, propose une solution concrète. Objectif: valider le fit.`,
+      [FunnelStage.CONSIDERATION]: `Le visiteur évalue vos solutions. Donne des détails précis (prix, comparaison, options). Adresse ses objections. Propose un devis ou une démo. Objectif: l'aider à décider.`,
+      [FunnelStage.DECISION]: `Le visiteur est prêt à acheter/réserver. Facilite l'action: lien de paiement, prise de RDV, confirmation de commande. Sois direct et rassurant. Objectif: closing.`,
+      [FunnelStage.CLOSED_WON]: `Le visiteur a converti. Remercie-le, confirme les prochaines étapes, propose un suivi. Objectif: fidélisation.`,
+      [FunnelStage.CLOSED_LOST]: `Le visiteur n'est pas prêt ou a refusé. Reste courtois, propose de revenir vers lui plus tard, laisse une bonne impression. Objectif: nurturing.`,
+    };
+    return guidance[stage] || null;
   }
 }

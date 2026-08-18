@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { MessageSquare, Users, Package, Bot, TrendingUp, Target, Zap, Clock } from 'lucide-react';
+import { MessageSquare, Users, Package, Bot, TrendingUp, Target, Zap, Clock, Filter, Radio, ArrowRight } from 'lucide-react';
 import { analyticsApi } from '@/lib/api';
 
 interface DashboardData {
@@ -13,17 +13,23 @@ interface DashboardData {
 export default function AnalyticsPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [timeline, setTimeline] = useState<{ date: string; count: number }[]>([]);
+  const [funnel, setFunnel] = useState<any>(null);
+  const [acquisition, setAcquisition] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [d, t] = await Promise.all([
+        const [d, t, f, a] = await Promise.all([
           analyticsApi.dashboard(),
           analyticsApi.timeline(30),
+          analyticsApi.funnel(),
+          analyticsApi.acquisition(),
         ]);
         setData(d);
         setTimeline(t);
+        setFunnel(f);
+        setAcquisition(a);
       } catch {
         // error
       } finally {
@@ -144,6 +150,119 @@ export default function AnalyticsPage() {
             </div>
           </div>
         </div>
+
+        {/* Funnel Analytics */}
+        {funnel && (
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Filter className="w-4 h-4 text-gray-400" /> Funnel de conversion</h2>
+            <div className="space-y-2">
+              {funnel.stages.map((s: any, i: number) => {
+                const maxCount = Math.max(...funnel.stages.map((x: any) => x.count), 1);
+                const width = s.count > 0 ? (s.count / maxCount) * 100 : 0;
+                return (
+                  <div key={s.stage}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="font-medium text-gray-700">{s.label}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-900 font-bold">{s.count}</span>
+                        {s.dropoffRate > 0 && (
+                          <span className="text-xs text-red-400">−{s.dropoffRate}%</span>
+                        )}
+                        {s.avgIntentScore > 0 && (
+                          <span className="text-xs text-orange-500">Intent: {s.avgIntentScore}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="h-7 bg-gray-100 rounded-lg overflow-hidden">
+                      <div className="h-full rounded-lg flex items-center px-2 transition-all" style={{ width: `${Math.max(width, s.count > 0 ? 5 : 0)}%`, background: s.color }}>
+                        {width > 15 && <span className="text-xs text-white font-medium">{s.count}</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="grid grid-cols-4 gap-3 mt-4 pt-4 border-t border-gray-100">
+              <div className="text-center">
+                <p className="text-lg font-bold text-gray-900">{funnel.summary.conversionRate}%</p>
+                <p className="text-xs text-gray-500">Conversion</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-green-600">{funnel.summary.wonCount}</p>
+                <p className="text-xs text-gray-500">Gagné</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-red-400">{funnel.summary.lostCount}</p>
+                <p className="text-xs text-gray-500">Perdu</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-orange-500">{funnel.summary.highIntentLeads}</p>
+                <p className="text-xs text-gray-500">Hot leads</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Acquisition Channel Analytics */}
+        {acquisition && (
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Radio className="w-4 h-4 text-gray-400" /> Canaux d'acquisition</h2>
+            {acquisition.channels.length > 0 ? (
+              <div className="space-y-3">
+                {acquisition.channels.map((c: any) => {
+                  const maxCount = Math.max(...acquisition.channels.map((x: any) => x.count), 1);
+                  const width = (c.count / maxCount) * 100;
+                  return (
+                    <div key={c.channel}>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded" style={{ background: c.color }} />
+                          <span className="font-medium text-gray-700">{c.label}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-gray-900 font-bold">{c.count}</span>
+                          {c.conversions > 0 && (
+                            <span className="text-xs text-green-600 flex items-center gap-0.5">
+                              <ArrowRight className="w-3 h-3" />{c.conversions} ({c.conversionRate}%)
+                            </span>
+                          )}
+                          {c.avgIntentScore > 0 && (
+                            <span className="text-xs text-orange-500">Intent: {c.avgIntentScore}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="h-6 bg-gray-100 rounded-lg overflow-hidden">
+                        <div className="h-full rounded-lg" style={{ width: `${width}%`, background: c.color }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                {acquisition.topCampaigns.length > 0 && (
+                  <div className="pt-3 border-t border-gray-100">
+                    <p className="text-xs font-medium text-gray-500 mb-2">Top campagnes UTM</p>
+                    <div className="flex flex-wrap gap-2">
+                      {acquisition.topCampaigns.map((c: any) => (
+                        <span key={c.campaign} className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                          {c.campaign} — {c.count}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-green-600">{acquisition.summary.totalTracked}</p>
+                    <p className="text-xs text-gray-500">Tracked</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-gray-400">{acquisition.summary.totalUntracked}</p>
+                    <p className="text-xs text-gray-500">Untracked</p>
+                  </div>
+                </div>
+              </div>
+            ) : <p className="text-sm text-gray-400 text-center py-8">Aucune donnée d'acquisition</p>}
+          </div>
+        )}
       </div>
     </div>
   );

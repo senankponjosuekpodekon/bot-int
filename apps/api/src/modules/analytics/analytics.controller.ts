@@ -22,4 +22,14 @@ export class AnalyticsController {
   getTimeline(@Request() req, @Query() query: TimelineDto) {
     return this.analyticsService.getConversationTimeline(req.user.tenantId, query.days || 30);
   }
+
+  @Get('funnel')
+  getFunnel(@Request() req) {
+    return this.analyticsService.getFunnelAnalytics(req.user.tenantId);
+  }
+
+  @Get('acquisition')
+  getAcquisition(@Request() req) {
+    return this.analyticsService.getAcquisitionAnalytics(req.user.tenantId);
+  }
 }
