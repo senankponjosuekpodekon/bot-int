@@ -333,3 +333,21 @@ export const apiKeyApi = {
   revoke: (id: string) => api.post(`/api-keys/${id}/revoke`).then((r) => r.data),
   delete: (id: string) => api.delete(`/api-keys/${id}`).then((r) => r.data),
 };
+
+export const adminApi = {
+  stats: () => api.get('/admin/stats').then((r) => r.data),
+  tenants: (page = 1, limit = 20, search?: string) =>
+    api.get('/admin/tenants', { params: { page, limit, search } }).then((r) => r.data),
+  tenantDetail: (id: string) => api.get(`/admin/tenants/${id}`).then((r) => r.data),
+  toggleTenant: (id: string) => api.patch(`/admin/tenants/${id}/toggle-active`).then((r) => r.data),
+  changeTenantPlan: (id: string, plan: string) => api.patch(`/admin/tenants/${id}/plan`, { plan }).then((r) => r.data),
+  deleteTenant: (id: string) => api.delete(`/admin/tenants/${id}`).then((r) => r.data),
+  users: (page = 1, limit = 20, tenantId?: string) =>
+    api.get('/admin/users', { params: { page, limit, tenantId } }).then((r) => r.data),
+  createUser: (data: any) => api.post('/admin/users', data).then((r) => r.data),
+  toggleUser: (id: string) => api.patch(`/admin/users/${id}/toggle-active`).then((r) => r.data),
+  changeUserRole: (id: string, role: string) => api.patch(`/admin/users/${id}/role`, { role }).then((r) => r.data),
+  resetPassword: (id: string, password: string) => api.post(`/admin/users/${id}/reset-password`, { password }).then((r) => r.data),
+  conversations: (page = 1, limit = 20, tenantId?: string) =>
+    api.get('/admin/conversations', { params: { page, limit, tenantId } }).then((r) => r.data),
+};

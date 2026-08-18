@@ -163,10 +163,45 @@ export default function BillingPage() {
             />
           </div>
           {usagePct > 80 && (
-            <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5" />
-              Vous approchez de votre limite. Pensez à upgrader.
-            </p>
+            <div className={`mt-3 p-3 rounded-xl text-sm flex items-center justify-between ${
+              usagePct >= 100 ? 'bg-red-50 text-red-700' : 'bg-orange-50 text-orange-700'
+            }`}>
+              <span className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                {usagePct >= 100
+                  ? 'Limite atteinte ! Vos conversations sont suspendues.'
+                  : `Il vous reste ${usage?.conversationsRemaining || 0} conversations.`}
+              </span>
+              <button
+                onClick={() => document.getElementById('plan-selection')?.scrollIntoView({ behavior: 'smooth' })}
+                className="font-semibold underline hover:no-underline"
+              >
+                Upgrader →
+              </button>
+            </div>
+          )}
+
+          {/* Free plan specific nudge */}
+          {usage?.plan === 'free' && usagePct < 80 && (
+            <div className="mt-3 p-3 rounded-xl bg-indigo-50 text-indigo-700 text-sm flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4" />
+                Vous êtes sur le plan Free. Passez à Starter pour 1 000 conversations/mois.
+              </span>
+              <button
+                onClick={() => document.getElementById('plan-selection')?.scrollIntoView({ behavior: 'smooth' })}
+                className="font-semibold underline hover:no-underline"
+              >
+                Voir les plans →
+              </button>
+            </div>
+          )}
+
+          {/* Overage info */}
+          {usage?.overageConversations > 0 && (
+            <div className="mt-3 p-3 rounded-xl bg-orange-50 text-orange-700 text-sm">
+              <strong>{usage.overageConversations}</strong> conversations en overage — {(usage.overageCostCents / 100).toFixed(2)}€ facturés en sus.
+            </div>
           )}
         </div>
 
@@ -194,7 +229,7 @@ export default function BillingPage() {
       </div>
 
       {/* Plan selection */}
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Changer de plan</h2>
+      <h2 id="plan-selection" className="text-lg font-semibold text-gray-900 mb-4">Changer de plan</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {plans.map((p) => {
           const isCurrent = currentPlan === p.id;

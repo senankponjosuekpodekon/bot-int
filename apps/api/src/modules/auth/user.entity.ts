@@ -10,6 +10,7 @@ import {
 import { Tenant } from '../tenants/tenant.entity';
 
 export enum UserRole {
+  SUPER_ADMIN = 'super_admin',
   ADMIN = 'admin',
   MANAGER = 'manager',
   VIEWER = 'viewer',

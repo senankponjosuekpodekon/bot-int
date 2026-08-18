@@ -21,6 +21,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { SurveysModule } from './modules/surveys/surveys.module';
 import { SiteModule } from './modules/site/site.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { LoggingMiddleware } from './common/logging.middleware';
 
 @Module({
@@ -72,6 +73,7 @@ import { LoggingMiddleware } from './common/logging.middleware';
     SurveysModule,
     SiteModule,
     BillingModule,
+    AdminModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

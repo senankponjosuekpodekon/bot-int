@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bot, MessageSquare, Users, BookOpen, LayoutDashboard, LogOut, Package, KanbanSquare, BarChart3, Settings, Brain, FileText, Headphones, Code2, Sparkles, ClipboardList, Globe, CreditCard } from 'lucide-react';
+import { Bot, MessageSquare, Users, BookOpen, LayoutDashboard, LogOut, Package, KanbanSquare, BarChart3, Settings, Brain, FileText, Headphones, Code2, Sparkles, ClipboardList, Globe, CreditCard, Crown } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { clsx } from 'clsx';
@@ -24,6 +24,10 @@ const nav = [
   { href: '/dashboard/site', label: 'Site & Landing', icon: Globe },
   { href: '/dashboard/billing', label: 'Facturation', icon: CreditCard },
   { href: '/dashboard/settings', label: 'Connecteurs', icon: Settings },
+];
+
+const adminNav = [
+  { href: '/dashboard/admin', label: 'Super Admin', icon: Crown },
 ];
 
 export default function Sidebar() {
@@ -63,6 +67,21 @@ export default function Sidebar() {
               pathname === href
                 ? 'bg-primary-600 text-white'
                 : 'text-gray-400 hover:bg-gray-800 hover:text-white',
+            )}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+          </Link>
+        ))}
+        {adminNav.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className={clsx(
+              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+              pathname === href
+                ? 'bg-yellow-600 text-white'
+                : 'text-yellow-500 hover:bg-gray-800 hover:text-yellow-400',
             )}
           >
             <Icon className="w-4 h-4" />
