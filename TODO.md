@@ -105,8 +105,8 @@
 - [x] Cache API (CacheService in-memory, CacheModule global) — products + billing
 - [x] 🔥 DTO validation with `class-validator` on all endpoints (API complète)
 - [x] Agent `PATCH` endpoint — full update with DTO
-- [ ] Chat — inject knowledge base context into Ollama prompt (RAG)
-- [ ] File upload for knowledge documents (PDF, DOCX)
+- [x] Chat — inject knowledge base context into Ollama prompt (RAG)
+- [x] File upload for knowledge documents (PDF, DOCX)
 - [x] Pagination on all list endpoints (`/agents`, `/leads`, `/knowledge`)
 - [x] Webhook support — notify external systems on new lead/conversation
 - [x] Swagger / OpenAPI documentation (`@nestjs/swagger`)
