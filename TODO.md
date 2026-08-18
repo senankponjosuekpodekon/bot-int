@@ -35,6 +35,7 @@
 - [x] **Site module** — Landing page builder
 - [x] **Admin module** — Admin dashboard
 - [x] **Integrations module** — External integrations
+- [x] **Regions module** — Regional adaptation (9 profiles, detection, dynamic system prompt)
 
 ### Frontend — Next.js
 - [x] Next.js 14 app router setup
@@ -53,14 +54,15 @@
 - [x] Conversation history viewer
 - [x] Toast notifications (success/error feedback)
 - [x] CurrencyProvider (USD/EUR with IP-based geo-detection)
-- [x] LocaleSwitcher (EN/FR/DE)
+- [x] LocaleSwitcher (EN/FR/DE/AR)
 
 ### Landing Pages & i18n
 - [x] English landing page (`/`) — hero, features, use cases, comparison, pricing, testimonials, FAQ, CTA, GEO block, footer, newsletter, sticky mobile CTA
 - [x] French landing page (`/fr`) — full translation
 - [x] German landing page (`/de`) — full translation
-- [x] Sitemap avec toutes les routes (EN/FR/DE + legal pages)
-- [x] hreflang alternates (en-US, fr-FR, de-DE)
+- [x] Arabic landing page (`/ar`) — full translation + RTL layout
+- [x] Sitemap avec toutes les routes (EN/FR/DE/AR + legal pages)
+- [x] hreflang alternates (en-US, fr-FR, de-DE, ar-AE)
 - [x] OpenGraph metadata + alternateLocale
 - [x] schema.org markup (HowTo, FAQPage)
 
@@ -80,8 +82,8 @@
    - [ ] Résoudre les 32 vulnérabilités `npm audit` (API + Web) ou documenter les exceptions
    - [ ] Vérifier que tous les secrets `.env` sont chiffrés/stockés (Vault, Doppler…)
 2. **Qualité & tests**
-   - [ ] 🔥 Fixer les 5 tests échoués (leads.service.spec.ts, chat.service.spec.ts) — préexistants
-   - [ ] Ajouter tests unitaires (AuthService ✅, ChatService, LeadsService, IntelligenceService)
+   - [x] 🔥 Fixer les 5 tests échoués (leads.service.spec.ts, chat.service.spec.ts) — 27/27 passent
+   - [ ] Ajouter tests unitaires (IntelligenceService, RegionsService, BillingService)
    - [ ] Ajouter tests E2E (Playwright) pour le flow agent → chat → lead
    - [ ] Mettre en place GitHub Actions (lint + test + build)
 3. **Observabilité & Ops**
@@ -139,6 +141,16 @@
 - [x] Fallback navigator.language
 - [x] localStorage priority over auto-detection
 - [x] EU country detection (FR, DE, ES, IT, NL, BE, PT, AT, IE)
+
+### Regional Adaptation ✅
+- [x] RegionProfile types + 9 profiles (us, uk, ae, sa, de, ch, fr, sg, international)
+- [x] RegionsService — detection via phone, timezone, browser language, IP geolocation
+- [x] Dynamic system prompt builder (tone, selling points, compliance per region)
+- [x] ChatService integration — auto-detects region, injects adapted prompt
+- [x] ChatGateway + ChatController pass regionContext
+- [x] REST endpoints: `GET /regions`, `GET /regions/detect`, `POST /regions/prompt`
+- [x] Arabic system prompts (ae + sa profiles) with MSA
+- [x] Compliance notes per region (GDPR, CCPA, PDPL, PDPA)
 
 ---
 
@@ -207,16 +219,17 @@
 - [x] English (root `/`) — landing page + legal pages
 - [x] French (`/fr`) — landing page + legal pages
 - [x] German (`/de`) — landing page
+- [x] Arabic RTL (`/ar`) — landing page + RTL layout + Noto Sans Arabic font
 - [ ] German legal pages (`/de/terms`, `/de/privacy`, `/de/gdpr`)
-- [ ] Arabic RTL (`/ar`) — workflow documenté dans `.devin/workflows/arabic-rtl.md` (Phase 2, mois 3-6)
+- [ ] Arabic legal pages (`/ar/terms`, `/ar/privacy`, `/ar/gdpr`)
 - [ ] i18n framework (next-intl ou react-i18next) pour factoriser les traductions
 
 ---
 
 ## Bugs & Technical Debt
 
-- [ ] 🔥 Fix: 5 tests échoués (leads.service.spec.ts, chat.service.spec.ts) — préexistants
-- [ ] Fix: `clsx` missing from `apps/web/package.json` (used in Sidebar)
+- [x] 🔥 Fix: 5 tests échoués (leads.service.spec.ts, chat.service.spec.ts) — 27/27 passent maintenant
+- [x] Fix: `clsx` missing from `apps/web/package.json` (used in Sidebar)
 - [ ] Fix: Next.js upgrade to 15 (security patch for 14.2.0)
 - [ ] Fix: npm audit — address high severity vulnerabilities
 - [ ] Clean: remove duplicate `PATH` export in `.zshrc`
@@ -231,8 +244,11 @@
 - All API endpoints require JWT except `POST /api/auth/register` and `POST /api/auth/login`
 - Cache TTL: 300s (default), 60s (products), 30s (billing)
 - Intelligence cron: hourly (unanswered, trends) + daily 3am (patterns, suggestions, auto-adjust, auto-optimize, auto-enrich, platform push) + daily 4am (platform analysis)
-- Default locale: English at root (`/`), French at `/fr`, German at `/de`
+- Default locale: English at root (`/`), French at `/fr`, German at `/de`, Arabic at `/ar` (RTL)
 - Default currency: USD, with EUR auto-detection via IP geolocation
+- Region detection: phone → timezone → browser language → IP geolocation → international fallback
+- Region profiles: us, uk, ae, sa, de, ch, fr, sg, international (9 profiles)
+- Arabic font: Noto Sans Arabic (loaded via Google Fonts in root layout)
 
 ---
 
