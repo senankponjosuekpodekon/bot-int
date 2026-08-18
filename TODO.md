@@ -83,16 +83,16 @@
    - [ ] Vérifier que tous les secrets `.env` sont chiffrés/stockés (Vault, Doppler…)
 2. **Qualité & tests**
    - [x] 🔥 Fixer les 5 tests échoués (leads.service.spec.ts, chat.service.spec.ts) — 27/27 passent
-   - [ ] Ajouter tests unitaires (IntelligenceService, RegionsService, BillingService)
+   - [x] Ajouter tests unitaires (IntelligenceService, RegionsService, BillingService)
    - [ ] Ajouter tests E2E (Playwright) pour le flow agent → chat → lead
-   - [ ] Mettre en place GitHub Actions (lint + test + build)
+   - [x] Mettre en place GitHub Actions (lint + test + build)
 3. **Observabilité & Ops**
    - [ ] Ajouter logger structuré & traçage (NestJS interceptor + Sentry/LogRocket côté web)
    - [ ] Script `make setup` (Docker + migrations + seed)
 4. **Expérience produit**
-   - [ ] Vue détaillée du lead (timeline, commentaires, pièces jointes)
-   - [ ] Export / partage transcript conversation (PDF / email)
-   - [ ] Filtres conversations par canal/date + recherche plein texte
+   - [x] Vue détaillée du lead (timeline, commentaires, pièces jointes)
+   - [x] Export / partage transcript conversation (PDF / email)
+   - [x] Filtres conversations par canal/date + recherche plein texte
 
 ---
 
