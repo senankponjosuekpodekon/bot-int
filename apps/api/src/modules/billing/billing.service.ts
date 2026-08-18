@@ -21,24 +21,48 @@ export class BillingService {
   async getSubscription(tenantId: string): Promise<Subscription> {
     let sub = await this.subRepo.findOne({ where: { tenantId } });
     if (!sub) {
-      sub = await this.createTrial(tenantId);
+      sub = await this.createFree(tenantId);
     }
     return sub;
   }
 
-  async createTrial(tenantId: string): Promise<Subscription> {
+  async createFree(tenantId: string): Promise<Subscription> {
     const existing = await this.subRepo.findOne({ where: { tenantId } });
     if (existing) return existing;
 
+    const sub = this.subRepo.create({
+      tenantId,
+      plan: PlanType.FREE,
+      status: SubscriptionStatus.FREE,
+      conversationsThisMonth: 0,
+      overageConversations: 0,
+      meteringResetAt: new Date(),
+    });
+    return this.subRepo.save(sub);
+  }
+
+  async createTrial(tenantId: string, plan: PlanType = PlanType.GROWTH): Promise<Subscription> {
+    const existing = await this.subRepo.findOne({ where: { tenantId } });
+    if (existing && existing.status !== SubscriptionStatus.FREE) return existing;
+
+    const limits = PLAN_LIMITS[plan];
     const trialEnds = new Date();
-    trialEnds.setDate(trialEnds.getDate() + 14);
+    trialEnds.setDate(trialEnds.getDate() + limits.trialDays);
+
+    if (existing) {
+      existing.plan = plan;
+      existing.status = SubscriptionStatus.TRIALING;
+      existing.trialEndsAt = trialEnds;
+      return this.subRepo.save(existing);
+    }
 
     const sub = this.subRepo.create({
       tenantId,
-      plan: PlanType.GROWTH,
+      plan,
       status: SubscriptionStatus.TRIALING,
       trialEndsAt: trialEnds,
       conversationsThisMonth: 0,
+      overageConversations: 0,
       meteringResetAt: new Date(),
     });
     return this.subRepo.save(sub);
@@ -78,10 +102,15 @@ export class BillingService {
     if (!secretKey) throw new BadRequestException('Stripe not configured');
 
     const priceMap: Record<PlanType, string> = {
+      [PlanType.FREE]: '',
       [PlanType.STARTER]: this.config.get('STRIPE_PRICE_STARTER', ''),
       [PlanType.GROWTH]: this.config.get('STRIPE_PRICE_GROWTH', ''),
       [PlanType.SCALE]: this.config.get('STRIPE_PRICE_SCALE', ''),
+      [PlanType.ENTERPRISE]: this.config.get('STRIPE_PRICE_ENTERPRISE', ''),
     };
+
+    if (plan === PlanType.FREE) throw new BadRequestException('Free plan does not require checkout');
+    if (plan === PlanType.ENTERPRISE) throw new BadRequestException('Contact sales for Enterprise plan');
 
     const priceId = priceMap[plan];
     if (!priceId) throw new BadRequestException(`No Stripe price configured for plan ${plan}`);
@@ -184,26 +213,34 @@ export class BillingService {
     return map[status] || SubscriptionStatus.ACTIVE;
   }
 
-  // ─── Metering: increment conversation count ───
+  // ─── Metering: increment conversation count with overage ───
   async incrementUsage(tenantId: string): Promise<void> {
     const sub = await this.getSubscription(tenantId);
     const now = new Date();
+    const limits = PLAN_LIMITS[sub.plan];
 
     // Reset monthly counter
     if (sub.meteringResetAt) {
       const resetDate = new Date(sub.meteringResetAt);
       if (now.getMonth() !== resetDate.getMonth() || now.getFullYear() !== resetDate.getFullYear()) {
         sub.conversationsThisMonth = 0;
+        sub.overageConversations = 0;
         sub.meteringResetAt = now;
       }
     }
 
     sub.conversationsThisMonth += 1;
+
+    // Track overage if above limit and plan supports it
+    if (sub.conversationsThisMonth > limits.conversationsPerMonth && limits.overagePerConversation > 0) {
+      sub.overageConversations += 1;
+    }
+
     await this.subRepo.save(sub);
   }
 
   // ─── Check if tenant can send messages ───
-  async checkQuota(tenantId: string): Promise<{ allowed: boolean; remaining: number; limit: number }> {
+  async checkQuota(tenantId: string): Promise<{ allowed: boolean; remaining: number; limit: number; overage?: boolean; overageRate?: number }> {
     const sub = await this.getSubscription(tenantId);
     const limits = PLAN_LIMITS[sub.plan];
 
@@ -222,6 +259,27 @@ export class BillingService {
     }
 
     const remaining = limits.conversationsPerMonth - sub.conversationsThisMonth;
+
+    // Free plan: hard limit, no overage
+    if (sub.plan === PlanType.FREE || sub.status === SubscriptionStatus.FREE) {
+      return {
+        allowed: remaining > 0,
+        remaining: Math.max(0, remaining),
+        limit: limits.conversationsPerMonth,
+      };
+    }
+
+    // Paid plans: allow overage if plan supports it
+    if (remaining <= 0 && limits.overagePerConversation > 0) {
+      return {
+        allowed: true,
+        remaining: 0,
+        limit: limits.conversationsPerMonth,
+        overage: true,
+        overageRate: limits.overagePerConversation,
+      };
+    }
+
     return {
       allowed: remaining > 0,
       remaining: Math.max(0, remaining),
@@ -257,6 +315,11 @@ export class BillingService {
       customDomain: limits.customDomain,
       whiteLabel: limits.whiteLabel,
       apiAccess: limits.apiAccess,
+      mcpServer: limits.mcpServer,
+      outcomeTracking: limits.outcomeTracking,
+      overageConversations: sub.overageConversations,
+      overageRate: limits.overagePerConversation,
+      overageCostCents: sub.overageConversations * limits.overagePerConversation,
       trialEndsAt: sub.trialEndsAt,
       trialDaysLeft,
       currentPeriodEnd: sub.currentPeriodEnd,

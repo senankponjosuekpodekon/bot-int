@@ -34,32 +34,48 @@ export default function BillingPage() {
 
   const plans = [
     {
+      id: 'free',
+      name: 'Free',
+      price: 0,
+      icon: Sparkles,
+      color: 'gray',
+      features: ['1 agent', '50 conv/mois', 'Web chat', 'Funnel tracking'],
+    },
+    {
       id: 'starter',
       name: 'Starter',
-      price: 99,
+      price: 79,
       icon: Zap,
       color: 'blue',
-      features: ['1 agent IA', '2 000 conversations/mois', 'Web chat + email', 'Funnel tracking', 'Landing page'],
+      features: ['3 agents', '1 000 conv/mois', 'Web + email', 'Funnel tracking', '0,08€/conv overage'],
     },
     {
       id: 'growth',
       name: 'Growth',
-      price: 299,
+      price: 249,
       icon: Crown,
       color: 'indigo',
-      features: ['Agents illimités', '10 000 conversations/mois', 'Multi-canal', 'Acquisition analytics', 'Domaine personnalisé', 'Stripe + Calendly'],
+      features: ['Agents illimités', '5 000 conv/mois', 'Multi-canal', 'API access', 'Domaine custom', '0,05€/conv overage'],
     },
     {
       id: 'scale',
       name: 'Scale',
-      price: 899,
+      price: 699,
       icon: Building2,
       color: 'purple',
-      features: ['Tout Growth +', 'Conversations illimitées', 'White-label', 'API + webhooks', 'SLA 99.9%', 'Account manager'],
+      features: ['20 000 conv/mois', 'MCP Server', 'Outcome tracking', 'White-label', 'SLA 99.9%', '0,03€/conv overage'],
+    },
+    {
+      id: 'enterprise',
+      name: 'Enterprise',
+      price: null,
+      icon: Building2,
+      color: 'dark',
+      features: ['Volume custom', 'Dedicated MCP', 'Outcome pricing', 'White-label', 'Account manager'],
     },
   ];
 
-  const currentPlan = sub?.plan || 'starter';
+  const currentPlan = sub?.plan || 'free';
   const usagePct = usage ? Math.min(100, (usage.conversationsUsed / usage.conversationsLimit) * 100) : 0;
 
   const handleCheckout = async (plan: string) => {
@@ -179,7 +195,7 @@ export default function BillingPage() {
 
       {/* Plan selection */}
       <h2 className="text-lg font-semibold text-gray-900 mb-4">Changer de plan</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {plans.map((p) => {
           const isCurrent = currentPlan === p.id;
           const colorMap: Record<string, string> = {
@@ -195,12 +211,12 @@ export default function BillingPage() {
               }`}
             >
               <div className="flex items-center gap-2 mb-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorMap[p.color]}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorMap[p.color] || 'bg-gray-50'}`}>
                   <p.icon className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900">{p.name}</h3>
-                  <p className="text-xs text-gray-500">{p.price}€/mois</p>
+                  <p className="text-xs text-gray-500">{p.price === null ? 'Sur devis' : `${p.price}€/mois`}</p>
                 </div>
               </div>
 
@@ -217,6 +233,10 @@ export default function BillingPage() {
                 <button disabled className="w-full py-3 rounded-xl bg-green-50 text-green-600 font-semibold cursor-default">
                   Plan actuel
                 </button>
+              ) : p.id === 'enterprise' ? (
+                <a href="mailto:sales@stiamond.com" className="w-full py-3 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
+                  Contacter les ventes
+                </a>
               ) : (
                 <button
                   onClick={() => handleCheckout(p.id)}
@@ -224,7 +244,7 @@ export default function BillingPage() {
                   className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
                 >
                   {actionLoading === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                  Upgrader
+                  {p.id === 'free' ? 'Passer au Free' : 'Upgrader'}
                 </button>
               )}
             </div>

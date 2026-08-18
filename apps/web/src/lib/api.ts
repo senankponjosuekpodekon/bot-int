@@ -326,3 +326,10 @@ export const billingApi = {
   changePlan: (plan: string) => api.post('/billing/change-plan', { plan }).then((r) => r.data),
   cancel: () => api.post('/billing/cancel').then((r) => r.data),
 };
+
+export const apiKeyApi = {
+  list: () => api.get('/api-keys').then((r) => r.data),
+  create: (name: string, scopes?: string[]) => api.post('/api-keys', { name, scopes }).then((r) => r.data),
+  revoke: (id: string) => api.post(`/api-keys/${id}/revoke`).then((r) => r.data),
+  delete: (id: string) => api.delete(`/api-keys/${id}`).then((r) => r.data),
+};

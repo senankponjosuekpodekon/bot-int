@@ -24,28 +24,49 @@ export default function LandingPage() {
 
   const plans = [
     {
-      name: 'Starter',
-      price: billingCycle === 'monthly' ? 99 : 79,
-      desc: 'Pour les solopreneurs et TPE',
-      features: ['1 agent IA', '2 000 conversations/mois', 'Web chat + email', 'Funnel tracking', 'Landing page', 'Support email'],
-      cta: 'Commencer',
+      name: 'Free',
+      price: 0,
+      desc: 'Pour tester et adopter',
+      features: ['1 agent IA', '50 conversations/mois', 'Web chat', 'Funnel tracking', '1 landing page'],
+      cta: 'Commencer gratuitement',
       highlight: false,
+      overage: null,
+    },
+    {
+      name: 'Starter',
+      price: billingCycle === 'monthly' ? 79 : 63,
+      desc: 'Pour les solopreneurs et TPE',
+      features: ['3 agents IA', '1 000 conversations/mois', 'Web chat + email', 'Funnel tracking', 'Landing page', 'Support email'],
+      cta: 'Essayer 14 jours',
+      highlight: false,
+      overage: '0,08€/conversation supplémentaire',
     },
     {
       name: 'Growth',
-      price: billingCycle === 'monthly' ? 299 : 249,
+      price: billingCycle === 'monthly' ? 249 : 199,
       desc: 'Pour les PME en croissance',
-      features: ['Agents illimités', '10 000 conversations/mois', 'Multi-canal (SMS, Telegram)', 'Acquisition analytics', 'Domaine personnalisé', 'Intégrations Stripe + Calendly', 'Support prioritaire'],
+      features: ['Agents illimités', '5 000 conversations/mois', 'Multi-canal (SMS, Telegram)', 'Acquisition analytics', 'Domaine personnalisé', 'API access', 'Stripe + Calendly'],
       cta: 'Essayer 14 jours',
       highlight: true,
+      overage: '0,05€/conversation supplémentaire',
     },
     {
       name: 'Scale',
-      price: billingCycle === 'monthly' ? 899 : 749,
+      price: billingCycle === 'monthly' ? 699 : 559,
       desc: 'Pour le mid-market',
-      features: ['Tout Growth +', 'Conversations illimitées', 'White-label', 'API + webhooks', 'Agents multi-outils avancés', 'SLA 99.9%', 'Account manager dédié'],
+      features: ['Tout Growth +', '20 000 conversations/mois', 'MCP Server inclus', 'Outcome tracking', 'White-label', 'API + webhooks', 'SLA 99.9%', 'Priority support'],
+      cta: 'Essayer 14 jours',
+      highlight: false,
+      overage: '0,03€/conversation supplémentaire',
+    },
+    {
+      name: 'Enterprise',
+      price: null,
+      desc: 'Pour les grandes entreprises & agences',
+      features: ['Volume custom', 'Dedicated MCP', 'Outcome-based pricing', 'White-label complet', 'SLA custom', 'Account manager dédié'],
       cta: 'Contacter',
       highlight: false,
+      overage: 'Sur devis',
     },
   ];
 
@@ -203,10 +224,19 @@ export default function LandingPage() {
                 )}
                 <h3 className="text-xl font-bold text-gray-900 mb-1">{p.name}</h3>
                 <p className="text-sm text-gray-500 mb-4">{p.desc}</p>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="text-4xl font-bold text-gray-900">{p.price}€</span>
-                  <span className="text-gray-500">/mois</span>
+                <div className="flex items-baseline gap-1 mb-2">
+                  {p.price === null ? (
+                    <span className="text-3xl font-bold text-gray-900">Sur devis</span>
+                  ) : (
+                    <>
+                      <span className="text-4xl font-bold text-gray-900">{p.price}€</span>
+                      <span className="text-gray-500">/mois</span>
+                    </>
+                  )}
                 </div>
+                {p.overage && (
+                  <p className="text-xs text-indigo-500 mb-4 font-medium">Overage: {p.overage}</p>
+                )}
                 <button
                   onClick={() => router.push('/register')}
                   className={`w-full py-3 rounded-xl font-semibold transition-colors mb-6 ${
@@ -228,7 +258,7 @@ export default function LandingPage() {
           </div>
 
           <p className="text-center text-sm text-gray-500 mt-8">
-            Tous les plans incluent : essai 14 jours, sans carte bancaire. Annulation à tout moment.
+            Tous les plans payants incluent : essai 14 jours, sans carte bancaire. Overage facturé au-delà du volume inclus. Annulation à tout moment.
           </p>
         </div>
       </section>
@@ -275,8 +305,10 @@ export default function LandingPage() {
               { q: 'Comment fonctionne l\'agent IA ?', a: 'L\'agent utilise un LLM (Ollama en local ou API) avec votre base de connaissances, catalogue produits et personnalité. Il qualifie, recommande, book et vend.' },
               { q: 'Puis-je utiliser mon propre domaine ?', a: 'Oui. Chaque plan inclut une landing page personnalisable avec sous-domaine. Growth+ supporte les domaines personnalisés.' },
               { q: 'Qu\'est-ce que le funnel tracking ?', a: 'Chaque conversation est automatiquement classée: Awareness → Interest → Qualification → Consideration → Decision. Vous voyez exactement où les leads décrochent.' },
-              { q: 'Y a-t-il un essai gratuit ?', a: 'Oui, 14 jours sans carte bancaire. Vous avez accès à toutes les features Growth pour tester.' },
-              { q: 'Mes données sont-elles sécurisées ?', a: 'Oui. Vos données sont isolées par tenant, JWT auth, Helmet headers, rate limiting. Vous êtes propriétaire de vos données.' },
+              { q: 'Y a-t-il un plan gratuit ?', a: 'Oui, le plan Free inclut 50 conversations/mois avec 1 agent. Sans carte bancaire. Upgradez quand vous voulez.' },
+              { q: 'Puis-je vendre ou intégrer l\'API ?', a: 'Oui. Le plan Growth inclut l\'API access avec clés API sécurisées. Le plan Scale inclut le MCP Server (Model Context Protocol) pour brancher vos agents sur Claude, Cursor, ou tout client MCP.' },
+              { q: 'Qu\'est-ce que le MCP ?', a: 'Le Model Context Protocol est le standard ouvert pour connecter les agents IA à des outils externes. Stiamond expose vos agents comme MCP Server : n\'importe quel client MCP peut les appeler.' },
+              { q: 'Mes données sont-elles sécurisées ?', a: 'Oui. Vos données sont isolées par tenant, JWT auth, Helmet headers, rate limiting, API keys hashées. Vous êtes propriétaire de vos données.' },
             ].map((item) => (
               <details key={item.q} className="group bg-white rounded-xl border border-gray-100 p-5">
                 <summary className="flex items-center justify-between cursor-pointer font-medium text-gray-900">

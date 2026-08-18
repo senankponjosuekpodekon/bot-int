@@ -8,9 +8,11 @@ import {
 } from 'typeorm';
 
 export enum PlanType {
+  FREE = 'free',
   STARTER = 'starter',
   GROWTH = 'growth',
   SCALE = 'scale',
+  ENTERPRISE = 'enterprise',
 }
 
 export enum SubscriptionStatus {
@@ -19,6 +21,7 @@ export enum SubscriptionStatus {
   PAST_DUE = 'past_due',
   CANCELED = 'canceled',
   UNPAID = 'unpaid',
+  FREE = 'free',
 }
 
 export const PLAN_LIMITS: Record<PlanType, {
@@ -28,30 +31,76 @@ export const PLAN_LIMITS: Record<PlanType, {
   customDomain: boolean;
   whiteLabel: boolean;
   apiAccess: boolean;
+  mcpServer: boolean;
+  outcomeTracking: boolean;
+  overagePerConversation: number;
+  priceMonthly: number;
+  trialDays: number;
 }> = {
-  [PlanType.STARTER]: {
-    conversationsPerMonth: 2000,
+  [PlanType.FREE]: {
+    conversationsPerMonth: 50,
     maxAgents: 1,
+    channels: ['web'],
+    customDomain: false,
+    whiteLabel: false,
+    apiAccess: false,
+    mcpServer: false,
+    outcomeTracking: false,
+    overagePerConversation: 0,
+    priceMonthly: 0,
+    trialDays: 0,
+  },
+  [PlanType.STARTER]: {
+    conversationsPerMonth: 1000,
+    maxAgents: 3,
     channels: ['web', 'email'],
     customDomain: false,
     whiteLabel: false,
     apiAccess: false,
+    mcpServer: false,
+    outcomeTracking: false,
+    overagePerConversation: 8,
+    priceMonthly: 7900,
+    trialDays: 14,
   },
   [PlanType.GROWTH]: {
-    conversationsPerMonth: 10000,
+    conversationsPerMonth: 5000,
     maxAgents: 999,
     channels: ['web', 'email', 'sms', 'telegram'],
     customDomain: true,
     whiteLabel: false,
-    apiAccess: false,
+    apiAccess: true,
+    mcpServer: false,
+    outcomeTracking: false,
+    overagePerConversation: 5,
+    priceMonthly: 24900,
+    trialDays: 14,
   },
   [PlanType.SCALE]: {
+    conversationsPerMonth: 20000,
+    maxAgents: 999,
+    channels: ['web', 'email', 'sms', 'telegram', 'whatsapp'],
+    customDomain: true,
+    whiteLabel: true,
+    apiAccess: true,
+    mcpServer: true,
+    outcomeTracking: true,
+    overagePerConversation: 3,
+    priceMonthly: 69900,
+    trialDays: 14,
+  },
+  [PlanType.ENTERPRISE]: {
     conversationsPerMonth: 999999,
     maxAgents: 999,
     channels: ['web', 'email', 'sms', 'telegram', 'whatsapp'],
     customDomain: true,
     whiteLabel: true,
     apiAccess: true,
+    mcpServer: true,
+    outcomeTracking: true,
+    overagePerConversation: 0,
+    priceMonthly: 0,
+    trialDays: 30,
   },
 };
 
@@ -94,6 +143,9 @@ export class Subscription {
   // Metering
   @Column({ type: 'int', default: 0 })
   conversationsThisMonth: number;
+
+  @Column({ type: 'int', default: 0 })
+  overageConversations: number;
 
   @Column({ type: 'date', nullable: true })
   meteringResetAt: Date;
