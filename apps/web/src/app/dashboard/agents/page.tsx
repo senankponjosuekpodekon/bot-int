@@ -65,8 +65,8 @@ export default function AgentsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const data = await agentsApi.list();
-      setAgents(data);
+      const res = await agentsApi.list();
+      setAgents(res.data || res);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Impossible de charger les agents');
     } finally {
@@ -202,9 +202,9 @@ export default function AgentsPage() {
                 <p className="text-sm text-gray-500 mt-1 line-clamp-2">{agent.systemPrompt}</p>
               </div>
               <div className="flex gap-2">
-                <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                <a href={`/dashboard/agents/${agent.id}`} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                   <Pencil className="w-4 h-4" />
-                </button>
+                </a>
                 <button onClick={() => handleDelete(agent.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>

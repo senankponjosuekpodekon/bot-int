@@ -143,7 +143,8 @@ api.interceptors.response.use(
 export default api;
 
 export const agentsApi = {
-  list: () => api.get('/agents').then((r) => r.data),
+  list: (params?: { page?: number; limit?: number }) => api.get('/agents', { params }).then((r) => r.data),
+  getById: (id: string) => api.get(`/agents/${id}`).then((r) => r.data),
   create: (data: any) => api.post('/agents', data).then((r) => r.data),
   update: (id: string, data: any) => api.patch(`/agents/${id}`, data).then((r) => r.data),
   delete: (id: string) => api.delete(`/agents/${id}`).then((r) => r.data),
@@ -182,8 +183,9 @@ export const chatApi = {
 };
 
 export const leadsApi = {
-  list: (params?: { status?: string; tag?: string; search?: string }) =>
+  list: (params?: { status?: string; tag?: string; search?: string; page?: number; limit?: number }) =>
     api.get('/leads', { params }).then((r) => r.data),
+  getById: (id: string) => api.get(`/leads/${id}`).then((r) => r.data),
   create: (data: any) => api.post('/leads', data).then((r) => r.data),
   update: (id: string, data: any) => api.patch(`/leads/${id}`, data).then((r) => r.data),
   addTag: (id: string, tag: string) => api.post(`/leads/${id}/tags`, { tag }).then((r) => r.data),

@@ -56,8 +56,8 @@ export default function LeadsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const data = await leadsApi.list();
-      setLeads(data);
+      const res = await leadsApi.list();
+      setLeads(res.data || res);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Impossible de charger les leads');
     } finally {
@@ -200,7 +200,9 @@ export default function LeadsPage() {
                       }`}
                     >
                       <td className="p-4">
-                        <p className="font-medium text-gray-900">{lead.name || 'Sans nom'}</p>
+                        <a href={`/dashboard/leads/${lead.id}`} className="font-medium text-gray-900 hover:text-primary-600">
+                          {lead.name || 'Sans nom'}
+                        </a>
                         <p className="text-xs text-gray-400">#{lead.id.slice(0, 8)}</p>
                       </td>
                       <td className="p-4 space-y-1 text-gray-600">

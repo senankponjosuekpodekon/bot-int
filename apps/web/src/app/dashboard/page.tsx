@@ -11,9 +11,9 @@ export default function DashboardPage() {
     Promise.all([agentsApi.list(), chatApi.conversations(), leadsApi.list()])
       .then(([agents, conversations, leads]) => {
         setStats({
-          agents: agents.length,
-          conversations: conversations.length,
-          leads: leads.length,
+          agents: agents.data?.length ?? agents.length ?? 0,
+          conversations: conversations.data?.length ?? conversations.length ?? 0,
+          leads: leads.data?.length ?? leads.length ?? 0,
         });
       })
       .catch(() => {})
