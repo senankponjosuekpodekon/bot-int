@@ -2,20 +2,22 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import ToasterProvider from '@/components/ToasterProvider';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
+import { CurrencyProvider } from '@/components/CurrencyProvider';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://stiamond.com';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Stiamond — Agents IA qui vendent, pas qui chattent',
+    default: 'Stiamond — AI Agents That Sell, Not Just Chat',
     template: '%s | Stiamond',
   },
-  description: "Plateforme d'agents IA autonomes pour PME et entrepreneurs. Qualifient les leads, recommandent des produits, prennent des rendez-vous et influencent les ventes — sur web, email, SMS et Telegram.",
+  description: 'Autonomous AI agent platform for SMBs and entrepreneurs. Agents qualify leads, recommend products, book appointments, and influence sales across web, email, SMS, and Telegram.',
   keywords: [
-    'agent IA', 'chatbot IA', 'automatisation ventes', 'qualification leads',
+    'AI agent', 'AI chatbot', 'sales automation', 'lead qualification',
     'conversational AI', 'AI sales agent', 'funnel tracking', 'lead nurturing',
-    'multi-canal IA', 'business automation', 'CRM IA', 'agent autonome',
+    'multi-channel AI', 'business automation', 'AI CRM', 'autonomous agent',
+    'MCP server', 'revenue attribution',
   ],
   authors: [{ name: 'Stiamond' }],
   creator: 'Stiamond',
@@ -23,31 +25,31 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/',
     languages: {
-      'fr-FR': '/',
-      'en-US': '/en',
+      'en-US': '/',
+      'fr-FR': '/fr',
     },
   },
   openGraph: {
     type: 'website',
-    locale: 'fr_FR',
-    alternateLocale: 'en_US',
+    locale: 'en_US',
+    alternateLocale: 'fr_FR',
     url: SITE_URL,
     siteName: 'Stiamond',
-    title: 'Stiamond — Agents IA qui vendent, pas qui chattent',
-    description: 'Vos agents IA qualifient les leads, recommandent des produits, prennent des RDV et influencent les ventes. 42% de conversion moyenne. Sans dépendance Meta.',
+    title: 'Stiamond — AI Agents That Sell, Not Just Chat',
+    description: 'Your AI agents qualify leads, recommend products, book appointments, and influence sales. 42% average conversion. No Meta dependency.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Stiamond — Agents IA autonomes',
+        alt: 'Stiamond — Autonomous AI Agents',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Stiamond — Agents IA qui vendent, pas qui chattent',
-    description: 'Vos agents IA qualifient, recommandent, bookent et vendent. 42% de conversion moyenne. Multi-canal. Sans dépendance Meta.',
+    title: 'Stiamond — AI Agents That Sell, Not Just Chat',
+    description: 'Your AI agents qualify, recommend, book, and sell. 42% average conversion. Multi-channel. No Meta dependency.',
     images: ['/og-image.png'],
     creator: '@stiamond',
   },
@@ -225,7 +227,7 @@ const allJsonLd = [jsonLdSoftware, jsonLdOrg, jsonLdService, jsonLdFaq, jsonLdHo
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         {allJsonLd.map((schema, i) => (
           <script
@@ -238,9 +240,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="alternate" type="text/markdown" href="/ai-summary.md" title="AI summary" />
       </head>
       <body suppressHydrationWarning>
-        <ToasterProvider />
-        <ServiceWorkerRegister />
-        {children}
+        <CurrencyProvider>
+          <ToasterProvider />
+          <ServiceWorkerRegister />
+          {children}
+        </CurrencyProvider>
       </body>
     </html>
   );

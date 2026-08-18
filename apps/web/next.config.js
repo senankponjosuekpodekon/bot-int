@@ -27,9 +27,7 @@ const nextConfig = {
     ];
   },
   async redirects() {
-    return [
-      { source: '/en', destination: '/', permanent: false },
-    ];
+    return [];
   },
 };
 
