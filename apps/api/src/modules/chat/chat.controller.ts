@@ -60,6 +60,13 @@ export class ChatController {
     return this.chatService.getHistory(id, req.user.tenantId);
   }
 
+  @Get('transcript/:conversationId')
+  @ApiOperation({ summary: 'Export conversation transcript' })
+  @ApiResponse({ status: 200, description: 'Conversation transcript with messages' })
+  exportTranscript(@Request() req, @Param('conversationId') id: string) {
+    return this.chatService.exportTranscript(id, req.user.tenantId);
+  }
+
   @Patch(':conversationId/lead')
   @ApiOperation({ summary: 'Attach a lead to a conversation' })
   @ApiResponse({ status: 200, description: 'Lead attached' })

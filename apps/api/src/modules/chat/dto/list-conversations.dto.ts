@@ -1,5 +1,5 @@
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsUUID, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { ConversationChannel, ConversationStatus, FunnelStage, AcquisitionChannel } from '../conversation.entity';
 import { LeadStatus } from '../../leads/lead.entity';
 
@@ -27,6 +27,10 @@ export class ListConversationsDto {
   @IsEnum(ConversationChannel)
   @IsOptional()
   channel?: ConversationChannel;
+
+  @IsString()
+  @IsOptional()
+  search?: string;
 
   @Transform(({ value }) => {
     if (value === undefined || value === null || value === '') return undefined;

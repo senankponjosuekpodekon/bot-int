@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Lead, LeadStatus } from './lead.entity';
+import { LeadComment } from './lead-comment.entity';
 import { PaginatedResult } from '../../common/pagination.dto';
 
 @Injectable()
@@ -9,6 +10,8 @@ export class LeadsService {
   constructor(
     @InjectRepository(Lead)
     private readonly leadRepo: Repository<Lead>,
+    @InjectRepository(LeadComment)
+    private readonly commentRepo: Repository<LeadComment>,
   ) {}
 
   async create(tenantId: string, data: Partial<Lead>): Promise<Lead> {
@@ -116,5 +119,37 @@ export class LeadsService {
       ].join(',');
     });
     return [headers.join(','), ...rows].join('\n');
+  }
+
+  async getComments(leadId: string, tenantId: string): Promise<LeadComment[]> {
+    await this.findById(leadId, tenantId);
+    return this.commentRepo.find({
+      where: { leadId, tenantId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async addComment(
+    leadId: string,
+    tenantId: string,
+    authorId: string,
+    authorName: string,
+    content: string,
+  ): Promise<LeadComment> {
+    await this.findById(leadId, tenantId);
+    const comment = this.commentRepo.create({
+      leadId,
+      tenantId,
+      authorId,
+      authorName,
+      content,
+    });
+    return this.commentRepo.save(comment);
+  }
+
+  async deleteComment(commentId: string, tenantId: string): Promise<void> {
+    const comment = await this.commentRepo.findOne({ where: { id: commentId, tenantId } });
+    if (!comment) throw new NotFoundException('Comment not found');
+    await this.commentRepo.delete(commentId);
   }
 }

@@ -14,6 +14,10 @@ import {
   Clock,
   MessageSquare,
   TrendingUp,
+  MessageCircle,
+  Send,
+  Download,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -30,20 +34,25 @@ export default function LeadDetailPage() {
   const router = useRouter();
   const [lead, setLead] = useState<any>(null);
   const [conversations, setConversations] = useState<any[]>([]);
+  const [comments, setComments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTag, setNewTag] = useState('');
   const [savingStatus, setSavingStatus] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [savingComment, setSavingComment] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     Promise.all([
       leadsApi.getById(id).catch(() => null),
       chatApi.conversations({ limit: 100 }).catch(() => ({ data: [] })),
+      leadsApi.getComments(id).catch(() => []),
     ])
-      .then(([leadData, convData]) => {
+      .then(([leadData, convData, commentData]) => {
         setLead(leadData);
         const allConvs = convData?.data || convData || [];
         setConversations(allConvs.filter((c: any) => c.leadId === id));
+        setComments(commentData || []);
       })
       .finally(() => setLoading(false));
   }, [id]);
@@ -84,6 +93,54 @@ export default function LeadDetailPage() {
       toast.success('Tag supprimé');
     } catch {
       toast.error('Impossible de supprimer le tag');
+    }
+  };
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !lead) return;
+    setSavingComment(true);
+    try {
+      const comment = await leadsApi.addComment(id, newComment.trim());
+      setComments([comment, ...comments]);
+      setNewComment('');
+      toast.success('Commentaire ajouté');
+    } catch {
+      toast.error('Impossible d\'ajouter le commentaire');
+    } finally {
+      setSavingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      await leadsApi.deleteComment(id, commentId);
+      setComments(comments.filter((c) => c.id !== commentId));
+      toast.success('Commentaire supprimé');
+    } catch {
+      toast.error('Suppression impossible');
+    }
+  };
+
+  const handleExportTranscript = async (conversationId: string) => {
+    try {
+      const data = await chatApi.exportTranscript(conversationId);
+      const lines = data.messages.map((m: any) => {
+        const time = new Date(m.createdAt).toLocaleString('fr-FR');
+        const role = m.role === 'user' ? 'Visiteur' : 'Agent';
+        return `[${time}] ${role}: ${m.content}`;
+      });
+      const header = `Transcript de conversation\nID: ${data.conversation.id}\nDate: ${new Date(data.conversation.createdAt).toLocaleString('fr-FR')}\nStatut: ${data.conversation.status}\n\n${'='.repeat(60)}\n\n`;
+      const blob = new Blob([header + lines.join('\n\n')], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `transcript-${conversationId.slice(0, 8)}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Transcript exporté');
+    } catch {
+      toast.error('Export impossible');
     }
   };
 
@@ -256,16 +313,94 @@ export default function LeadDetailPage() {
                 />
               )}
               {conversations.map((conv) => (
-                <TimelineItem
-                  key={conv.id}
-                  icon={MessageSquare}
-                  title={`Conversation ${conv.status || ''}`}
-                  date={conv.createdAt}
-                  color="bg-green-500"
-                  link={`/dashboard/chat?conversationId=${conv.id}`}
-                />
+                <div key={conv.id} className="flex items-start gap-3 group">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <MessageSquare className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <a href={`/dashboard/chat?conversationId=${conv.id}`} className="text-sm font-medium text-gray-900 hover:text-primary-600">
+                      Conversation {conv.status || ''}
+                    </a>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {new Date(conv.createdAt).toLocaleString('fr-FR', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleExportTranscript(conv.id)}
+                    className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    title="Exporter le transcript"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                </div>
               ))}
             </div>
+          </div>
+
+          {/* Comments section */}
+          <div className="card p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <MessageCircle className="w-4 h-4 text-primary-600" />
+              <h2 className="text-sm font-semibold text-gray-900">Commentaires</h2>
+              {comments.length > 0 && (
+                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{comments.length}</span>
+              )}
+            </div>
+
+            <form onSubmit={handleAddComment} className="mb-4">
+              <div className="flex gap-2">
+                <input
+                  className="input flex-1 text-sm"
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Ajouter un commentaire..."
+                  disabled={savingComment}
+                />
+                <button type="submit" className="btn-primary px-3" disabled={savingComment || !newComment.trim()}>
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+            </form>
+
+            {comments.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-4">Aucun commentaire pour ce lead</p>
+            ) : (
+              <div className="space-y-3">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="flex items-start gap-3 group">
+                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium text-gray-600">
+                      {comment.authorName?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-900">{comment.authorName}</span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(comment.createdAt).toLocaleString('fr-FR', {
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">{comment.content}</p>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteComment(comment.id)}
+                      className="p-1 text-gray-300 hover:text-red-600 rounded transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

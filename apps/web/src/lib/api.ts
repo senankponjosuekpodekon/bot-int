@@ -161,6 +161,8 @@ export const chatApi = {
     api.get('/chat/conversations', { params }).then((r) => r.data),
   history: (conversationId: string) =>
     api.get(`/chat/history/${conversationId}`).then((r) => r.data),
+  exportTranscript: (conversationId: string) =>
+    api.get(`/chat/transcript/${conversationId}`).then((r) => r.data),
   attachLead: (conversationId: string, leadId: string) =>
     api.patch(`/chat/${conversationId}/lead`, { leadId }).then((r) => r.data),
   updateStatus: (conversationId: string, status: string) =>
@@ -190,6 +192,9 @@ export const leadsApi = {
   update: (id: string, data: any) => api.patch(`/leads/${id}`, data).then((r) => r.data),
   addTag: (id: string, tag: string) => api.post(`/leads/${id}/tags`, { tag }).then((r) => r.data),
   removeTag: (id: string, tag: string) => api.delete(`/leads/${id}/tags/${tag}`).then((r) => r.data),
+  getComments: (id: string) => api.get(`/leads/${id}/comments`).then((r) => r.data),
+  addComment: (id: string, content: string) => api.post(`/leads/${id}/comments`, { content }).then((r) => r.data),
+  deleteComment: (leadId: string, commentId: string) => api.delete(`/leads/${leadId}/comments/${commentId}`).then((r) => r.data),
   pipelineStats: () => api.get('/leads/pipeline/stats').then((r) => r.data),
   exportCsv: () => api.get('/leads/export/csv', { responseType: 'blob' }).then((r) => r.data),
 };

@@ -13,6 +13,10 @@ class TagDto {
   @IsString() @IsNotEmpty() tag: string;
 }
 
+class CommentDto {
+  @IsString() @IsNotEmpty() content: string;
+}
+
 class ListLeadsDto {
   @IsEnum(LeadStatus) @IsOptional() status?: LeadStatus;
   @IsString() @IsOptional() tag?: string;
@@ -86,5 +90,32 @@ export class LeadsController {
   @ApiResponse({ status: 200, description: 'Tag removed' })
   removeTag(@Request() req, @Param('id') id: string, @Param('tag') tag: string) {
     return this.leadsService.removeTag(id, req.user.tenantId, tag);
+  }
+
+  @Get(':id/comments')
+  @ApiOperation({ summary: 'Get lead comments' })
+  @ApiResponse({ status: 200, description: 'List of comments' })
+  getComments(@Request() req, @Param('id') id: string) {
+    return this.leadsService.getComments(id, req.user.tenantId);
+  }
+
+  @Post(':id/comments')
+  @ApiOperation({ summary: 'Add comment to lead' })
+  @ApiResponse({ status: 201, description: 'Comment added' })
+  addComment(@Request() req, @Param('id') id: string, @Body() dto: CommentDto) {
+    return this.leadsService.addComment(
+      id,
+      req.user.tenantId,
+      req.user.id,
+      req.user.email || req.user.name || 'User',
+      dto.content,
+    );
+  }
+
+  @Delete(':id/comments/:commentId')
+  @ApiOperation({ summary: 'Delete lead comment' })
+  @ApiResponse({ status: 200, description: 'Comment deleted' })
+  deleteComment(@Request() req, @Param('commentId') commentId: string) {
+    return this.leadsService.deleteComment(commentId, req.user.tenantId);
   }
 }

@@ -524,6 +524,20 @@ export class ChatService {
     });
   }
 
+  async exportTranscript(conversationId: string, tenantId: string): Promise<{ conversation: Conversation; messages: Message[] }> {
+    const conversation = await this.convRepo.findOne({
+      where: { id: conversationId, tenantId },
+    });
+    if (!conversation) throw new NotFoundException('Conversation not found');
+
+    const messages = await this.msgRepo.find({
+      where: { conversationId, role: In([MessageRole.USER, MessageRole.ASSISTANT]) },
+      order: { createdAt: 'ASC' },
+    });
+
+    return { conversation, messages };
+  }
+
   async getConversations(tenantId: string, params: ListConversationsDto) {
     const page = params.page ?? 1;
     const limit = Math.min(params.limit ?? 20, 100);
@@ -565,6 +579,13 @@ export class ChatService {
 
     if (params.acquisitionChannel) {
       qb.andWhere('conversation.acquisitionChannel = :acquisitionChannel', { acquisitionChannel: params.acquisitionChannel });
+    }
+
+    if (params.search) {
+      qb.andWhere(
+        '(lead.name ILIKE :search OR lead.email ILIKE :search OR conversation.visitorId ILIKE :search)',
+        { search: `%${params.search}%` },
+      );
     }
 
     const [data, total] = await qb.getManyAndCount();

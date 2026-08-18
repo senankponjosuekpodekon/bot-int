@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Lead } from './lead.entity';
+import { LeadComment } from './lead-comment.entity';
 import { LeadsService } from './leads.service';
 import { LeadsController } from './leads.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Lead])],
+  imports: [TypeOrmModule.forFeature([Lead, LeadComment])],
   providers: [LeadsService],
   controllers: [LeadsController],
   exports: [LeadsService],
