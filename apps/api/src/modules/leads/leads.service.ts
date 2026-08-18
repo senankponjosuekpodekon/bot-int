@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Lead, LeadStatus } from './lead.entity';
+import { PaginatedResult } from '../../common/pagination.dto';
 
 @Injectable()
 export class LeadsService {
@@ -15,11 +16,19 @@ export class LeadsService {
     return this.leadRepo.save(lead);
   }
 
-  async findByTenant(tenantId: string, params?: { status?: LeadStatus; tag?: string; search?: string }): Promise<Lead[]> {
+  async findByTenant(
+    tenantId: string,
+    params?: { status?: LeadStatus; tag?: string; search?: string; page?: number; limit?: number },
+  ): Promise<PaginatedResult<Lead>> {
+    const page = params?.page ?? 1;
+    const limit = params?.limit ?? 20;
+
     const qb = this.leadRepo
       .createQueryBuilder('lead')
       .where('lead.tenantId = :tenantId', { tenantId })
-      .orderBy('lead.createdAt', 'DESC');
+      .orderBy('lead.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
 
     if (params?.status) {
       qb.andWhere('lead.status = :status', { status: params.status });
@@ -35,7 +44,8 @@ export class LeadsService {
       });
     }
 
-    return qb.getMany();
+    const [data, total] = await qb.getManyAndCount();
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findById(id: string, tenantId: string): Promise<Lead> {

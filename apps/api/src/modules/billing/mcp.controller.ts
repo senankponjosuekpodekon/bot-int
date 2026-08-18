@@ -73,7 +73,7 @@ export class McpController {
       }
 
       case 'tools/list': {
-        const agents = await this.agentsService.findByTenant(apiKey.tenantId);
+        const { data: agents } = await this.agentsService.findByTenant(apiKey.tenantId, 1, 1000);
         const tools = agents.map((agent) => ({
           name: `agent_${agent.id.substring(0, 8)}`,
           description: agent.systemPrompt?.substring(0, 200) || `Agent: ${agent.name}`,
@@ -119,7 +119,7 @@ export class McpController {
         }
 
         // Find full agent ID
-        const agents = await this.agentsService.findByTenant(apiKey.tenantId);
+        const { data: agents } = await this.agentsService.findByTenant(apiKey.tenantId, 1, 1000);
         const agent = agents.find((a) => a.id.startsWith(agentId));
         if (!agent) {
           return res.json({
@@ -159,7 +159,7 @@ export class McpController {
       }
 
       case 'resources/list': {
-        const agents = await this.agentsService.findByTenant(apiKey.tenantId);
+        const { data: agents } = await this.agentsService.findByTenant(apiKey.tenantId, 1, 1000);
         const resources = agents.map((agent) => ({
           uri: `stiamond://agents/${agent.id}`,
           name: agent.name,

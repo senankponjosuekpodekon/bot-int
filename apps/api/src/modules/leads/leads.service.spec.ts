@@ -44,13 +44,19 @@ describe('LeadsService', () => {
         where: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue(leads),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([leads, 1]),
       };
       leadRepo.createQueryBuilder?.mockReturnValue(queryBuilder);
 
       const result = await service.findByTenant('t-1');
 
-      expect(result).toBe(leads);
+      expect(result.data).toBe(leads);
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(20);
+      expect(result.totalPages).toBe(1);
       expect(leadRepo.createQueryBuilder).toHaveBeenCalledWith('lead');
       expect(queryBuilder.where).toHaveBeenCalledWith('lead.tenantId = :tenantId', { tenantId: 't-1' });
       expect(queryBuilder.orderBy).toHaveBeenCalledWith('lead.createdAt', 'DESC');

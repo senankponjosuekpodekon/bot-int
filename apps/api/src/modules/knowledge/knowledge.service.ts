@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { KnowledgeDocument, DocumentType } from './knowledge-document.entity';
 import { KnowledgeChunk } from './knowledge-chunk.entity';
 import { OllamaService } from '../chat/ollama.service';
+import { PaginatedResult } from '../../common/pagination.dto';
 import { PDFParse } from 'pdf-parse';
 import * as cheerio from 'cheerio';
 import axios from 'axios';
@@ -386,8 +387,14 @@ export class KnowledgeService {
     return results;
   }
 
-  async findByTenant(tenantId: string): Promise<KnowledgeDocument[]> {
-    return this.docRepo.find({ where: { tenantId }, order: { createdAt: 'DESC' } });
+  async findByTenant(tenantId: string, page = 1, limit = 20): Promise<PaginatedResult<KnowledgeDocument>> {
+    const [data, total] = await this.docRepo.findAndCount({
+      where: { tenantId },
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async delete(id: string, tenantId: string): Promise<void> {

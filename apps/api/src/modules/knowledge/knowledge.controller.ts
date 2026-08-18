@@ -18,6 +18,7 @@ import { KnowledgeService } from './knowledge.service';
 import { SiteScraperService } from './site-scraper.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateTextDocumentDto } from './dto/create-text-document.dto';
+import { PaginationDto } from '../../common/pagination.dto';
 
 class SearchQueryDto {
   @IsString()
@@ -84,8 +85,8 @@ export class KnowledgeController {
   }
 
   @Get()
-  findAll(@Request() req) {
-    return this.knowledgeService.findByTenant(req.user.tenantId);
+  findAll(@Request() req, @Query() query: PaginationDto) {
+    return this.knowledgeService.findByTenant(req.user.tenantId, query.page, query.limit);
   }
 
   @Get('search')

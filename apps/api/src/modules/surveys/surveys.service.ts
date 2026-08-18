@@ -372,7 +372,7 @@ export class SurveysService {
 
     let lead: any = null;
     try {
-      const leads = await this.leadsService.findByTenant(tenantId);
+      const { data: leads } = await this.leadsService.findByTenant(tenantId, { limit: 1000 });
       lead = leads.find((l: any) => l.email === customerEmail);
     } catch {}
 

@@ -52,6 +52,7 @@ describe('ChatService', () => {
       noopService() as any, // intelligenceService
       { checkQuota: jest.fn().mockResolvedValue({ allowed: true }), incrementUsage: jest.fn().mockResolvedValue(undefined) } as any, // billingService
       { detectRegion: jest.fn().mockResolvedValue('international'), buildSystemPrompt: jest.fn().mockImplementation((base: string) => base), getProfile: jest.fn() } as any, // regionsService
+      { trigger: jest.fn().mockResolvedValue(undefined) } as any, // webhookService
     );
 
     jest.clearAllMocks();

@@ -15,6 +15,7 @@ import { IntelligenceService } from '../intelligence/intelligence.service';
 import { BillingService } from '../billing/billing.service';
 import { RegionsService } from '../regions/regions.service';
 import { RegionCode } from '../regions/region-profile.types';
+import { WebhookService } from '../webhooks/webhook.service';
 import { ListConversationsDto } from './dto/list-conversations.dto';
 
 const EMAIL_REGEX = /[\w.+-]+@[\w-]+\.[\w.-]+/gi;
@@ -63,6 +64,7 @@ export class ChatService {
     private readonly intelligenceService: IntelligenceService,
     private readonly billingService: BillingService,
     private readonly regionsService: RegionsService,
+    private readonly webhookService: WebhookService,
   ) {}
 
   async sendMessage(
@@ -169,6 +171,13 @@ export class ChatService {
         }),
       );
 
+      this.webhookService.trigger('conversation.created', tenantId, {
+        conversationId: conversation.id,
+        agentId,
+        visitorId,
+        channel: 'web',
+      }).catch(() => {});
+
       if (captureLead !== false) {
         const lead = await this.leadsService.create(tenantId, {
           agentId,
@@ -182,6 +191,13 @@ export class ChatService {
         createdLeadId = lead.id;
         await this.convRepo.update(conversation.id, { leadId: lead.id });
         conversation.leadId = lead.id;
+
+        this.webhookService.trigger('lead.created', tenantId, {
+          leadId: lead.id,
+          agentId,
+          conversationId: conversation.id,
+          source: 'chat',
+        }).catch(() => {});
       }
     }
 

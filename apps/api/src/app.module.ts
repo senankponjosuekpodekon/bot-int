@@ -23,6 +23,7 @@ import { SiteModule } from './modules/site/site.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { RegionsModule } from './modules/regions/regions.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { LoggingMiddleware } from './common/logging.middleware';
 import { CacheModule } from './common/cache.module';
 
@@ -78,6 +79,7 @@ import { CacheModule } from './common/cache.module';
     BillingModule,
     AdminModule,
     RegionsModule,
+    WebhooksModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import { AgentsService } from './agents.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
+import { PaginationDto } from '../../common/pagination.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('agents')
@@ -25,8 +27,8 @@ export class AgentsController {
   }
 
   @Get()
-  findAll(@Request() req) {
-    return this.agentsService.findByTenant(req.user.tenantId);
+  findAll(@Request() req, @Query() query: PaginationDto) {
+    return this.agentsService.findByTenant(req.user.tenantId, query.page, query.limit);
   }
 
   @Get(':id')
