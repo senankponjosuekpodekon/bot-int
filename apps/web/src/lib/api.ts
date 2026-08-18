@@ -302,3 +302,17 @@ export const surveysApi = {
   sendEmail: (id: string, leadId: string, email: string) => api.post(`/surveys/${id}/send-email`, { leadId, email }).then((r) => r.data),
   exportCsv: (id: string) => api.get(`/surveys/${id}/export`, { responseType: 'blob' }).then((r) => r.data),
 };
+
+export const siteApi = {
+  list: () => api.get('/site').then((r) => r.data),
+  get: (id: string) => api.get(`/site/${id}`).then((r) => r.data),
+  create: (data: any) => api.post('/site', data).then((r) => r.data),
+  update: (id: string, data: any) => api.patch(`/site/${id}`, data).then((r) => r.data),
+  delete: (id: string) => api.delete(`/site/${id}`).then((r) => r.data),
+  toggle: (id: string) => api.patch(`/site/${id}/toggle`).then((r) => r.data),
+  verifyDomain: (id: string) => api.post(`/site/${id}/verify-domain`).then((r) => r.data),
+  public: {
+    getBySlug: (slug: string) => api.get(`/site/public/slug/${slug}`).then((r) => r.data),
+    getByDomain: (domain: string) => api.get(`/site/public/domain/${domain}`).then((r) => r.data),
+  },
+};
