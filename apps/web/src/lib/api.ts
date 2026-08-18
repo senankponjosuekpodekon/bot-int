@@ -289,3 +289,15 @@ export const knowledgeApi = {
     api.post('/knowledge/scrape-site', { url }).then((r) => r.data),
   delete: (id: string) => api.delete(`/knowledge/${id}`).then((r) => r.data),
 };
+
+export const surveysApi = {
+  list: (type?: string) => api.get('/surveys', { params: { type } }).then((r) => r.data),
+  get: (id: string) => api.get(`/surveys/${id}`).then((r) => r.data),
+  create: (data: any) => api.post('/surveys', data).then((r) => r.data),
+  update: (id: string, data: any) => api.patch(`/surveys/${id}`, data).then((r) => r.data),
+  delete: (id: string) => api.delete(`/surveys/${id}`).then((r) => r.data),
+  toggle: (id: string) => api.patch(`/surveys/${id}/toggle`).then((r) => r.data),
+  submit: (id: string, answers: any[], opts?: any) => api.post(`/surveys/${id}/submit`, { answers, ...opts }).then((r) => r.data),
+  results: (id: string) => api.get(`/surveys/${id}/results`).then((r) => r.data),
+  sendEmail: (id: string, leadId: string, email: string) => api.post(`/surveys/${id}/send-email`, { leadId, email }).then((r) => r.data),
+};

@@ -257,11 +257,167 @@ export const EMBED_SCRIPT = `
       addMessage('agent', data.reply);
       if (data.products && data.products.length > 0) addProductsCarousel(data.products);
       if (data.flow) addFlowToUI(data.flow);
+      checkAndShowSurvey();
     })
     .catch(function() {
       if (typing) typing.style.display = 'none';
       addMessage('agent', 'Desole, une erreur est survenue. Reessayez dans un instant.');
     });
+  }
+
+  var surveyShown = false;
+  var messageCount = 0;
+
+  function checkAndShowSurvey() {
+    if (surveyShown) return;
+    messageCount++;
+    var threshold = 3;
+    if (messageCount < threshold) return;
+
+    fetch(apiUrl + '/widget/survey/' + agentId)
+      .then(function(r) { return r.json(); })
+      .then(function(survey) {
+        if (!survey || !survey.id || !survey.isActive) return;
+        if (sessionStorage.getItem('stiamond_survey_' + survey.id)) return;
+        showSurveyInWidget(survey);
+      })
+      .catch(function() {});
+  }
+
+  function showSurveyInWidget(survey) {
+    var container = document.getElementById('stiamond-messages');
+    if (!container) return;
+
+    var surveyDiv = document.createElement('div');
+    surveyDiv.style.cssText = 'align-self:flex-start;max-width:90%;background:#f8f9ff;border:1px solid #dce4ff;border-radius:12px;padding:12px;margin-top:8px;';
+
+    var title = document.createElement('div');
+    title.style.cssText = 'font-size:13px;font-weight:600;color:' + primaryColor + ';margin-bottom:4px;';
+    title.textContent = survey.title || 'Sondage rapide';
+    surveyDiv.appendChild(title);
+
+    if (survey.description) {
+      var desc = document.createElement('div');
+      desc.style.cssText = 'font-size:11px;color:#666;margin-bottom:8px;';
+      desc.textContent = survey.description;
+      surveyDiv.appendChild(desc);
+    }
+
+    var answers = {};
+
+    survey.questions.forEach(function(q) {
+      var qDiv = document.createElement('div');
+      qDiv.style.cssText = 'margin-bottom:10px;';
+
+      var label = document.createElement('div');
+      label.style.cssText = 'font-size:12px;color:#333;margin-bottom:4px;';
+      label.textContent = q.label + (q.required ? ' *' : '');
+      qDiv.appendChild(label);
+
+      if (q.type === 'scale_1_5' || q.type === 'nps_1_10') {
+        var max = q.type === 'scale_1_5' ? 5 : 10;
+        var btnRow = document.createElement('div');
+        btnRow.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;';
+        for (var i = 1; i <= max; i++) {
+          (function(val) {
+            var btn = document.createElement('button');
+            btn.textContent = val;
+            btn.style.cssText = 'width:28px;height:28px;border:1px solid #ddd;border-radius:6px;background:white;cursor:pointer;font-size:11px;';
+            btn.onclick = function() {
+              btnRow.querySelectorAll('button').forEach(function(b) { b.style.background = 'white'; b.style.color = '#333'; });
+              btn.style.background = primaryColor;
+              btn.style.color = 'white';
+              answers[q.id] = val;
+            };
+            btnRow.appendChild(btn);
+          })(i);
+        }
+        qDiv.appendChild(btnRow);
+      } else if (q.type === 'single_choice' || q.type === 'demographic_age' || q.type === 'demographic_location') {
+        q.options.forEach(function(opt) {
+          var lbl = document.createElement('label');
+          lbl.style.cssText = 'display:block;font-size:12px;color:#333;cursor:pointer;margin:2px 0;';
+          var radio = document.createElement('input');
+          radio.type = 'radio';
+          radio.name = 'survey_' + q.id;
+          radio.style.cssText = 'margin-right:6px;';
+          radio.onchange = function() { answers[q.id] = opt; };
+          lbl.appendChild(radio);
+          lbl.appendChild(document.createTextNode(opt));
+          qDiv.appendChild(lbl);
+        });
+      } else if (q.type === 'multiple_choice') {
+        q.options.forEach(function(opt) {
+          var lbl = document.createElement('label');
+          lbl.style.cssText = 'display:block;font-size:12px;color:#333;cursor:pointer;margin:2px 0;';
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.value = opt;
+          cb.style.cssText = 'margin-right:6px;';
+          cb.onchange = function() {
+            if (!answers[q.id]) answers[q.id] = [];
+            if (cb.checked) {
+              answers[q.id].push(opt);
+            } else {
+              answers[q.id] = answers[q.id].filter(function(v) { return v !== opt; });
+            }
+          };
+          lbl.appendChild(cb);
+          lbl.appendChild(document.createTextNode(opt));
+          qDiv.appendChild(lbl);
+        });
+      } else {
+        var input = document.createElement(q.type === 'textarea' ? 'textarea' : 'input');
+        input.placeholder = q.placeholder || '';
+        input.style.cssText = 'width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:12px;box-sizing:border-box;';
+        input.oninput = function() { answers[q.id] = input.value; };
+        qDiv.appendChild(input);
+      }
+
+      surveyDiv.appendChild(qDiv);
+    });
+
+    var submitBtn = document.createElement('button');
+    submitBtn.textContent = 'Envoyer';
+    submitBtn.style.cssText = 'width:100%;padding:8px;background:' + primaryColor + ';color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;margin-top:6px;';
+    submitBtn.onclick = function() {
+      var answerArray = [];
+      survey.questions.forEach(function(q) {
+        if (answers[q.id] !== undefined) {
+          answerArray.push({ questionId: q.id, value: answers[q.id] });
+        }
+      });
+      if (answerArray.length === 0) return;
+
+      submitBtn.textContent = 'Envoi...';
+      submitBtn.disabled = true;
+
+      fetch(apiUrl + '/widget/survey/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          surveyId: survey.id,
+          agentId: agentId,
+          visitorId: visitorId,
+          conversationId: conversationId,
+          answers: answerArray,
+        })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        sessionStorage.setItem('stiamond_survey_' + survey.id, '1');
+        surveyDiv.innerHTML = '<div style="text-align:center;padding:12px;color:' + primaryColor + ';font-size:13px;">Merci pour vos reponses !</div>';
+        surveyShown = true;
+      })
+      .catch(function() {
+        submitBtn.textContent = 'Reessayer';
+        submitBtn.disabled = false;
+      });
+    };
+    surveyDiv.appendChild(submitBtn);
+
+    container.appendChild(surveyDiv);
+    container.scrollTop = container.scrollHeight;
   }
 
   function init() {

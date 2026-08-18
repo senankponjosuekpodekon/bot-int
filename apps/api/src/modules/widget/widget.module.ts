@@ -9,6 +9,7 @@ import { WidgetService } from './widget.service';
 import { WidgetController } from './widget.controller';
 import { ChatModule } from '../chat/chat.module';
 import { FlowsModule } from '../flows/flows.module';
+import { SurveysModule } from '../surveys/surveys.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { FlowsModule } from '../flows/flows.module';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
     ChatModule,
     FlowsModule,
+    SurveysModule,
   ],
   providers: [WidgetService],
   controllers: [WidgetController],

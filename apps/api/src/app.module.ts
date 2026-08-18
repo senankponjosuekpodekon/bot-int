@@ -16,6 +16,7 @@ import { IntelligenceModule } from './modules/intelligence/intelligence.module';
 import { QuotesModule } from './modules/quotes/quotes.module';
 import { WidgetModule } from './modules/widget/widget.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { SurveysModule } from './modules/surveys/surveys.module';
 import { LoggingMiddleware } from './common/logging.middleware';
 
 @Module({
@@ -51,6 +52,7 @@ import { LoggingMiddleware } from './common/logging.middleware';
     QuotesModule,
     WidgetModule,
     NotificationsModule,
+    SurveysModule,
   ],
 })
 export class AppModule implements NestModule {

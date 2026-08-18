@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bot, MessageSquare, Users, BookOpen, LayoutDashboard, LogOut, Package, KanbanSquare, BarChart3, Settings, Brain, FileText, Headphones, Code2, Sparkles } from 'lucide-react';
+import { Bot, MessageSquare, Users, BookOpen, LayoutDashboard, LogOut, Package, KanbanSquare, BarChart3, Settings, Brain, FileText, Headphones, Code2, Sparkles, ClipboardList } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { clsx } from 'clsx';
@@ -13,6 +13,7 @@ const nav = [
   { href: '/dashboard/chat', label: 'Conversations', icon: MessageSquare },
   { href: '/dashboard/operator', label: 'Opérateur', icon: Headphones },
   { href: '/dashboard/leads', label: 'Leads', icon: Users },
+  { href: '/dashboard/surveys', label: 'Sondages', icon: ClipboardList },
   { href: '/dashboard/pipeline', label: 'Pipeline CRM', icon: KanbanSquare },
   { href: '/dashboard/products', label: 'Produits', icon: Package },
   { href: '/dashboard/quotes', label: 'Devis', icon: FileText },
