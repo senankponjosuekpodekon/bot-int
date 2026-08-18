@@ -117,8 +117,8 @@
 - [x] Conversation history viewer
 - [x] Toast notifications (success/error feedback)
 - [x] Dashboard loading skeleton (`dashboard/loading.tsx`)
-- [ ] Agent detail/edit page
-- [ ] Lead detail page avec timeline/status
+- [x] Agent detail/edit page
+- [x] Lead detail page avec timeline/status
 - [ ] Loading skeletons pour toutes les pages (partiel — dashboard + chat ok)
 - [ ] Responsive mobile layout
 
