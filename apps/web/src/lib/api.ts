@@ -212,6 +212,7 @@ export const productsApi = {
   importSitemap: (sitemapUrl: string) =>
     api.post('/products/import/sitemap', { sitemapUrl }).then((r) => r.data),
   sync: () => api.post('/products/sync').then((r) => r.data),
+  autoSync: () => api.post('/products/auto-sync').then((r) => r.data),
 };
 
 export const analyticsApi = {
@@ -284,5 +285,7 @@ export const knowledgeApi = {
     api.post('/knowledge/url-async', { url }).then((r) => r.data),
   searchCompany: (companyName: string) =>
     api.post('/knowledge/search-company', { companyName }).then((r) => r.data),
+  scrapeSite: (url: string) =>
+    api.post('/knowledge/scrape-site', { url }).then((r) => r.data),
   delete: (id: string) => api.delete(`/knowledge/${id}`).then((r) => r.data),
 };

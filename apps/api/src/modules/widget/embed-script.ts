@@ -145,6 +145,72 @@ export const EMBED_SCRIPT = `
     container.scrollTop = container.scrollHeight;
   }
 
+  function addProductsCarousel(products) {
+    var container = document.getElementById('stiamond-messages');
+    if (!container || !products || products.length === 0) return;
+
+    var carouselDiv = document.createElement('div');
+    carouselDiv.style.cssText = 'display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px 0;align-self:flex-start;max-width:90%;';
+
+    products.forEach(function(p) {
+      var card = document.createElement('div');
+      card.style.cssText = 'flex-shrink:0;width:140px;background:white;border:1px solid #eee;border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow 0.2s;';
+
+      card.onmouseenter = function() { card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; };
+      card.onmouseleave = function() { card.style.boxShadow = 'none'; };
+
+      var imgContainer = document.createElement('div');
+      imgContainer.style.cssText = 'width:140px;height:100px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;';
+      if (p.image) {
+        var img = document.createElement('img');
+        img.src = p.image;
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+        img.onerror = function() { imgContainer.innerHTML = '<span style="font-size:24px;color:#ccc;">\\uD83D\\uDCD6</span>'; };
+        imgContainer.appendChild(img);
+      } else {
+        imgContainer.innerHTML = '<span style="font-size:24px;color:#ccc;">\\uD83D\\uDCD6</span>';
+      }
+      card.appendChild(imgContainer);
+
+      var info = document.createElement('div');
+      info.style.cssText = 'padding:8px;';
+
+      var name = document.createElement('div');
+      name.style.cssText = 'font-size:12px;font-weight:600;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+      name.textContent = p.name;
+      info.appendChild(name);
+
+      var price = document.createElement('div');
+      price.style.cssText = 'font-size:13px;font-weight:700;color:' + primaryColor + ';margin-top:2px;';
+      price.textContent = p.price + (p.currency === 'EUR' ? ' EUR' : ' ' + (p.currency || ''));
+      info.appendChild(price);
+
+      if (p.stock !== undefined && p.stock !== null) {
+        var stock = document.createElement('div');
+        stock.style.cssText = 'font-size:10px;margin-top:2px;';
+        if (p.stock > 0) {
+          stock.style.color = '#22c55e';
+          stock.textContent = 'En stock';
+        } else {
+          stock.style.color = '#ef4444';
+          stock.textContent = 'Rupture';
+        }
+        info.appendChild(stock);
+      }
+
+      card.appendChild(info);
+
+      if (p.url) {
+        card.onclick = function() { window.open(p.url, '_blank'); };
+      }
+
+      carouselDiv.appendChild(card);
+    });
+
+    container.appendChild(carouselDiv);
+    container.scrollTop = container.scrollHeight;
+  }
+
   function toggleChat() {
     isOpen = !isOpen;
     var win = document.getElementById('stiamond-chat-window');
@@ -189,6 +255,7 @@ export const EMBED_SCRIPT = `
       if (typing) typing.style.display = 'none';
       if (data.conversationId) conversationId = data.conversationId;
       addMessage('agent', data.reply);
+      if (data.products && data.products.length > 0) addProductsCarousel(data.products);
       if (data.flow) addFlowToUI(data.flow);
     })
     .catch(function() {

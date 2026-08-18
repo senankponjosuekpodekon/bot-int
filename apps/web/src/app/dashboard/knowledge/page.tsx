@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { knowledgeApi } from '@/lib/api';
-import { BookOpen, Plus, Trash2, Search, X, FileText, Link as LinkIcon, Upload, Building2, Loader2 } from 'lucide-react';
+import { BookOpen, Plus, Trash2, Search, X, FileText, Link as LinkIcon, Upload, Building2, Loader2, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface KnowledgeDoc {
@@ -17,7 +17,7 @@ export default function KnowledgePage() {
   const [docs, setDocs] = useState<KnowledgeDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [importMode, setImportMode] = useState<'text' | 'file' | 'url' | 'company'>('text');
+  const [importMode, setImportMode] = useState<'text' | 'file' | 'url' | 'company' | 'scrape'>('text');
   const [form, setForm] = useState({ content: '', filename: '' });
   const [urlForm, setUrlForm] = useState('');
   const [companyForm, setCompanyForm] = useState('');
@@ -128,6 +128,23 @@ export default function KnowledgePage() {
       }
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Recherche entreprise impossible');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleScrapeSite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!urlForm.trim()) return;
+    setSaving(true);
+    try {
+      const result = await knowledgeApi.scrapeSite(urlForm.trim());
+      toast.success(`${result.knowledgeEntries} entrée(s) ajoutée(s) à la base de connaissances`);
+      setShowForm(false);
+      setUrlForm('');
+      load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Scraping impossible');
     } finally {
       setSaving(false);
     }
@@ -244,6 +261,12 @@ export default function KnowledgePage() {
                 onClick={() => setImportMode('company')}
               >
                 <Building2 className="w-4 h-4" /> Entreprise
+              </button>
+              <button
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${importMode === 'scrape' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                onClick={() => setImportMode('scrape')}
+              >
+                <Globe className="w-4 h-4" /> Scraper site
               </button>
             </div>
 
@@ -375,6 +398,43 @@ export default function KnowledgePage() {
                     )}
                   </div>
                 )}
+              </form>
+            )}
+
+            {importMode === 'scrape' && (
+              <form className="space-y-4" onSubmit={handleScrapeSite}>
+                <p className="text-sm text-gray-500">
+                  Donnez l'URL de votre site. Le système scrape automatiquement les pages clés (contact, à propos, FAQ, services) et extrait les informations dans la base de connaissances.
+                </p>
+                <div>
+                  <label className="label">URL du site à scraper</label>
+                  <input
+                    className="input"
+                    value={urlForm}
+                    onChange={(e) => setUrlForm(e.target.value)}
+                    placeholder="https://www.monentreprise.com"
+                    required
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button type="submit" className="btn-primary flex-1" disabled={saving}>
+                    {saving ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Scraping...</span> : 'Scraper et importer'}
+                  </button>
+                  <button type="button" className="btn-secondary flex-1" onClick={() => { setShowForm(false); setUrlForm(''); }}>
+                    Annuler
+                  </button>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700">
+                  <p className="font-semibold mb-1">Ce qui sera extrait :</p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    <li>Emails, téléphones, adresses</li>
+                    <li>Horaires d'ouverture</li>
+                    <li>Description de l'entreprise</li>
+                    <li>FAQ (questions/réponses)</li>
+                    <li>Services proposés</li>
+                    <li>Liens réseaux sociaux</li>
+                  </ul>
+                </div>
               </form>
             )}
           </div>

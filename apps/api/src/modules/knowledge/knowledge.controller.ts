@@ -15,6 +15,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator';
 import { KnowledgeService } from './knowledge.service';
+import { SiteScraperService } from './site-scraper.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateTextDocumentDto } from './dto/create-text-document.dto';
 
@@ -40,7 +41,10 @@ class SearchCompanyDto {
 @UseGuards(JwtAuthGuard)
 @Controller('knowledge')
 export class KnowledgeController {
-  constructor(private readonly knowledgeService: KnowledgeService) {}
+  constructor(
+    private readonly knowledgeService: KnowledgeService,
+    private readonly siteScraperService: SiteScraperService,
+  ) {}
 
   @Post('text')
   addText(@Request() req, @Body() dto: CreateTextDocumentDto) {
@@ -72,6 +76,11 @@ export class KnowledgeController {
   @Post('search-company')
   searchCompany(@Request() req, @Body() dto: SearchCompanyDto) {
     return this.knowledgeService.searchCompany(req.user.tenantId, dto.companyName);
+  }
+
+  @Post('scrape-site')
+  scrapeSite(@Request() req, @Body() dto: ImportUrlDto) {
+    return this.siteScraperService.scrapeSite(req.user.tenantId, dto.url);
   }
 
   @Get()

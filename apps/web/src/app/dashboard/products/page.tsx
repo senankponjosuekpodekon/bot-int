@@ -50,6 +50,19 @@ export default function ProductsPage() {
     }
   };
 
+  const handleAutoSync = async () => {
+    setSyncing(true);
+    try {
+      const result = await productsApi.autoSync();
+      showToast(`${result.imported} produit(s) synchronisé(s) automatiquement`);
+      load();
+    } catch {
+      showToast('Erreur lors de l\'auto-sync (configurez Shopify/WooCommerce d\'abord)', 'error');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -115,6 +128,9 @@ export default function ProductsPage() {
         <div className="flex gap-2">
           <button onClick={handleSync} disabled={syncing} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
             <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> {syncing ? 'Sync...' : 'Synchroniser'}
+          </button>
+          <button onClick={handleAutoSync} disabled={syncing} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-50 border border-primary-200 text-sm font-medium text-primary-700 hover:bg-primary-100 disabled:opacity-50" title="Synchronisation automatique depuis Shopify/WooCommerce (cron toutes les 6h)">
+            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> Auto-sync
           </button>
           <button onClick={() => setShowImport(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <Upload className="w-4 h-4" /> Importer

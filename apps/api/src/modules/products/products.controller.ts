@@ -14,6 +14,7 @@ import {
 import { IsNotEmpty, IsNumber, IsOptional, IsString, IsBoolean, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ProductsService } from './products.service';
+import { AutoSyncService } from './auto-sync.service';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -65,6 +66,7 @@ class ListProductsDto {
 export class ProductsController {
   constructor(
     private readonly productsService: ProductsService,
+    private readonly autoSyncService: AutoSyncService,
     private readonly integrationsService: IntegrationsService,
   ) {}
 
@@ -144,6 +146,11 @@ export class ProductsController {
       }
     }
     return results;
+  }
+
+  @Post('auto-sync')
+  async triggerAutoSync(@Request() req) {
+    return this.autoSyncService.syncTenant(req.user.tenantId);
   }
 
   @Post('webhook/shopify/:tenantId')

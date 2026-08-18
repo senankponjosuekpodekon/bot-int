@@ -67,7 +67,7 @@ export class ChatService {
     conversationId?: string,
     visitorId?: string,
     captureLead = true,
-  ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: { id: string; title: string; fields: any[] } | null }> {
+  ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: { id: string; title: string; fields: any[] } | null; products?: any[] }> {
     const agent = await this.agentsService.findById(agentId, tenantId);
     const personalityConfig = agent.personalityConfig || {};
 
@@ -275,9 +275,20 @@ export class ChatService {
     }
 
     let productsContext = '';
+    let carouselProducts: any[] = [];
     try {
       const products = await this.productsService.searchRelevant(tenantId, userMessage);
       if (products.length > 0) {
+        carouselProducts = products.slice(0, 5).map((p) => ({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          currency: p.currency,
+          image: p.imageUrl || p.metadata?.image || null,
+          url: p.productUrl || null,
+          stock: p.stock,
+          description: p.description ? p.description.slice(0, 120) : '',
+        }));
         productsContext = products
           .map((p) => `- ${p.name}: ${p.price}${p.currency === 'EUR' ? '€' : ' ' + p.currency} (stock: ${p.stock})${p.description ? ` — ${p.description.slice(0, 200)}` : ''}${p.productUrl ? ` [${p.productUrl}]` : ''}`)
           .join('\n');
@@ -394,7 +405,7 @@ export class ChatService {
       // Intelligence recording is optional
     }
 
-    return { reply: finalReply, conversationId: conversation.id, leadId: responseLeadId, flow: flowData };
+    return { reply: finalReply, conversationId: conversation.id, leadId: responseLeadId, flow: flowData, products: carouselProducts.length > 0 ? carouselProducts : undefined };
   }
 
   async getHistory(conversationId: string, tenantId: string) {
