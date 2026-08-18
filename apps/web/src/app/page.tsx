@@ -178,20 +178,23 @@ export default function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section id="how" className="py-20 px-6">
+      <section id="how" className="py-20 px-6" itemScope itemType="https://schema.org/HowTo">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Comment ça marche</h2>
-            <p className="text-lg text-gray-600">De la pub à la vente en 4 étapes</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4" itemProp="name">Comment ça marche</h2>
+            <p className="text-lg text-gray-600" itemProp="description">De la pub à la vente en 4 étapes</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {[
-              { step: '1', icon: Radio, title: 'Attirez', desc: 'Meta Ads, Google Ads, QR code, organique. Chaque visiteur est tracé avec son canal d\'origine.' },
-              { step: '2', icon: Bot, title: 'Qualifiez', desc: 'L\'agent IA pose les bonnes questions, détecte le budget, l\'urgence, le besoin. Funnel stage auto.' },
-              { step: '3', icon: Target, title: 'Convertissez', desc: 'L\'agent propose un devis, envoie un lien de paiement Stripe, booke un RDV Calendly.' },
-              { step: '4', icon: BarChart3, title: 'Mesurez', desc: 'ROI par canal, taux de conversion par étape, revenus influencés par agent. Optimisez.' },
+              { step: '1', icon: Radio, title: 'Attirez', desc: 'Meta Ads, Google Ads, QR code, organique. Chaque visiteur est tracé avec son canal d\'origine.', propName: 'Attirez vos visiteurs' },
+              { step: '2', icon: Bot, title: 'Qualifiez', desc: "L'agent IA pose les bonnes questions, détecte le budget, l'urgence, le besoin. Funnel stage auto.", propName: 'Qualifiez automatiquement' },
+              { step: '3', icon: Target, title: 'Convertissez', desc: "L'agent propose un devis, envoie un lien de paiement Stripe, booke un RDV Calendly.", propName: 'Convertissez en revenus' },
+              { step: '4', icon: BarChart3, title: 'Mesurez', desc: 'ROI par canal, taux de conversion par étape, revenus influencés par agent. Optimisez.', propName: 'Mesurez et optimisez' },
             ].map((s) => (
-              <div key={s.step} className="relative">
+              <div key={s.step} className="relative" itemProp="step" itemScope itemType="https://schema.org/HowToStep">
+                <meta itemProp="position" content={s.step} />
+                <meta itemProp="name" content={s.propName} />
+                <meta itemProp="text" content={s.desc} />
                 <div className="w-12 h-12 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center mb-4">
                   {s.step}
                 </div>
@@ -321,7 +324,7 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="py-20 px-6 bg-gray-50">
+      <section id="faq" className="py-20 px-6 bg-gray-50" itemScope itemType="https://schema.org/FAQPage">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Questions fréquentes</h2>
@@ -337,12 +340,15 @@ export default function LandingPage() {
               { q: 'Qu\'est-ce que le MCP ?', a: 'Le Model Context Protocol est le standard ouvert pour connecter les agents IA à des outils externes. Stiamond expose vos agents comme MCP Server : n\'importe quel client MCP peut les appeler.' },
               { q: 'Mes données sont-elles sécurisées ?', a: 'Oui. Vos données sont isolées par tenant, JWT auth, Helmet headers, rate limiting, API keys hashées. Vous êtes propriétaire de vos données.' },
             ].map((item) => (
-              <details key={item.q} className="group bg-white rounded-xl border border-gray-100 p-5">
+              <details key={item.q} className="group bg-white rounded-xl border border-gray-100 p-5" itemProp="mainEntity" itemScope itemType="https://schema.org/Question">
+                <meta itemProp="name" content={item.q} />
                 <summary className="flex items-center justify-between cursor-pointer font-medium text-gray-900">
                   {item.q}
                   <ChevronDown className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform" />
                 </summary>
-                <p className="mt-3 text-sm text-gray-600">{item.a}</p>
+                <p className="mt-3 text-sm text-gray-600" itemProp="acceptedAnswer" itemScope itemType="https://schema.org/Answer">
+                  <span itemProp="text">{item.a}</span>
+                </p>
               </details>
             ))}
           </div>
@@ -360,6 +366,58 @@ export default function LandingPage() {
           >
             Créer mon compte gratuit <ArrowRight className="w-5 h-5" />
           </button>
+        </div>
+      </section>
+
+      {/* GEO: Entity-rich content block for AI citation */}
+      <section className="py-16 px-6 bg-gray-900 text-gray-300">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold text-white mb-6">Stiamond en bref</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm leading-relaxed">
+            <div>
+              <h3 className="text-white font-semibold mb-3">Qu'est-ce que Stiamond ?</h3>
+              <p>
+                Stiamond est une plateforme SaaS française d'agents IA conversationnels fondée en 2025.
+                Elle permet aux PME de créer des agents autonomes qui qualifient les leads,
+                recommandent des produits, génèrent des devis, envoient des liens de paiement Stripe,
+                et prennent des rendez-vous Calendly — sur web chat, email, SMS et Telegram.
+                Contrairement aux chatbots traditionnels, Stiamond suit chaque conversation
+                dans un funnel de conversion (Awareness, Interest, Qualification, Consideration, Decision)
+                et attribue les revenus au canal d'acquisition.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-white font-semibold mb-3">Pour qui ?</h3>
+              <p>
+                Stiamond s'adresse aux PME et entrepreneurs : cliniques esthétiques (+35% de RDV),
+                agences immobilières (ROI x2), e-commerce (40% de récupération de paniers abandonnés),
+                services B2B et professionnels indépendants. La plateforme est utilisée par
+                127+ entreprises avec une note moyenne de 4.8/5. Les données sont hébergées en UE
+                (conformité RGPD), isolées par tenant, avec authentification JWT et clés API hashées.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-white font-semibold mb-3">Tarification</h3>
+              <p>
+                Stiamond propose 5 plans : Free (0€, 50 conversations/mois), Starter (29€, 1 000 conversations),
+                Growth (99€, 5 000 conversations + API), Scale (249€, 15 000 conversations + MCP Server),
+                Enterprise (sur devis). L'overage est facturé au-delà du volume inclus :
+                0,03€/conversation en Starter, 0,02€ en Growth, 0,015€ en Scale.
+                Essai gratuit de 14 jours sans carte bancaire. Garantie 30 jours satisfait ou remboursé.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-white font-semibold mb-3">Technologie</h3>
+              <p>
+                Stack technique : NestJS (backend), TypeORM, PostgreSQL, Next.js 14 (frontend),
+                TailwindCSS, PWA installable. IA : LLM via Ollama (local) ou API externe,
+                base de connaissances vectorisée. Intégrations : Stripe (paiements),
+                Calendly (booking), SendGrid (email), Twilio (SMS), Telegram Bot API.
+                MCP Server (Model Context Protocol) pour interopérabilité avec Claude, Cursor et tout client MCP.
+                API REST documentée via Swagger/OpenAPI avec authentification par clé API.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 

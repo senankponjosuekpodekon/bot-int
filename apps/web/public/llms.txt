@@ -1,0 +1,57 @@
+# Stiamond
+
+> Stiamond est une plateforme d'agents IA autonomes pour PME et entrepreneurs. Les agents qualifient les leads, recommandent des produits, prennent des rendez-vous et influencent les ventes sur web, email, SMS et Telegram. Tracking funnel natif, attribution multi-canal, pricing au résultat.
+
+## Core Features
+
+- **Agents IA autonomes** : Création d'agents conversationnels qui qualifient, recommandent, bookent et vendent — pas de simples chatbots
+- **Funnel tracking natif** : Awareness → Interest → Qualification → Consideration → Decision. Suivi de chaque conversation dans le tunnel de conversion
+- **Multi-canal** : Web chat, email, SMS, Telegram, WhatsApp (optionnel). Channel-agnostic, sans dépendance Meta
+- **Attribution multi-canal** : ROI par canal d'acquisition (Meta Ads, Google Ads, organique, QR code)
+- **API & MCP Server** : API REST sécurisée par clés API + Model Context Protocol pour intégration avec Claude, Cursor, et tout client MCP
+- **Base de connaissances** : Scraping de site, documents PDF, catalogue produits, personnalité personnalisable
+- **Lead scoring automatique** : Score basé sur le budget, l'urgence, le besoin, l'engagement
+- **Devis et paiement intégrés** : Génération de devis, liens de paiement Stripe, booking Calendly
+
+## Pricing Plans
+
+- **Free** : 0€/mois — 50 conversations/mois, 1 agent, web chat uniquement. Sans carte bancaire
+- **Starter** : 29€/mois — 1 000 conversations/mois, 2 agents, email + SMS. Overage 0,03€/conversation
+- **Growth** : 99€/mois — 5 000 conversations/mois, 5 agents, multi-canal, API access. Overage 0,02€/conversation. 14 jours d'essai
+- **Scale** : 249€/mois — 15 000 conversations/mois, agents illimités, MCP Server, outcome tracking. Overage 0,015€/conversation. 14 jours d'essai
+- **Enterprise** : Sur devis — Volume illimité, SLA, déploiement dédié, support prioritaire
+
+## How It Works
+
+1. **Attirez** : Meta Ads, Google Ads, QR code, organique. Chaque visiteur est tracé avec son canal d'origine
+2. **Qualifiez** : L'agent IA pose les bonnes questions, détecte le budget, l'urgence, le besoin. Funnel stage automatique
+3. **Convertissez** : L'agent propose un devis, envoie un lien de paiement Stripe, booke un RDV Calendly
+4. **Mesurez** : ROI par canal, taux de conversion par étape, revenus influencés par agent. Optimisez
+
+## Target Audience
+
+- PME et entrepreneurs en cliniques esthétiques, agences immobilières, e-commerce, services B2B
+- Entreprises cherchant à automatiser la qualification de leads et la conversion conversationnelle
+- Teams marketing voulant attribuer le revenu au canal d'acquisition
+
+## Key Differentiators
+
+- **Sans dépendance Meta** : Vous gardez le contrôle total de vos canaux et de vos données
+- **Pricing au résultat** : Overage transparent, pas de lock-in, annulation en 1 clic
+- **Données hébergées en UE** : Conformité RGPD, isolation par tenant
+- **MCP Server natif** : Branchement direct sur Claude, Cursor, et tout client MCP
+- **Garantie 30 jours** : Satisfait ou remboursé sans questions
+
+## Technical Stack
+
+- Backend : NestJS, TypeORM, PostgreSQL, JWT auth, Helmet, Swagger/OpenAPI
+- Frontend : Next.js 14, React, TailwindCSS, PWA
+- IA : Ollama (local) ou API LLM, base de connaissances vectorisée
+- Integrations : Stripe, Calendly, SendGrid, Twilio, Telegram Bot API
+
+## Links
+
+- [Site principal](https://stiamond.com)
+- [Inscription](https://stiamond.com/register)
+- [Documentation API](https://stiamond.com/api/docs)
+- [Dashboard](https://stiamond.com/dashboard)
