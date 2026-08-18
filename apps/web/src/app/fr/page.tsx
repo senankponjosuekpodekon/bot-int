@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation';
 import {
   Bot, MessageSquare, BarChart3, Globe, Zap, Shield, Brain, TrendingUp,
   Users, Package, Clock, Target, Filter, Radio, Check, ArrowRight, Star,
-  Sparkles, Code2, Phone, Mail, MapPin, ChevronDown, Server
+  Sparkles, Code2, Phone, Mail, MapPin, ChevronDown, Server,
+  Stethoscope, Home, ShoppingBag, Briefcase, X, Building2
 } from 'lucide-react';
 import { useCurrency } from '@/components/CurrencyProvider';
 import LocaleSwitcher from '@/components/LocaleSwitcher';
@@ -76,10 +77,10 @@ export default function LandingPageFR() {
   ];
 
   const stats = [
-    { value: '42%', label: 'Taux de conversion moyen' },
-    { value: '<2s', label: 'Temps de réponse IA' },
-    { value: '6+', label: 'Canaux supportés' },
-    { value: '0%', label: 'Dépendance Meta' },
+    { value: '42%', label: 'Conversion visiteur → lead qualifié' },
+    { value: '<2s', label: 'Temps de réponse IA moyen' },
+    { value: '6+', label: 'Canaux supportés (web, email, SMS, Telegram, WhatsApp, API)' },
+    { value: '8x', label: 'Moins cher qu\'un commercial junior' },
   ];
 
   const getPriceDisplay = (plan: typeof plans[number]) => {
@@ -158,9 +159,53 @@ export default function LandingPageFR() {
             {stats.map((s) => (
               <div key={s.label} className="text-center">
                 <p className="text-3xl font-bold text-gray-900">{s.value}</p>
-                <p className="text-sm text-gray-500 mt-1">{s.label}</p>
+                <p className="text-xs text-gray-500 mt-1 max-w-[140px] mx-auto">{s.label}</p>
               </div>
             ))}
+          </div>
+
+          {/* Product visual */}
+          <div className="mt-16 max-w-4xl mx-auto">
+            <div className="bg-gray-900 rounded-2xl p-2 shadow-2xl shadow-indigo-200">
+              <div className="bg-gray-800 rounded-xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-3 h-3 rounded-full bg-red-400" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                  <div className="w-3 h-3 rounded-full bg-green-400" />
+                  <span className="ml-2 text-xs text-gray-400">stiamond.com/dashboard</span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-gray-700 rounded-lg p-3">
+                    <p className="text-xs text-gray-400 mb-1">Conversations</p>
+                    <p className="text-lg font-bold text-white">1 247</p>
+                    <p className="text-xs text-green-400">+18% cette semaine</p>
+                  </div>
+                  <div className="bg-gray-700 rounded-lg p-3">
+                    <p className="text-xs text-gray-400 mb-1">Leads qualifiés</p>
+                    <p className="text-lg font-bold text-white">523</p>
+                    <p className="text-xs text-green-400">42% de taux</p>
+                  </div>
+                  <div className="bg-gray-700 rounded-lg p-3">
+                    <p className="text-xs text-gray-400 mb-1">Revenus influencés</p>
+                    <p className="text-lg font-bold text-white">48,2k€</p>
+                    <p className="text-xs text-green-400">+32% MoM</p>
+                  </div>
+                </div>
+                <div className="mt-3 bg-gray-700 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs text-gray-400">Répartition du funnel</p>
+                    <p className="text-xs text-indigo-400">Awareness → Decision</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="h-6 bg-indigo-500 rounded-l flex items-center justify-center text-[10px] text-white font-bold" style={{ width: '100%' }}>A</div>
+                    <div className="h-6 bg-indigo-400 flex items-center justify-center text-[10px] text-white font-bold" style={{ width: '72%' }}>I</div>
+                    <div className="h-6 bg-indigo-300 flex items-center justify-center text-[10px] text-white font-bold" style={{ width: '52%' }}>Q</div>
+                    <div className="h-6 bg-indigo-200 flex items-center justify-center text-[10px] text-indigo-900 font-bold" style={{ width: '35%' }}>C</div>
+                    <div className="h-6 bg-green-500 rounded-r flex items-center justify-center text-[10px] text-white font-bold" style={{ width: '22%' }}>D</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -182,6 +227,88 @@ export default function LandingPageFR() {
                 <p className="text-sm text-gray-600">{f.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Use Cases */}
+      <section id="use-cases" className="py-20 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Conçu pour votre secteur</h2>
+            <p className="text-lg text-gray-600">Des agents spécialisés qui comprennent votre métier.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { icon: Stethoscope, title: 'Cliniques esthétiques', desc: 'Qualification patients, booking consultations, recommandations soins. +35% de RDV.', metric: '+35% RDV' },
+              { icon: Home, title: 'Immobilier', desc: 'Matching bien, planification visites, lead scoring par budget et urgence. ROI x2.', metric: 'ROI x2' },
+              { icon: ShoppingBag, title: 'E-commerce', desc: 'Récupération paniers abandonnés, recommandations produits, suivi commandes via chat. 40% récup.', metric: '40% récup' },
+              { icon: Briefcase, title: 'Services B2B', desc: 'Qualification leads, devis automatisés, planification réunions, sync CRM. Pipeline 3x plus rapide.', metric: '3x plus rapide' },
+            ].map((u) => (
+              <div key={u.title} className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-shadow">
+                <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center mb-4">
+                  <u.icon className="w-6 h-6 text-indigo-600" />
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">{u.title}</h3>
+                <p className="text-sm text-gray-600 mb-3">{u.desc}</p>
+                <span className="inline-block px-3 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold">{u.metric}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Comparison */}
+      <section className="py-20 px-6 bg-gray-50">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Pourquoi Stiamond ?</h2>
+            <p className="text-lg text-gray-600">Pas un chatbot. Pas un humain. Mieux.</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b-2 border-gray-200">
+                  <th className="text-left py-4 px-4 font-semibold text-gray-900">Fonctionnalité</th>
+                  <th className="text-center py-4 px-4 font-semibold text-gray-500">Chatbot</th>
+                  <th className="text-center py-4 px-4 font-semibold text-gray-500">Commercial</th>
+                  <th className="text-center py-4 px-4 font-bold text-indigo-600 bg-indigo-50 rounded-t-xl">Stiamond</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { feat: 'Disponible 24/7', chatbot: true, human: false, stiamond: true },
+                  { feat: 'Qualifie les leads automatiquement', chatbot: false, human: true, stiamond: true },
+                  { feat: 'Funnel tracking & attribution', chatbot: false, human: false, stiamond: true },
+                  { feat: 'Recommande des produits', chatbot: false, human: true, stiamond: true },
+                  { feat: 'Envoie devis & liens de paiement', chatbot: false, human: true, stiamond: true },
+                  { feat: 'Prend des rendez-vous', chatbot: false, human: true, stiamond: true },
+                  { feat: 'Multi-canal (web, email, SMS, Telegram)', chatbot: false, human: true, stiamond: true },
+                  { feat: 'Mémoire long-terme', chatbot: false, human: true, stiamond: true },
+                  { feat: 'Coût mensuel', chatbot: '10-50€', human: '3 000€+', stiamond: '49-399€' },
+                  { feat: 'Scale à l\'infini', chatbot: true, human: false, stiamond: true },
+                ].map((row) => (
+                  <tr key={row.feat} className="border-b border-gray-100">
+                    <td className="py-3 px-4 text-gray-700 font-medium">{row.feat}</td>
+                    <td className="py-3 px-4 text-center">
+                      {typeof row.chatbot === 'boolean' ? (
+                        row.chatbot ? <Check className="w-4 h-4 text-green-500 mx-auto" /> : <X className="w-4 h-4 text-red-400 mx-auto" />
+                      ) : <span className="text-gray-500">{row.chatbot}</span>}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {typeof row.human === 'boolean' ? (
+                        row.human ? <Check className="w-4 h-4 text-green-500 mx-auto" /> : <X className="w-4 h-4 text-red-400 mx-auto" />
+                      ) : <span className="text-gray-500">{row.human}</span>}
+                    </td>
+                    <td className="py-3 px-4 text-center bg-indigo-50">
+                      {typeof row.stiamond === 'boolean' ? (
+                        row.stiamond ? <Check className="w-4 h-4 text-green-600 mx-auto" /> : <X className="w-4 h-4 text-red-400 mx-auto" />
+                      ) : <span className="text-indigo-600 font-bold">{row.stiamond}</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -227,9 +354,9 @@ export default function LandingPageFR() {
             <button onClick={() => setBillingCycle('monthly')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${billingCycle === 'monthly' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}>Mensuel</button>
             <button onClick={() => setBillingCycle('yearly')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${billingCycle === 'yearly' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}>Annuel <span className="text-xs opacity-75">(-20%)</span></button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {plans.map((p) => (
-              <div key={p.name} className={`bg-white rounded-2xl p-8 border-2 transition-all ${p.highlight ? 'border-indigo-600 shadow-xl shadow-indigo-100 scale-105' : 'border-gray-100'}`}>
+              <div key={p.name} className={`bg-white rounded-2xl p-6 border-2 transition-all ${p.highlight ? 'border-indigo-600 shadow-xl shadow-indigo-100 lg:scale-105' : 'border-gray-100'}`}>
                 {p.highlight && <div className="inline-block px-3 py-1 rounded-full bg-indigo-600 text-white text-xs font-medium mb-4">Le plus populaire</div>}
                 <h3 className="text-xl font-bold text-gray-900 mb-1">{p.name}</h3>
                 <p className="text-sm text-gray-500 mb-4">{p.desc}</p>
@@ -400,25 +527,49 @@ export default function LandingPageFR() {
             <div>
               <h4 className="font-semibold text-gray-900 mb-3 text-sm">Entreprise</h4>
               <ul className="space-y-2 text-sm text-gray-500">
-                <li><a href="#" className="hover:text-gray-900">À propos</a></li>
-                <li><a href="#" className="hover:text-gray-900">Blog</a></li>
-                <li><a href="#" className="hover:text-gray-900">Contact</a></li>
+                <li><a href="#use-cases" className="hover:text-gray-900">Cas d'usage</a></li>
+                <li><a href="#faq" className="hover:text-gray-900">FAQ</a></li>
+                <li><a href="/register" className="hover:text-gray-900">Démarrer</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-gray-900 mb-3 text-sm">Légal</h4>
               <ul className="space-y-2 text-sm text-gray-500">
-                <li><a href="#" className="hover:text-gray-900">CGU</a></li>
-                <li><a href="#" className="hover:text-gray-900">Confidentialité</a></li>
-                <li><a href="#" className="hover:text-gray-900">RGPD</a></li>
+                <li><a href="/terms" className="hover:text-gray-900">CGU</a></li>
+                <li><a href="/privacy" className="hover:text-gray-900">Confidentialité</a></li>
+                <li><a href="/gdpr" className="hover:text-gray-900">RGPD</a></li>
               </ul>
             </div>
           </div>
+
+          {/* Newsletter capture */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 mt-8 p-6 bg-gray-50 rounded-2xl">
+            <div className="flex-1 text-left">
+              <p className="font-semibold text-gray-900 text-sm">Restez informé</p>
+              <p className="text-xs text-gray-500">Mises à jour produit, conseils vente IA, et accès anticipé aux nouvelles fonctionnalités.</p>
+            </div>
+            <form className="flex gap-2 w-full sm:w-auto" onSubmit={(e) => { e.preventDefault(); router.push('/register'); }}>
+              <input type="email" required placeholder="vous@entreprise.com" className="px-4 py-2 rounded-lg border border-gray-200 text-sm flex-1 sm:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <button type="submit" className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap">S'abonner</button>
+            </form>
+          </div>
+
           <div className="pt-8 border-t border-gray-100 text-center text-sm text-gray-400">
             © 2026 Stiamond. Tous droits réservés. Construit avec ❤️ pour les PME.
           </div>
         </div>
       </footer>
+
+      {/* Sticky mobile CTA */}
+      <div className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-white border-t border-gray-200 p-3 flex items-center gap-3">
+        <div className="flex-1">
+          <p className="text-xs text-gray-500">14 jours gratuits · Sans CB</p>
+        </div>
+        <button onClick={() => router.push('/register')} className="bg-indigo-600 text-white text-sm font-semibold px-6 py-2.5 rounded-lg whitespace-nowrap">
+          Essai gratuit →
+        </button>
+      </div>
+      <div className="h-16 md:hidden" />
     </div>
   );
 }
