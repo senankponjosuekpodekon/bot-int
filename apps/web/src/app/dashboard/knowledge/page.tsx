@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { knowledgeApi } from '@/lib/api';
-import { BookOpen, Plus, Trash2, Search, X } from 'lucide-react';
+import { BookOpen, Plus, Trash2, Search, X, FileText, Link as LinkIcon, Upload, Building2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface KnowledgeDoc {
@@ -17,7 +17,12 @@ export default function KnowledgePage() {
   const [docs, setDocs] = useState<KnowledgeDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [importMode, setImportMode] = useState<'text' | 'file' | 'url' | 'company'>('text');
   const [form, setForm] = useState({ content: '', filename: '' });
+  const [urlForm, setUrlForm] = useState('');
+  const [companyForm, setCompanyForm] = useState('');
+  const [companyResult, setCompanyResult] = useState<any>(null);
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -71,6 +76,60 @@ export default function KnowledgePage() {
       setDocs((prev) => prev.filter((doc) => doc.id !== id));
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Suppression impossible');
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await knowledgeApi.uploadFile(file);
+      toast.success('Fichier importé avec succès');
+      setShowForm(false);
+      load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Import impossible');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleUrlImport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!urlForm.trim()) return;
+    setSaving(true);
+    try {
+      await knowledgeApi.importUrlAsync(urlForm.trim());
+      toast.success('Import URL lancé en arrière-plan');
+      setShowForm(false);
+      setUrlForm('');
+      setTimeout(() => load(), 5000);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Import URL impossible');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCompanySearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!companyForm.trim()) return;
+    setSaving(true);
+    setCompanyResult(null);
+    try {
+      const result = await knowledgeApi.searchCompany(companyForm.trim());
+      setCompanyResult(result);
+      if (result.docs?.length > 0) {
+        toast.success(`${result.docs.length} document(s) importé(s) pour ${companyForm.trim()}`);
+        load();
+      } else {
+        toast.info('Recherche terminée — aucune page exploitable trouvée');
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Recherche entreprise impossible');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -159,34 +218,165 @@ export default function KnowledgePage() {
             <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-600" onClick={() => setShowForm(false)}>
               <X className="w-5 h-5" />
             </button>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">Ajouter un texte</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Copiez-collez un extrait important (FAQ, script commercial, fiche produit, etc.).
-            </p>
-            <form className="space-y-4" onSubmit={handleCreate}>
-              <div>
-                <label className="label">Nom (optionnel)</label>
-                <input className="input" value={form.filename} onChange={(e) => setForm({ ...form, filename: e.target.value })} placeholder="FAQ Support" />
-              </div>
-              <div>
-                <label className="label">Contenu</label>
-                <textarea
-                  className="input h-48 resize-y"
-                  value={form.content}
-                  onChange={(e) => setForm({ ...form, content: e.target.value })}
-                  placeholder="Collez votre texte ici..."
-                  required
-                />
-              </div>
-              <div className="flex gap-3">
-                <button type="submit" className="btn-primary flex-1" disabled={saving}>
-                  {saving ? 'Ajout...' : 'Enregistrer'}
-                </button>
-                <button type="button" className="btn-secondary flex-1" onClick={() => setShowForm(false)}>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Ajouter du contenu</h2>
+
+            <div className="flex gap-2 mb-6">
+              <button
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${importMode === 'text' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                onClick={() => setImportMode('text')}
+              >
+                <FileText className="w-4 h-4" /> Texte
+              </button>
+              <button
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${importMode === 'file' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                onClick={() => setImportMode('file')}
+              >
+                <Upload className="w-4 h-4" /> Fichier
+              </button>
+              <button
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${importMode === 'url' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                onClick={() => setImportMode('url')}
+              >
+                <LinkIcon className="w-4 h-4" /> URL
+              </button>
+              <button
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${importMode === 'company' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                onClick={() => setImportMode('company')}
+              >
+                <Building2 className="w-4 h-4" /> Entreprise
+              </button>
+            </div>
+
+            {importMode === 'text' && (
+              <form className="space-y-4" onSubmit={handleCreate}>
+                <p className="text-sm text-gray-500">
+                  Copiez-collez un extrait important (FAQ, script commercial, fiche produit, etc.).
+                </p>
+                <div>
+                  <label className="label">Nom (optionnel)</label>
+                  <input className="input" value={form.filename} onChange={(e) => setForm({ ...form, filename: e.target.value })} placeholder="FAQ Support" />
+                </div>
+                <div>
+                  <label className="label">Contenu</label>
+                  <textarea
+                    className="input h-48 resize-y"
+                    value={form.content}
+                    onChange={(e) => setForm({ ...form, content: e.target.value })}
+                    placeholder="Collez votre texte ici..."
+                    required
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button type="submit" className="btn-primary flex-1" disabled={saving}>
+                    {saving ? 'Ajout...' : 'Enregistrer'}
+                  </button>
+                  <button type="button" className="btn-secondary flex-1" onClick={() => setShowForm(false)}>
+                    Annuler
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {importMode === 'file' && (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-500">
+                  Importez un fichier PDF ou texte. Le contenu sera extrait et indexé automatiquement.
+                </p>
+                <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center">
+                  <Upload className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                  <label className="cursor-pointer">
+                    <span className="btn-primary inline-block">{uploading ? 'Import...' : 'Choisir un fichier'}</span>
+                    <input
+                      type="file"
+                      accept=".pdf,.txt,.md,.csv"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                      disabled={uploading}
+                    />
+                  </label>
+                  <p className="text-xs text-gray-400 mt-3">PDF, TXT, MD, CSV — 10 Mo max</p>
+                </div>
+                <button type="button" className="btn-secondary w-full" onClick={() => setShowForm(false)}>
                   Annuler
                 </button>
               </div>
-            </form>
+            )}
+
+            {importMode === 'url' && (
+              <form className="space-y-4" onSubmit={handleUrlImport}>
+                <p className="text-sm text-gray-500">
+                  Importez le contenu d'une page web. Le scraping s'exécute en arrière-plan avec rendu JavaScript.
+                </p>
+                <div>
+                  <label className="label">URL de la page</label>
+                  <input
+                    className="input"
+                    value={urlForm}
+                    onChange={(e) => setUrlForm(e.target.value)}
+                    placeholder="https://exemple.com/page"
+                    type="url"
+                    required
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button type="submit" className="btn-primary flex-1" disabled={saving}>
+                    {saving ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Import...</span> : 'Importer en arrière-plan'}
+                  </button>
+                  <button type="button" className="btn-secondary flex-1" onClick={() => setShowForm(false)}>
+                    Annuler
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {importMode === 'company' && (
+              <form className="space-y-4" onSubmit={handleCompanySearch}>
+                <p className="text-sm text-gray-500">
+                  Recherchez une entreprise par nom. Le système trouve automatiquement son site web, ses réseaux sociaux et importe le contenu dans la base de connaissances.
+                </p>
+                <div>
+                  <label className="label">Nom de l'entreprise</label>
+                  <input
+                    className="input"
+                    value={companyForm}
+                    onChange={(e) => setCompanyForm(e.target.value)}
+                    placeholder="Ex: Stiamond, OpenAI, Renault..."
+                    required
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button type="submit" className="btn-primary flex-1" disabled={saving}>
+                    {saving ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Recherche...</span> : 'Rechercher et importer'}
+                  </button>
+                  <button type="button" className="btn-secondary flex-1" onClick={() => { setShowForm(false); setCompanyResult(null); }}>
+                    Annuler
+                  </button>
+                </div>
+                {companyResult && (
+                  <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+                    <p className="font-semibold text-gray-900">{companyResult.name}</p>
+                    {companyResult.website && (
+                      <p className="text-gray-600">Site web: <a href={companyResult.website} target="_blank" rel="noreferrer" className="text-primary-600 underline">{companyResult.website}</a></p>
+                    )}
+                    {companyResult.description && (
+                      <p className="text-gray-500 text-xs">{companyResult.description.slice(0, 200)}...</p>
+                    )}
+                    {companyResult.socials?.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {companyResult.socials.map((s: any, i: number) => (
+                          <a key={i} href={s.url} target="_blank" rel="noreferrer" className="px-2 py-1 rounded-lg bg-white border border-gray-200 text-xs text-gray-600 hover:border-primary-200">
+                            {s.platform}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    {companyResult.docs?.length > 0 && (
+                      <p className="text-emerald-600 text-xs">{companyResult.docs.length} document(s) importé(s) dans la base</p>
+                    )}
+                  </div>
+                )}
+              </form>
+            )}
           </div>
         </div>
       )}

@@ -53,6 +53,15 @@ export class Lead {
   @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, any>;
 
+  @Column({ type: 'simple-array', nullable: true })
+  tags: string[];
+
+  @Column({ nullable: true })
+  company: string;
+
+  @Column({ nullable: true })
+  notes: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

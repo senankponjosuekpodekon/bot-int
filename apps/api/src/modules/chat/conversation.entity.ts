@@ -12,6 +12,7 @@ import { Lead } from '../leads/lead.entity';
 
 export enum ConversationStatus {
   OPEN = 'open',
+  HANDED_OFF = 'handed_off',
   CLOSED = 'closed',
 }
 

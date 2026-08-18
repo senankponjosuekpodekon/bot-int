@@ -32,6 +32,19 @@ export class OllamaService {
     }
   }
 
+  async embed(text: string): Promise<number[]> {
+    try {
+      const response = await axios.post(`${this.baseUrl}/api/embeddings`, {
+        model: this.model,
+        prompt: text,
+      });
+      return response.data.embedding;
+    } catch (error: any) {
+      this.logger.error('Ollama embedding failed', error?.message);
+      throw new Error('Embedding service unavailable');
+    }
+  }
+
   async isAvailable(): Promise<boolean> {
     try {
       await axios.get(`${this.baseUrl}/api/tags`);

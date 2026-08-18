@@ -1,8 +1,51 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { agentsApi } from '@/lib/api';
-import { Bot, Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Bot, Plus, Pencil, Trash2, X, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+
+const SYSTEM_PROMPT_TEMPLATES: Record<string, Array<{ label: string; prompt: string }>> = {
+  general: [
+    {
+      label: 'Assistant polyvalent',
+      prompt: 'Tu es un assistant IA polyvalent. Tu réponds de manière claire, concise et utile. Tu adaptes ton ton à l\'interlocuteur et poses des questions pertinentes pour mieux comprendre les besoins. Tu réponds toujours en français.',
+    },
+    {
+      label: 'Guide conversationnel',
+      prompt: 'Tu es un guide conversationnel bienveillant. Tu accueilles chaleureusement l\'utilisateur, tu l\'orientes vers les bonnes ressources et tu maintains une conversation fluide et engageante. Tu réponds en français.',
+    },
+  ],
+  sales: [
+    {
+      label: 'Commercial B2B',
+      prompt: 'Tu es un expert commercial B2B. Ton objectif est de qualifier les prospects, comprendre leurs besoins et présenter les solutions adaptées. Tu poses des questions ouvertes pour identifier les pain points. Tu es persuasif sans être agressif. Tu réponds en français et demandes toujours des coordonnées (email/téléphone) pour qualifier le lead.',
+    },
+    {
+      label: 'Vendeur e-commerce',
+      prompt: 'Tu es un conseiller de vente e-commerce. Tu aides les clients à choisir les bons produits, tu réponds aux questions sur les prix, les délais de livraison et les retours. Tu proposes des upsells pertinents. Tu réponds en français et restes amical et professionnel.',
+    },
+  ],
+  support: [
+    {
+      label: 'Support technique N1',
+      prompt: 'Tu es un agent de support technique niveau 1. Tu diagnostiques les problèmes en posant des questions méthodiques, tu proposes des solutions étape par étape et tu escalades vers le support N2 si nécessaire. Tu restes patient et clair. Tu réponds en français.',
+    },
+    {
+      label: 'Support client FAQ',
+      prompt: 'Tu es un agent de support client. Tu réponds aux questions fréquentes sur les comptes, facturations, et fonctionnalités du produit. Tu guides l\'utilisateur avec des instructions simples. Si tu ne connais pas la réponse, tu proposes de transmettre à un humain. Tu réponds en français.',
+    },
+  ],
+  hr: [
+    {
+      label: 'Assistant RH onboarding',
+      prompt: 'Tu es un assistant RH spécialisé dans l\'onboarding. Tu accueilles les nouveaux employés, tu les guides dans leurs premières étapes (compte, outils, formation) et tu réponds aux questions sur la politique de l\'entreprise. Tu es chaleureux et structuré. Tu réponds en français.',
+    },
+    {
+      label: 'RH FAQ interne',
+      prompt: 'Tu es un assistant RH qui répond aux questions internes des employés: congés, paie, avantages, procédures administratives. Tu renvoies vers les bons documents ou contacts quand nécessaire. Tu réponds en français de manière professionnelle et confidentielle.',
+    },
+  ],
+};
 
 interface Agent {
   id: string;
@@ -98,6 +141,21 @@ export default function AgentsPage() {
               </div>
               <div>
                 <label className="label">Prompt système</label>
+                {(SYSTEM_PROMPT_TEMPLATES[form.type] || []).length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {(SYSTEM_PROMPT_TEMPLATES[form.type] || []).map((tpl) => (
+                      <button
+                        key={tpl.label}
+                        type="button"
+                        onClick={() => setForm({ ...form, systemPrompt: tpl.prompt })}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary-200 bg-primary-50 text-primary-700 text-xs font-medium hover:bg-primary-100 transition-colors"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        {tpl.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <textarea
                   className="input resize-none"
                   rows={4}

@@ -9,7 +9,7 @@ import clsx from 'clsx';
 const CONVERSATION_PAGE_SIZE = 12;
 
 type ConversationFilters = {
-  status: 'all' | 'open' | 'closed';
+  status: 'all' | 'open' | 'handed_off' | 'closed';
   agentId: string;
   leadStatus: 'all' | 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
   hasLead: 'all' | 'with' | 'without';
@@ -25,6 +25,7 @@ const DEFAULT_FILTERS: ConversationFilters = {
 const STATUS_FILTERS: Array<{ label: string; value: ConversationFilters['status'] }> = [
   { label: 'Toutes', value: 'all' },
   { label: 'Ouvertes', value: 'open' },
+  { label: 'Transférées', value: 'handed_off' },
   { label: 'Closes', value: 'closed' },
 ];
 
@@ -208,7 +209,7 @@ export default function ChatPage() {
     }
   };
 
-  const handleUpdateStatus = async (status: 'open' | 'closed') => {
+  const handleUpdateStatus = async (status: 'open' | 'handed_off' | 'closed') => {
     if (!selectedConversation) return;
     setStatusUpdating(true);
     try {
@@ -333,6 +334,7 @@ export default function ChatPage() {
   const hasMoreConversations = conversationMeta.hasMore;
 
   const isConversationClosed = selectedConversationData?.status === 'closed';
+  const isHandedOff = selectedConversationData?.status === 'handed_off';
 
   const leadStatusStyle = (status?: string) => {
     switch (status) {
@@ -582,10 +584,16 @@ export default function ChatPage() {
                       'px-2 py-0.5 rounded-full text-[11px] font-medium uppercase tracking-wide',
                       selectedConversationData.status === 'open'
                         ? 'bg-emerald-50 text-emerald-600'
+                        : selectedConversationData.status === 'handed_off'
+                        ? 'bg-amber-50 text-amber-600'
                         : 'bg-gray-200 text-gray-600',
                     )}
                   >
-                    {selectedConversationData.status === 'open' ? 'Ouverte' : 'Clôturée'}
+                    {selectedConversationData.status === 'open'
+                      ? 'Ouverte'
+                      : selectedConversationData.status === 'handed_off'
+                      ? 'Transférée'
+                      : 'Clôturée'}
                   </span>
                 </div>
               </div>
@@ -712,6 +720,27 @@ export default function ChatPage() {
             <div ref={bottomRef} />
           </div>
 
+          {isHandedOff && (
+            <div className="card p-3 flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border-amber-100">
+              <Info className="w-4 h-4 flex-shrink-0" />
+              Cette conversation a été transférée à un agent humain.
+            </div>
+          )}
+
+          {messages.length === 0 && !loadingHistory && selectedAgent && (
+            <div className="flex flex-wrap gap-2 px-1">
+              {(['Bonjour, j\'aimerais des informations', 'Quels sont vos tarifs ?', 'Je souhaite être contacté', '/help'] as string[]).map((ice) => (
+                <button
+                  key={ice}
+                  onClick={() => setInput(ice)}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 text-xs hover:border-primary-200 hover:text-primary-700 transition-colors"
+                >
+                  {ice}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="flex gap-3 flex-shrink-0">
             <textarea
               className="input flex-1 resize-none"
@@ -719,12 +748,12 @@ export default function ChatPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Écrivez votre message... (Entrée pour envoyer)"
-              disabled={!selectedAgent || sending}
+              placeholder="Écrivez votre message... (/help pour les commandes)"
+              disabled={!selectedAgent || sending || isHandedOff}
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim() || !selectedAgent || sending}
+              disabled={!input.trim() || !selectedAgent || sending || isHandedOff}
               className="btn-primary px-5 self-end"
             >
               <Send className="w-4 h-4" />

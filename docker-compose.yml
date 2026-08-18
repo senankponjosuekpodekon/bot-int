@@ -6,8 +6,8 @@ services:
     container_name: stiamond_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: stiamond
+      POSTGRES_PASSWORD: stiamond123
       POSTGRES_DB: stiamond_agent
     ports:
       - '5432:5432'
@@ -27,8 +27,8 @@ services:
       NODE_ENV: development
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_USER: stiamond
+      DB_PASSWORD: stiamond123
       DB_NAME: stiamond_agent
       JWT_SECRET: changeme_secret_in_production
       OLLAMA_URL: http://host.docker.internal:11434

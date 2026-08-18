@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bot, MessageSquare, Users, BookOpen, LayoutDashboard, LogOut } from 'lucide-react';
+import { Bot, MessageSquare, Users, BookOpen, LayoutDashboard, LogOut, Package, KanbanSquare, BarChart3, Settings, Brain, FileText } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { clsx } from 'clsx';
@@ -11,7 +11,13 @@ const nav = [
   { href: '/dashboard/agents', label: 'Agents', icon: Bot },
   { href: '/dashboard/chat', label: 'Conversations', icon: MessageSquare },
   { href: '/dashboard/leads', label: 'Leads', icon: Users },
+  { href: '/dashboard/pipeline', label: 'Pipeline CRM', icon: KanbanSquare },
+  { href: '/dashboard/products', label: 'Produits', icon: Package },
+  { href: '/dashboard/quotes', label: 'Devis', icon: FileText },
   { href: '/dashboard/knowledge', label: 'Base de connaissances', icon: BookOpen },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/dashboard/intelligence', label: 'Intelligence', icon: Brain },
+  { href: '/dashboard/settings', label: 'Connecteurs', icon: Settings },
 ];
 
 export default function Sidebar() {

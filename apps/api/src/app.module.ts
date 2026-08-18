@@ -1,17 +1,25 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from './modules/auth/auth.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { AgentsModule } from './modules/agents/agents.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { KnowledgeModule } from './modules/knowledge/knowledge.module';
 import { LeadsModule } from './modules/leads/leads.module';
+import { ProductsModule } from './modules/products/products.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { IntegrationsModule } from './modules/integrations/integrations.module';
+import { FlowsModule } from './modules/flows/flows.module';
+import { IntelligenceModule } from './modules/intelligence/intelligence.module';
+import { QuotesModule } from './modules/quotes/quotes.module';
 import { LoggingMiddleware } from './common/logging.middleware';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -33,6 +41,12 @@ import { LoggingMiddleware } from './common/logging.middleware';
     ChatModule,
     KnowledgeModule,
     LeadsModule,
+    ProductsModule,
+    AnalyticsModule,
+    IntegrationsModule,
+    FlowsModule,
+    IntelligenceModule,
+    QuotesModule,
   ],
 })
 export class AppModule implements NestModule {

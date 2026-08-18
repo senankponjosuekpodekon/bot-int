@@ -164,14 +164,95 @@ export const chatApi = {
     api.get(`/chat/history/${conversationId}`).then((r) => r.data),
   attachLead: (conversationId: string, leadId: string) =>
     api.patch(`/chat/${conversationId}/lead`, { leadId }).then((r) => r.data),
-  updateStatus: (conversationId: string, status: 'open' | 'closed') =>
+  updateStatus: (conversationId: string, status: 'open' | 'handed_off' | 'closed') =>
     api.patch(`/chat/${conversationId}/status`, { status }).then((r) => r.data),
 };
 
 export const leadsApi = {
-  list: () => api.get('/leads').then((r) => r.data),
+  list: (params?: { status?: string; tag?: string; search?: string }) =>
+    api.get('/leads', { params }).then((r) => r.data),
   create: (data: any) => api.post('/leads', data).then((r) => r.data),
   update: (id: string, data: any) => api.patch(`/leads/${id}`, data).then((r) => r.data),
+  addTag: (id: string, tag: string) => api.post(`/leads/${id}/tags`, { tag }).then((r) => r.data),
+  removeTag: (id: string, tag: string) => api.delete(`/leads/${id}/tags/${tag}`).then((r) => r.data),
+  pipelineStats: () => api.get('/leads/pipeline/stats').then((r) => r.data),
+  exportCsv: () => api.get('/leads/export/csv', { responseType: 'blob' }).then((r) => r.data),
+};
+
+export const productsApi = {
+  list: (params?: { category?: string; search?: string; page?: number; limit?: number }) =>
+    api.get('/products', { params }).then((r) => r.data),
+  categories: () => api.get('/products/categories').then((r) => r.data),
+  create: (data: any) => api.post('/products', data).then((r) => r.data),
+  update: (id: string, data: any) => api.patch(`/products/${id}`, data).then((r) => r.data),
+  delete: (id: string) => api.delete(`/products/${id}`).then((r) => r.data),
+  importShopify: (shopDomain: string, accessToken: string) =>
+    api.post('/products/import/shopify', { shopDomain, accessToken }).then((r) => r.data),
+  importWooCommerce: (siteUrl: string, consumerKey: string, consumerSecret: string) =>
+    api.post('/products/import/woocommerce', { siteUrl, consumerKey, consumerSecret }).then((r) => r.data),
+  importFeed: (shopUrl: string) =>
+    api.post('/products/import/feed', { shopUrl }).then((r) => r.data),
+  importCsv: (csvContent: string, format?: string) =>
+    api.post('/products/import/csv', { csvContent, format }).then((r) => r.data),
+  importGoogleMerchant: (csvContent: string) =>
+    api.post('/products/import/google-merchant', { csvContent }).then((r) => r.data),
+  importSitemap: (sitemapUrl: string) =>
+    api.post('/products/import/sitemap', { sitemapUrl }).then((r) => r.data),
+  sync: () => api.post('/products/sync').then((r) => r.data),
+};
+
+export const analyticsApi = {
+  dashboard: () => api.get('/analytics/dashboard').then((r) => r.data),
+  timeline: (days?: number) => api.get('/analytics/timeline', { params: { days } }).then((r) => r.data),
+};
+
+export const integrationsApi = {
+  list: () => api.get('/integrations').then((r) => r.data),
+  upsert: (type: string, config: Record<string, any>) => api.post('/integrations', { type, config }).then((r) => r.data),
+  toggle: (type: string, enabled: boolean) => api.patch(`/integrations/${type}`, { enabled }).then((r) => r.data),
+  remove: (type: string) => api.delete(`/integrations/${type}`).then((r) => r.data),
+  createPaymentLink: (productId: string, productName: string, amount: number, currency?: string) =>
+    api.post('/integrations/stripe/payment-link', { productId, productName, amount, currency }).then((r) => r.data),
+  calendlyEvents: () => api.get('/integrations/calendly/events').then((r) => r.data),
+  sendEmail: (to: string, subject: string, body: string) =>
+    api.post('/integrations/email/send', { to, subject, body }).then((r) => r.data),
+  sendWhatsApp: (to: string, message: string) =>
+    api.post('/integrations/whatsapp/send', { to, message }).then((r) => r.data),
+  sendTelegram: (to: string, message: string) =>
+    api.post('/integrations/telegram/send', { to, message }).then((r) => r.data),
+  sendSMS: (to: string, message: string) =>
+    api.post('/integrations/sms/send', { to, message }).then((r) => r.data),
+};
+
+export const flowsApi = {
+  list: () => api.get('/flows').then((r) => r.data),
+  findByAgent: (agentId: string) => api.get(`/flows/agent/${agentId}`).then((r) => r.data),
+  create: (data: any) => api.post('/flows', data).then((r) => r.data),
+  update: (id: string, data: any) => api.patch(`/flows/${id}`, data).then((r) => r.data),
+  delete: (id: string) => api.delete(`/flows/${id}`).then((r) => r.data),
+  respond: (conversationId: string, flowId: string, responses: Record<string, string>) =>
+    api.post('/flows/respond', { conversationId, flowId, responses }).then((r) => r.data),
+};
+
+export const intelligenceApi = {
+  dashboard: () => api.get('/intelligence/dashboard').then((r) => r.data),
+  insights: (params?: { type?: string; resolved?: string }) =>
+    api.get('/intelligence/insights', { params }).then((r) => r.data),
+  resolve: (id: string) => api.post(`/intelligence/insights/${id}/resolve`).then((r) => r.data),
+  autoEnrich: (keyword: string) => api.post('/intelligence/auto-enrich', { keyword }).then((r) => r.data),
+  platformDashboard: () => api.get('/intelligence/platform/dashboard').then((r) => r.data),
+  platformRecommendations: () => api.get('/intelligence/platform/recommendations').then((r) => r.data),
+};
+
+export const quotesApi = {
+  list: () => api.get('/quotes').then((r) => r.data),
+  get: (id: string) => api.get(`/quotes/${id}`).then((r) => r.data),
+  create: (data: any) => api.post('/quotes', data).then((r) => r.data),
+  createFromFlow: (leadId: string, responses: Record<string, string>) =>
+    api.post('/quotes/from-flow', { leadId, responses }).then((r) => r.data),
+  updateStatus: (id: string, status: string) => api.patch(`/quotes/${id}/status`, { status }).then((r) => r.data),
+  delete: (id: string) => api.delete(`/quotes/${id}`).then((r) => r.data),
+  pdfUrl: (id: string) => `${api.defaults.baseURL}/quotes/${id}/pdf`,
 };
 
 export const knowledgeApi = {
@@ -179,5 +260,16 @@ export const knowledgeApi = {
   search: (q: string) => api.get('/knowledge/search', { params: { q } }).then((r) => r.data),
   addText: (content: string, filename?: string) =>
     api.post('/knowledge/text', { content, filename }).then((r) => r.data),
+  uploadFile: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/knowledge/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data);
+  },
+  importUrl: (url: string) =>
+    api.post('/knowledge/url', { url }).then((r) => r.data),
+  importUrlAsync: (url: string) =>
+    api.post('/knowledge/url-async', { url }).then((r) => r.data),
+  searchCompany: (companyName: string) =>
+    api.post('/knowledge/search-company', { companyName }).then((r) => r.data),
   delete: (id: string) => api.delete(`/knowledge/${id}`).then((r) => r.data),
 };

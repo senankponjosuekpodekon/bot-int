@@ -40,6 +40,9 @@ export class Agent {
   @Column({ type: 'text' })
   systemPrompt: string;
 
+  @Column({ type: 'jsonb', nullable: true })
+  iceBreakers: string[];
+
   @Column({ default: true })
   isActive: boolean;
 

@@ -8,6 +8,7 @@
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "target": "ES2021",
+    "lib": ["ES2021", "DOM"],
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
@@ -18,7 +19,7 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
-    "types": ["node", "jest"]
+    "types": ["node", "jest", "multer"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test"]
