@@ -110,6 +110,7 @@
 - [x] Pagination on all list endpoints (`/agents`, `/leads`, `/knowledge`)
 - [x] Webhook support — notify external systems on new lead/conversation
 - [x] Swagger / OpenAPI documentation (`@nestjs/swagger`)
+- [x] Lead auto-tagging (LeadTagService — intent, source, language, region, agent type, funnel stage)
 
 ### Frontend
 - [x] 🔥 Leads page (`/dashboard/leads`)
