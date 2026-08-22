@@ -10,12 +10,16 @@ export class OpenAIProvider implements LLMProvider {
   private readonly model: string;
   private readonly embedModel: string;
   private readonly baseUrl: string;
+  private readonly embedBaseUrl: string;
+  private readonly embedApiKey: string;
 
   constructor(private readonly config: ConfigService) {
     this.apiKey = config.get('OPENAI_API_KEY', '');
     this.model = config.get('OPENAI_MODEL', 'gpt-4o-mini');
     this.embedModel = config.get('OPENAI_EMBED_MODEL', 'text-embedding-3-small');
     this.baseUrl = config.get('OPENAI_BASE_URL', 'https://api.openai.com/v1');
+    this.embedBaseUrl = config.get('OPENAI_EMBED_BASE_URL', this.baseUrl);
+    this.embedApiKey = config.get('OPENAI_EMBED_API_KEY', this.apiKey);
   }
 
   getProviderName(): string {
@@ -92,14 +96,14 @@ export class OpenAIProvider implements LLMProvider {
   async embed(text: string): Promise<number[]> {
     try {
       const response = await axios.post(
-        `${this.baseUrl}/embeddings`,
+        `${this.embedBaseUrl}/embeddings`,
         {
           model: this.embedModel,
           input: text,
         },
         {
           headers: {
-            Authorization: `Bearer ${this.apiKey}`,
+            Authorization: `Bearer ${this.embedApiKey}`,
             'Content-Type': 'application/json',
           },
         },
