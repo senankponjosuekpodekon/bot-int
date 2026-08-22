@@ -3,6 +3,7 @@ import './globals.css';
 import ToasterProvider from '@/components/ToasterProvider';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 import { CurrencyProvider } from '@/components/CurrencyProvider';
+import KeepAlive from '@/components/KeepAlive';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://stiamond.com';
 
@@ -246,6 +247,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body suppressHydrationWarning>
+        <KeepAlive />
         <CurrencyProvider>
           <ToasterProvider />
           <ServiceWorkerRegister />
