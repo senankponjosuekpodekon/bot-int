@@ -1,8 +1,7 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npx turbo run build --filter=@stiamond/web...",
+  "buildCommand": "npx turbo run build --filter=@stiamond/web... && cp -r apps/web/.next .next",
   "devCommand": "npx turbo run dev --filter=@stiamond/web...",
   "installCommand": "npm ci",
-  "outputDirectory": "apps/web/.next",
   "regions": ["iad1"]
 }
