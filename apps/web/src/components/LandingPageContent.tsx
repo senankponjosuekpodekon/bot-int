@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useCurrency } from '@/components/CurrencyProvider';
 import LocaleSwitcher from '@/components/LocaleSwitcher';
+import WidgetEmbed from '@/components/WidgetEmbed';
 
 const planPrices: Record<string, { monthly: number; yearly: number; overageCents: number }> = {
   Free: { monthly: 0, yearly: 0, overageCents: 0 },
@@ -513,6 +514,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
         </button>
       </div>
       <div className="h-16 md:hidden" />
+      <WidgetEmbed />
     </div>
   );
 }
