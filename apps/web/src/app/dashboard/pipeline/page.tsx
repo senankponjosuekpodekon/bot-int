@@ -46,8 +46,8 @@ export default function PipelinePage() {
         leadsApi.list({ search: search || undefined }),
         leadsApi.pipelineStats(),
       ]);
-      setLeads(data);
-      setStats(s);
+      setLeads(Array.isArray(data) ? data : data?.data ?? []);
+      setStats(s ?? {});
     } catch {
       showToast('Erreur lors du chargement', 'error');
     } finally {
