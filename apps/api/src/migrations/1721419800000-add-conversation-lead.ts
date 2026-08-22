@@ -5,6 +5,10 @@ export class AddConversationLead1721419800000 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     const tableName = 'conversations';
+    const tableExists = await queryRunner.hasTable(tableName);
+    if (!tableExists) {
+      return;
+    }
 
     const hasColumn = await queryRunner.hasColumn(tableName, 'leadId');
     if (!hasColumn) {
@@ -31,6 +35,9 @@ export class AddConversationLead1721419800000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     const tableName = 'conversations';
+    const tableExists = await queryRunner.hasTable(tableName);
+    if (!tableExists) return;
+
     const table = await queryRunner.getTable(tableName);
     const fk = table?.foreignKeys.find((foreignKey) => foreignKey.columnNames.includes('leadId'));
     if (fk) {
