@@ -75,8 +75,9 @@ export class SiteService {
     });
     if (site) return site;
 
+    const siteDomain = process.env.SITE_DOMAIN || 'agents.stiamond.net';
     const subdomain = domain.split('.')[0];
-    if (subdomain && subdomain !== 'www' && domain.endsWith('.stiamond.com')) {
+    if (subdomain && subdomain !== 'www' && domain.endsWith(`.${siteDomain}`)) {
       return this.siteRepo.findOne({ where: { subdomain, isActive: true } });
     }
 

@@ -4,6 +4,8 @@ import { siteApi, agentsApi } from '@/lib/api';
 import { Globe, Plus, Trash2, Save, Eye, X, ExternalLink, CheckCircle2, AlertCircle, Palette, Layout, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
+const SITE_DOMAIN = process.env.NEXT_PUBLIC_SITE_DOMAIN || 'agents.stiamond.net';
+
 const COLOR_PRESETS = [
   { name: 'Indigo', primary: '#6366f1', secondary: '#8b5cf6' },
   { name: 'Émeraude', primary: '#10b981', secondary: '#34d399' },
@@ -160,7 +162,7 @@ export default function SiteConfigPage() {
                   <a href={`/site/${s.slug}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary-600 hover:underline">
                     <ExternalLink className="w-3 h-3" /> /site/{s.slug}
                   </a>
-                  {s.subdomain && <span className="text-gray-400">{s.subdomain}.stiamond.com</span>}
+                  {s.subdomain && <span className="text-gray-400">{s.subdomain}.{SITE_DOMAIN}</span>}
                   {s.agentId && <span className="text-gray-400">Chat: ✓</span>}
                 </div>
               </div>
@@ -383,9 +385,9 @@ export default function SiteConfigPage() {
                     <p className="text-sm font-medium text-blue-800">Sous-domaine Stiamond Agents</p>
                     <div className="flex items-center gap-2">
                       <input value={editing.subdomain || ''} onChange={(e) => update('subdomain', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} placeholder="mon-business" className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
-                      <span className="text-sm text-gray-500">.stiamond.com</span>
+                      <span className="text-sm text-gray-500">.{SITE_DOMAIN}</span>
                     </div>
-                    <p className="text-xs text-blue-600">URL: {editing.subdomain || 'mon-business'}.stiamond.com</p>
+                    <p className="text-xs text-blue-600">URL: {editing.subdomain || 'mon-business'}.{SITE_DOMAIN}</p>
                   </div>
 
                   <div className="bg-green-50 rounded-lg p-4 space-y-3">
@@ -394,7 +396,7 @@ export default function SiteConfigPage() {
                     <div className="bg-white rounded-lg p-3 text-xs text-gray-600 space-y-1">
                       <p className="font-medium text-gray-700">Configuration DNS:</p>
                       <p>1. Ajoutez un enregistrement CNAME:</p>
-                      <p className="font-mono bg-gray-50 px-2 py-1 rounded">www → cdn.stiamond.com</p>
+                      <p className="font-mono bg-gray-50 px-2 py-1 rounded">www → cdn.{SITE_DOMAIN}</p>
                       <p>2. Cliquez sur "Vérifier" après configuration</p>
                     </div>
                     {editing.id && editing.customDomain && (

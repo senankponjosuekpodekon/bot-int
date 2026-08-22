@@ -8,7 +8,8 @@ const nextConfig = {
   reactStrictMode: true,
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://bot-int.onrender.com/api',
-    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || 'https://stiamond.com',
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || 'https://agents.stiamond.net',
+    NEXT_PUBLIC_SITE_DOMAIN: process.env.NEXT_PUBLIC_SITE_DOMAIN || 'agents.stiamond.net',
     NEXT_PUBLIC_WIDGET_AGENT_ID: process.env.NEXT_PUBLIC_WIDGET_AGENT_ID || '9ab36d2f-68a3-4fb7-9f36-4b048fe5817c',
   },
   async headers() {
