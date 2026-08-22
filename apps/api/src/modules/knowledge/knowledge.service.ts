@@ -50,10 +50,17 @@ export class KnowledgeService implements OnModuleInit {
       }
       await this.dataSource.query('CREATE EXTENSION IF NOT EXISTS vector');
       await this.dataSource.query(`ALTER TABLE knowledge_chunks ADD COLUMN IF NOT EXISTS embedding_vector vector(${EMBEDDING_DIMS})`);
+
+      const indexType = EMBEDDING_DIMS > 2000 ? 'hnsw' : 'ivfflat';
+      const indexOptions =
+        EMBEDDING_DIMS > 2000
+          ? 'WITH (m = 16, ef_construction = 64)'
+          : 'WITH (lists = 100)';
+
       await this.dataSource.query(`
         CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_embedding_vector
-        ON knowledge_chunks USING ivfflat (embedding_vector vector_cosine_ops)
-        WITH (lists = 100)
+        ON knowledge_chunks USING ${indexType} (embedding_vector vector_cosine_ops)
+        ${indexOptions}
       `);
       this.hasPgvector = true;
       this.logger.log('pgvector enabled — semantic search will use vector index');
