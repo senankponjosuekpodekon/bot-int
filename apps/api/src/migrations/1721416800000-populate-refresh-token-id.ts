@@ -6,6 +6,11 @@ export class PopulateRefreshTokenId1721416800000 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     const tableName = 'refresh_tokens';
+    const tableExists = await queryRunner.hasTable(tableName);
+    if (!tableExists) {
+      return;
+    }
+
     const hasColumn = await queryRunner.hasColumn(tableName, 'tokenId');
     if (!hasColumn) {
       await queryRunner.addColumn(
@@ -44,6 +49,9 @@ export class PopulateRefreshTokenId1721416800000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     const tableName = 'refresh_tokens';
+    const tableExists = await queryRunner.hasTable(tableName);
+    if (!tableExists) return;
+
     await queryRunner.query(`ALTER TABLE "${tableName}" ALTER COLUMN "tokenId" DROP NOT NULL`);
 
     const table = await queryRunner.getTable(tableName);
