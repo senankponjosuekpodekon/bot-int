@@ -87,11 +87,12 @@ export class AgentWorkflowService {
 
   async execute(workflowId: string, ctx: WorkflowExecutionContext): Promise<WorkflowExecutionResult> {
     const workflow = await this.findById(workflowId, ctx.tenantId);
+    const steps = Array.isArray(workflow.steps) ? workflow.steps : [];
     const stepsExecuted: string[] = [];
     const notifications: string[] = [];
     let output = '';
     let handoff = false;
-    let currentStep = workflow.steps.find((s) => s.id === workflow.steps[0]?.id);
+    let currentStep = steps.find((s) => s.id === steps[0]?.id);
 
     const maxIterations = 20;
     let iterations = 0;
@@ -131,8 +132,8 @@ export class AgentWorkflowService {
             const condition = currentStep.config.condition || '';
             const evaluated = this.evaluateCondition(condition, ctx);
             currentStep = evaluated
-              ? workflow.steps.find((s) => s.id === currentStep!.nextStepId)
-              : workflow.steps.find((s) => s.id === currentStep!.config.targetStepId);
+              ? steps.find((s) => s.id === currentStep!.nextStepId)
+              : steps.find((s) => s.id === currentStep!.config.targetStepId);
             continue;
           }
 
@@ -153,7 +154,7 @@ export class AgentWorkflowService {
 
       if (handoff) break;
       currentStep = currentStep.nextStepId
-        ? workflow.steps.find((s) => s.id === currentStep!.nextStepId)
+        ? steps.find((s) => s.id === currentStep!.nextStepId)
         : undefined;
     }
 

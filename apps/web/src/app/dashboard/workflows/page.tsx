@@ -31,7 +31,7 @@ export default function WorkflowsPage() {
     setLoading(true);
     try {
       const res = await agentsApi.listWorkflows();
-      setWorkflows(res.data || res);
+      setWorkflows(Array.isArray(res) ? res : res?.data ?? []);
     } catch {
       toast.error('Failed to load workflows');
     } finally {
@@ -195,14 +195,14 @@ function WorkflowForm({ workflow, onSave, onCancel }: { workflow: any; onSave: (
   const [description, setDescription] = useState(workflow?.description || '');
   const [triggerType, setTriggerType] = useState(workflow?.trigger?.type || 'manual');
   const [triggerValue, setTriggerValue] = useState(workflow?.trigger?.value || '');
-  const [steps, setSteps] = useState<any[]>(workflow?.steps || []);
+  const [steps, setSteps] = useState<any[]>(Array.isArray(workflow?.steps) ? workflow.steps : []);
   const [status, setStatus] = useState(workflow?.status || 'draft');
 
   const addStep = () => {
-    setSteps([...steps, {
+    setSteps([...(steps || []), {
       id: `step_${Date.now()}`,
       type: 'llm_call',
-      name: `Step ${steps.length + 1}`,
+      name: `Step ${(steps || []).length + 1}`,
       config: {},
       nextStepId: undefined,
     }]);
@@ -215,7 +215,7 @@ function WorkflowForm({ workflow, onSave, onCancel }: { workflow: any; onSave: (
   };
 
   const removeStep = (idx: number) => {
-    setSteps(steps.filter((_, i) => i !== idx));
+    setSteps((steps || []).filter((_, i) => i !== idx));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
