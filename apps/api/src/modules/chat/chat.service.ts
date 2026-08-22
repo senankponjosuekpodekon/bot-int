@@ -996,4 +996,21 @@ export class ChatService {
     };
     return guidance[stage] || null;
   }
+
+  // ─── Operator human reply ───
+  async operatorReply(conversationId: string, tenantId: string, content: string): Promise<Message> {
+    const conversation = await this.convRepo.findOne({
+      where: { id: conversationId, tenantId },
+    });
+    if (!conversation) throw new NotFoundException('Conversation not found');
+
+    const message = this.msgRepo.create({
+      conversationId,
+      role: MessageRole.ASSISTANT,
+      content,
+      metadata: { isOperator: true },
+    });
+
+    return this.msgRepo.save(message);
+  }
 }

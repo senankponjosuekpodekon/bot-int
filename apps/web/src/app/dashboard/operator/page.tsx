@@ -18,13 +18,13 @@ interface Message {
   role: string;
   content: string;
   createdAt: string;
+  metadata?: any;
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  active: 'Actif',
-  handed_off: 'Transféré',
-  closed: 'Fermé',
-  waiting: 'En attente',
+  open: 'Ouverte',
+  handed_off: 'Transférée',
+  closed: 'Fermée',
 };
 
 export default function OperatorPage() {
@@ -76,7 +76,7 @@ export default function OperatorPage() {
   const handleSend = async () => {
     if (!reply.trim() || !selected) return;
     try {
-      await chatApi.send(selected.agentId, reply, selected.id, false);
+      await chatApi.operatorReply(selected.id, reply);
       setReply('');
       selectConversation(selected);
     } catch {
@@ -87,7 +87,7 @@ export default function OperatorPage() {
   const handleTakeOver = async () => {
     if (!selected) return;
     try {
-      await chatApi.updateStatus(selected.id, 'handed_off');
+      await chatApi.updateStatus(selected.id, 'open');
       showToast('Conversation prise en charge');
       load();
     } catch {
@@ -116,7 +116,7 @@ export default function OperatorPage() {
             <Headphones className="w-5 h-5 text-primary-600" /> Opérateur
           </h1>
           <div className="flex gap-1 mt-3">
-            {['handed_off', 'active', 'waiting', ''].map((s) => (
+            {['handed_off', 'open', 'closed', ''].map((s) => (
               <button
                 key={s}
                 onClick={() => setFilter(s)}
@@ -197,6 +197,11 @@ export default function OperatorPage() {
               messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[70%] px-4 py-2 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-primary-600 text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm'}`}>
+                    {msg.role === 'assistant' && msg.metadata?.isOperator && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-orange-600 mb-1">
+                        <Headphones className="w-3 h-3" /> Opérateur
+                      </span>
+                    )}
                     <p>{msg.content}</p>
                     <p className={`text-xs mt-1 ${msg.role === 'user' ? 'text-primary-200' : 'text-gray-400'}`}>
                       {new Date(msg.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}

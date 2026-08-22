@@ -9,6 +9,7 @@ import { AttachLeadDto } from './dto/attach-lead.dto';
 import { ListConversationsDto } from './dto/list-conversations.dto';
 import { UpdateConversationStatusDto } from './dto/update-conversation-status.dto';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
+import { OperatorReplyDto } from './dto/operator-reply.dto';
 
 class SendMessageDto {
   @IsString() @IsNotEmpty() agentId: string;
@@ -134,5 +135,16 @@ export class ChatController {
   @ApiResponse({ status: 200, description: 'Feedback deleted' })
   deleteFeedback(@Request() req, @Param('id') id: string) {
     return this.chatService.deleteFeedback(id, req.user.tenantId);
+  }
+
+  @Post(':id/operator')
+  @ApiOperation({ summary: 'Post a human operator reply to a conversation' })
+  @ApiResponse({ status: 201, description: 'Operator reply saved' })
+  operatorReply(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: OperatorReplyDto,
+  ) {
+    return this.chatService.operatorReply(id, req.user.tenantId, dto.message);
   }
 }
