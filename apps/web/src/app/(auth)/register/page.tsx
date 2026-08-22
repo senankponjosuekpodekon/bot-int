@@ -4,7 +4,7 @@ import enMessages from '@/messages/en.json';
 
 export default function RegisterPage() {
   return (
-    <IntlProvider locale="en" messages={enMessages}>
+    <IntlProvider locale="en" messages={enMessages} timeZone="UTC">
       <RegisterPageContent />
     </IntlProvider>
   );
