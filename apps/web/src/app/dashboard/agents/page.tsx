@@ -110,7 +110,7 @@ export default function AgentsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Agents IA</h1>
           <p className="text-gray-500 text-sm mt-1">Créez et gérez vos agents conversationnels</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
+        <button onClick={() => { window.location.href = '/dashboard/agents/create'; }} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" />
           Nouvel agent
         </button>
