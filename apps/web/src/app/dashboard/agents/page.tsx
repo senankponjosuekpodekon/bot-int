@@ -113,8 +113,8 @@ export default function AgentsPage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Agents IA</h1>
           <p className="text-gray-500 text-sm mt-1">Créez et gérez vos agents conversationnels</p>
@@ -199,19 +199,19 @@ export default function AgentsPage() {
       ) : (
         <div className="grid gap-4">
           {agents.map((agent) => (
-            <div key={agent.id} className="card p-5 flex items-start gap-4">
+            <div key={agent.id} className="card p-4 sm:p-5 flex flex-col sm:flex-row items-start gap-4">
               <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Bot className="w-5 h-5 text-primary-600" />
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0 w-full">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-semibold text-gray-900">{agent.name}</h3>
                   <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full capitalize">{agent.type}</span>
                   {agent.isActive && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Actif</span>}
                 </div>
                 <p className="text-sm text-gray-500 mt-1 line-clamp-2">{agent.systemPrompt}</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full sm:w-auto justify-end">
                 <button
                   onClick={() => copyPublicUrl(agent.id)}
                   title="Copier le lien public"
