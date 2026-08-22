@@ -24,7 +24,7 @@ const dataSource = new DataSource({
   database: process.env.DB_NAME || 'stiamond_agent',
   entities: [join(__dirname, 'src/**/*.entity.{ts,js}')],
   migrations: [join(__dirname, 'src/migrations/*.{ts,js}')],
-  synchronize: false,
+  synchronize: process.env.DB_SYNC === 'true' || process.env.NODE_ENV !== 'production',
   logging: process.env.TYPEORM_LOGGING === 'true' || process.env.NODE_ENV === 'development',
 });
 
