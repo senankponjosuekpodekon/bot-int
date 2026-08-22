@@ -55,6 +55,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+api.interceptors.response.use((response) => {
+  const payload = response.data;
+  if (payload && typeof payload === 'object' && !Array.isArray(payload) && Array.isArray(payload.data)) {
+    response.data = payload.data;
+  }
+  return response;
+});
+
 export const authApi = {
   register: (data: { companyName: string; name: string; email: string; password: string }) =>
     api.post('/auth/register', data, { skipAuthRefresh: true }).then((r) => r.data as AuthResponse),
