@@ -140,7 +140,7 @@ export default function SurveysPage() {
   const isDemographic = (type: string) => ['demographic_age', 'demographic_location'].includes(type);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -203,7 +203,7 @@ export default function SurveysPage() {
       {/* Builder modal */}
       {showBuilder && editing && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-4 lg:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">{editing.id ? 'Éditer' : 'Créer'} un sondage</h2>
               <button onClick={() => { setShowBuilder(false); setEditing(null); }} className="p-1 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
@@ -388,7 +388,7 @@ export default function SurveysPage() {
       {/* Results modal */}
       {resultsFor && results && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-4 lg:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">Résultats: {resultsFor.title}</h2>
               <button onClick={() => { setResultsFor(null); setResults(null); }} className="p-1 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>

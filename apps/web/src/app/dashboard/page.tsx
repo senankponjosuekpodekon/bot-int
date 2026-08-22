@@ -28,15 +28,15 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="p-8">
+    <div className="p-4 lg:p-8">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Tableau de bord</h1>
         <p className="text-gray-500 text-sm mt-1">Vue d'ensemble de votre plateforme d'agents IA</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:p-6 mb-8">
         {cards.map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="card p-6">
+          <div key={label} className="card p-4 lg:p-6">
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm font-medium text-gray-500">{label}</span>
               <div className={`w-9 h-9 ${color} rounded-lg flex items-center justify-center`}>
@@ -50,7 +50,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="card p-6">
+      <div className="card p-4 lg:p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Démarrage rapide</h2>
         <div className="space-y-3">
           {[

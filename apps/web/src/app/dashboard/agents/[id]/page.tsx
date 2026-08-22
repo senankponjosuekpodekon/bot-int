@@ -85,7 +85,7 @@ export default function AgentDetailPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-4 lg:p-8">
         <div className="text-center py-12 text-gray-400">Chargement...</div>
       </div>
     );
@@ -93,7 +93,7 @@ export default function AgentDetailPage() {
 
   if (!agent) {
     return (
-      <div className="p-8">
+      <div className="p-4 lg:p-8">
         <div className="card p-12 text-center">
           <Bot className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">Agent introuvable</p>
@@ -103,7 +103,7 @@ export default function AgentDetailPage() {
   }
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-4 lg:p-8 max-w-3xl">
       <button
         onClick={() => router.push('/dashboard/agents')}
         className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-6 transition-colors"
@@ -126,7 +126,7 @@ export default function AgentDetailPage() {
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
-        <div className="card p-6 space-y-4">
+        <div className="card p-4 lg:p-6 space-y-4">
           <h2 className="text-lg font-semibold text-gray-900">Configuration</h2>
 
           <div>
@@ -191,7 +191,7 @@ export default function AgentDetailPage() {
           </div>
         </div>
 
-        <div className="card p-6 space-y-4">
+        <div className="card p-4 lg:p-6 space-y-4">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary-600" />
             <h2 className="text-lg font-semibold text-gray-900">Brise-glace</h2>

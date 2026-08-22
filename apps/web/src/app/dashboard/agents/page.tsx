@@ -113,7 +113,7 @@ export default function AgentsPage() {
   };
 
   return (
-    <div className="p-4 sm:p-8">
+    <div className="p-4 sm:p-4 lg:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Agents IA</h1>
@@ -127,7 +127,7 @@ export default function AgentsPage() {
 
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="card p-6 w-full max-w-lg">
+          <div className="card p-4 lg:p-6 w-full max-w-lg">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Nouvel agent</h2>
               <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600">

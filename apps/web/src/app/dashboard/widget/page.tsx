@@ -41,7 +41,7 @@ export default function WidgetConfigPage() {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <Code2 className="w-6 h-6 text-primary-600" /> Widget & Intégration
@@ -50,7 +50,7 @@ export default function WidgetConfigPage() {
       </div>
 
       {/* Configuration */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 mb-6">
         <h2 className="font-semibold text-gray-900 mb-4">Configuration</h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -81,9 +81,9 @@ export default function WidgetConfigPage() {
       </div>
 
       {/* Preview */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 mb-6">
         <h2 className="font-semibold text-gray-900 mb-4">Aperçu</h2>
-        <div className="bg-gray-100 rounded-lg p-8 relative h-48 flex items-center justify-center">
+        <div className="bg-gray-100 rounded-lg p-4 lg:p-8 relative h-48 flex items-center justify-center">
           <p className="text-gray-400 text-sm">Aperçu de votre site</p>
           <div className="absolute bottom-4 right-4 flex items-center gap-2">
             <div className="bg-white rounded-lg shadow-lg p-3 max-w-[200px]" style={{ display: 'none' }}>
@@ -97,7 +97,7 @@ export default function WidgetConfigPage() {
       </div>
 
       {/* Embed code */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-gray-900">Code d'intégration (HTML)</h2>
           <button onClick={() => copyToClipboard(embedCode)} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100">
@@ -109,7 +109,7 @@ export default function WidgetConfigPage() {
       </div>
 
       {/* WordPress shortcode */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-gray-900">Shortcode WordPress</h2>
           <button onClick={() => copyToClipboard(wordpressShortcode)} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100">
@@ -121,7 +121,7 @@ export default function WidgetConfigPage() {
       </div>
 
       {/* API endpoints */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
         <h2 className="font-semibold text-gray-900 mb-3">Endpoints API publique</h2>
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2">

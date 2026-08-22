@@ -111,10 +111,10 @@ export default function SettingsPage() {
 
   const isEnabled = (type: string) => integrations.find((i) => i.type === type)?.enabled ?? false;
 
-  if (loading) return <div className="p-6 text-center text-gray-500">Chargement...</div>;
+  if (loading) return <div className="p-4 lg:p-6 text-center text-gray-500">Chargement...</div>;
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Connecteurs</h1>
 
       <div className="space-y-6">

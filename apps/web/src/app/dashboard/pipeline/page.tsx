@@ -108,7 +108,7 @@ export default function PipelinePage() {
   const leadsByStatus = (status: string) => leads.filter((l) => l.status === status);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pipeline CRM</h1>
@@ -116,7 +116,7 @@ export default function PipelinePage() {
         </div>
         <div className="flex gap-2">
           <div className="relative">
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher..." className="px-3 py-2 rounded-lg border border-gray-300 text-sm w-48" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher..." className="px-3 py-2 rounded-lg border border-gray-300 text-sm w-full sm:w-48" />
           </div>
           <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <Download className="w-4 h-4" /> Export CSV
@@ -131,7 +131,7 @@ export default function PipelinePage() {
           {COLUMNS.map((col) => {
             const colLeads = leadsByStatus(col.key);
             return (
-              <div key={col.key} className="flex-shrink-0 w-72">
+              <div key={col.key} className="flex-shrink-0 w-full lg:w-72">
                 <div className="flex items-center gap-2 mb-3">
                   <div className={`w-2 h-2 rounded-full ${col.color}`} />
                   <h3 className="font-semibold text-sm text-gray-700">{col.label}</h3>
@@ -173,7 +173,7 @@ export default function PipelinePage() {
 
       {selectedLead && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedLead(null)}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl p-4 lg:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">{selectedLead.name || 'Lead anonyme'}</h2>
               <button onClick={() => setSelectedLead(null)} className="p-1 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>

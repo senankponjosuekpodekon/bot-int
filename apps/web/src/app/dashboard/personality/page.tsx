@@ -105,7 +105,7 @@ export default function PersonalityPage() {
   const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <Sparkles className="w-6 h-6 text-primary-600" /> Personnalité & Comportement

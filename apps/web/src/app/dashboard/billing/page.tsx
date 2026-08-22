@@ -30,7 +30,7 @@ export default function BillingPage() {
     load();
   }, []);
 
-  if (loading) return <div className="p-6 text-center text-gray-500">Chargement...</div>;
+  if (loading) return <div className="p-4 lg:p-6 text-center text-gray-500">Chargement...</div>;
 
   const plans = [
     {
@@ -104,12 +104,12 @@ export default function BillingPage() {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 mb-2">Facturation & Abonnement</h1>
       <p className="text-gray-500 mb-8">Gérez votre plan et suivez votre consommation</p>
 
       {/* Current plan status */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8">
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 lg:p-6 mb-8">
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -241,7 +241,7 @@ export default function BillingPage() {
           return (
             <div
               key={p.id}
-              className={`bg-white rounded-2xl border-2 p-6 transition-all ${
+              className={`bg-white rounded-2xl border-2 p-4 lg:p-6 transition-all ${
                 isCurrent ? 'border-green-500 shadow-lg' : 'border-gray-100 hover:border-gray-200'
               }`}
             >

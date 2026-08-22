@@ -141,8 +141,8 @@ export default function CreateAgentPage() {
 
   if (created) {
     return (
-      <div className="p-8 max-w-4xl mx-auto">
-        <div className="card p-8 text-center">
+      <div className="p-4 lg:p-8 max-w-4xl mx-auto">
+        <div className="card p-4 lg:p-8 text-center">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Check className="w-8 h-8 text-green-600" />
           </div>
@@ -167,7 +167,7 @@ export default function CreateAgentPage() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-5xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Bot className="w-6 h-6 text-primary-600" /> Créer un nouvel agent</h1>
         <p className="text-gray-500 text-sm mt-1">Assistant pas-à-pas. Chaque étape est optionnelle.</p>
@@ -182,7 +182,7 @@ export default function CreateAgentPage() {
         ))}
       </div>
 
-      <div className="card p-6 mb-6 min-h-[420px]">
+      <div className="card p-4 lg:p-6 mb-6 min-h-[420px]">
         {step === 0 && (
           <div className="space-y-5">
             <h2 className="text-lg font-semibold flex items-center gap-2"><Bot className="w-5 h-5 text-primary-600" /> Identité de l&apos;agent</h2>
@@ -319,7 +319,7 @@ export default function CreateAgentPage() {
                 <input className="input" value={widget.color} onChange={(e) => setWidget({ ...widget, color: e.target.value })} />
               </div>
             </div>
-            <div className="bg-gray-100 rounded-lg p-6 h-40 flex items-center justify-center relative mt-4">
+            <div className="bg-gray-100 rounded-lg p-4 lg:p-6 h-40 flex items-center justify-center relative mt-4">
               <p className="text-gray-400 text-sm">Aperçu de ton site</p>
               <div className="absolute bottom-4 right-4 w-12 h-12 rounded-full flex items-center justify-center shadow-lg" style={{ background: widget.color }}>
                 <MessageCircle className="w-6 h-6 text-white" />

@@ -57,7 +57,7 @@ export default function MemoryPage() {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -72,7 +72,7 @@ export default function MemoryPage() {
       </div>
 
       <div className="flex gap-3 mb-4">
-        <select value={scope} onChange={(e) => setScope(e.target.value)} className="input w-40">
+        <select value={scope} onChange={(e) => setScope(e.target.value)} className="input w-full sm:w-40">
           <option value="visitor">Visitor</option>
           <option value="lead">Lead</option>
           <option value="tenant">Tenant</option>
@@ -115,7 +115,7 @@ export default function MemoryPage() {
             placeholder="Importance (0-2)"
             value={newMemory.importance}
             onChange={(e) => setNewMemory({ ...newMemory, importance: parseFloat(e.target.value) || 1 })}
-            className="input w-40"
+            className="input w-full sm:w-40"
           />
           <div className="flex gap-2">
             <button type="submit" className="btn-primary">Save</button>

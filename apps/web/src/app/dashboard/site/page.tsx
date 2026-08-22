@@ -117,7 +117,7 @@ export default function SiteConfigPage() {
   const updateSection = (field: string, value: boolean) => setEditing({ ...editing, sections: { ...editing.sections, [field]: value } });
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -211,7 +211,7 @@ export default function SiteConfigPage() {
               ))}
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-4 lg:p-6 space-y-4">
               {tab === 'content' && (
                 <>
                   <div className="grid grid-cols-2 gap-4">

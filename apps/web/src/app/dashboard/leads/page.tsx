@@ -113,7 +113,7 @@ export default function LeadsPage() {
   };
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 lg:p-8 space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pipeline des leads</h1>
@@ -172,9 +172,9 @@ export default function LeadsPage() {
         </div>
 
         {loading ? (
-          <div className="p-8 text-center text-gray-400">Chargement...</div>
+          <div className="p-4 lg:p-8 text-center text-gray-400">Chargement...</div>
         ) : filteredLeads.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">Aucun lead pour ce filtre.</div>
+          <div className="p-4 lg:p-8 text-center text-gray-400">Aucun lead pour ce filtre.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -250,7 +250,7 @@ export default function LeadsPage() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="card p-6 w-full max-w-lg relative">
+          <div className="card p-4 lg:p-6 w-full max-w-lg relative">
             <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-600" onClick={() => setShowForm(false)}>
               <X className="w-5 h-5" />
             </button>

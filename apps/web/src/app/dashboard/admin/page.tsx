@@ -82,11 +82,11 @@ export default function AdminPage() {
     }
   };
 
-  if (loading) return <div className="p-6 text-center text-gray-500">Chargement...</div>;
+  if (loading) return <div className="p-4 lg:p-6 text-center text-gray-500">Chargement...</div>;
 
   if (!stats) {
     return (
-      <div className="p-6 max-w-2xl mx-auto text-center">
+      <div className="p-4 lg:p-6 max-w-2xl mx-auto text-center">
         <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
         <h2 className="text-xl font-bold text-gray-900 mb-2">Accès refusé</h2>
         <p className="text-gray-500">Vous devez être Super Admin pour accéder à cette page.</p>
@@ -102,7 +102,7 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-7xl mx-auto">
       <div className="flex items-center gap-2 mb-2">
         <Crown className="w-6 h-6 text-indigo-600" />
         <h1 className="text-2xl font-bold text-gray-900">Super Admin</h1>
@@ -148,8 +148,8 @@ export default function AdminPage() {
           </div>
 
           {/* Revenue + Plan distribution */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:p-6">
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 lg:p-6">
               <div className="flex items-center gap-2 mb-4">
                 <DollarSign className="w-5 h-5 text-green-600" />
                 <h3 className="font-semibold text-gray-900">Revenus estimés (MRR)</h3>
@@ -167,7 +167,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 p-6">
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 lg:p-6">
               <h3 className="font-semibold text-gray-900 mb-4">Distribution des plans</h3>
               <div className="space-y-3">
                 {Object.entries(stats.subscriptions.planDistribution).map(([plan, count]) => (

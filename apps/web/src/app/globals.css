@@ -40,3 +40,31 @@
     @apply block text-sm font-medium text-gray-700 mb-1;
   }
 }
+
+@layer utilities {
+  .responsive-table {
+    @apply w-full overflow-x-auto block;
+  }
+}
+
+@media (max-width: 1024px) {
+  img,
+  video,
+  svg,
+  canvas,
+  iframe {
+    max-width: 100%;
+    height: auto;
+  }
+  pre,
+  code {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}

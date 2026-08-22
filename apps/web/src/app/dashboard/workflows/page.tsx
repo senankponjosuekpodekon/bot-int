@@ -69,7 +69,7 @@ export default function WorkflowsPage() {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -230,7 +230,7 @@ function WorkflowForm({ workflow, onSave, onCancel }: { workflow: any; onSave: (
   };
 
   return (
-    <form onSubmit={handleSubmit} className="card p-6 mb-4 space-y-4">
+    <form onSubmit={handleSubmit} className="card p-4 lg:p-6 mb-4 space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="label">Name</label>
@@ -285,7 +285,7 @@ function WorkflowForm({ workflow, onSave, onCancel }: { workflow: any; onSave: (
               <select
                 value={step.type}
                 onChange={(e) => updateStep(idx, 'type', e.target.value)}
-                className="input w-40"
+                className="input w-full sm:w-40"
               >
                 {STEP_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>

@@ -37,17 +37,17 @@ export default function ChannelAnalyticsPage() {
   }, [days]);
 
   if (loading) {
-    return <div className="p-6 text-center text-gray-400">Loading analytics...</div>;
+    return <div className="p-4 lg:p-6 text-center text-gray-400">Loading analytics...</div>;
   }
 
   if (!data) {
-    return <div className="p-6 text-center text-gray-400">No data available</div>;
+    return <div className="p-4 lg:p-6 text-center text-gray-400">No data available</div>;
   }
 
   const maxConversations = Math.max(...(data.channels?.map((c: any) => c.conversations) || [1]), 1);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -56,7 +56,7 @@ export default function ChannelAnalyticsPage() {
           </h1>
           <p className="text-gray-500 text-sm mt-1">Message volume, lead conversion, and performance by channel</p>
         </div>
-        <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="input w-40">
+        <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="input w-full sm:w-40">
           <option value={7}>Last 7 days</option>
           <option value={30}>Last 30 days</option>
           <option value={90}>Last 90 days</option>
@@ -70,7 +70,7 @@ export default function ChannelAnalyticsPage() {
         <StatCard icon={TrendingUp} label="Conversion Rate" value={`${data.summary?.avgConversionRate || 0}%`} color="text-orange-600" />
       </div>
 
-      <div className="card p-6 mb-6">
+      <div className="card p-4 lg:p-6 mb-6">
         <h2 className="font-medium mb-4">Channel Performance</h2>
         {data.channels?.length === 0 ? (
           <p className="text-gray-400 text-sm">No conversations in this period</p>
@@ -96,7 +96,7 @@ export default function ChannelAnalyticsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-4 text-xs text-gray-500 w-48 justify-end">
+                <div className="flex gap-4 text-xs text-gray-500 w-full sm:w-48 justify-end">
                   <span title="Leads">{ch.leads} leads</span>
                   <span title="Conversion rate">{ch.conversionRate}%</span>
                   <span title="Messages">{ch.messages} msgs</span>
@@ -108,7 +108,7 @@ export default function ChannelAnalyticsPage() {
       </div>
 
       {data.dailyVolume?.length > 0 && (
-        <div className="card p-6">
+        <div className="card p-4 lg:p-6">
           <h2 className="font-medium mb-4">Daily Conversation Volume</h2>
           <DailyChart data={data.dailyVolume} colors={CHANNEL_COLORS} labels={CHANNEL_LABELS} />
         </div>

@@ -146,7 +146,7 @@ export default function LeadDetailPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-4 lg:p-8">
         <div className="text-center py-12 text-gray-400">Chargement...</div>
       </div>
     );
@@ -154,7 +154,7 @@ export default function LeadDetailPage() {
 
   if (!lead) {
     return (
-      <div className="p-8">
+      <div className="p-4 lg:p-8">
         <div className="card p-12 text-center">
           <p className="text-gray-500 font-medium">Lead introuvable</p>
         </div>
@@ -165,7 +165,7 @@ export default function LeadDetailPage() {
   const statusOption = STATUS_OPTIONS.find((s) => s.value === lead.status);
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="p-4 lg:p-8 max-w-4xl">
       <button
         onClick={() => router.push('/dashboard/leads')}
         className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-6 transition-colors"
@@ -184,10 +184,10 @@ export default function LeadDetailPage() {
         </span>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:p-6">
         {/* Left column — Contact info + tags */}
         <div className="space-y-6">
-          <div className="card p-6">
+          <div className="card p-4 lg:p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Coordonnées</h2>
             <div className="space-y-3">
               {lead.email && (
@@ -219,7 +219,7 @@ export default function LeadDetailPage() {
             </div>
           </div>
 
-          <div className="card p-6">
+          <div className="card p-4 lg:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-gray-900">Score</h2>
               <TrendingUp className="w-4 h-4 text-primary-600" />
@@ -235,7 +235,7 @@ export default function LeadDetailPage() {
             </div>
           </div>
 
-          <div className="card p-6">
+          <div className="card p-4 lg:p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Tags</h2>
             <div className="flex flex-wrap gap-2 mb-3">
               {(lead.tags || []).map((tag: string) => (
@@ -275,7 +275,7 @@ export default function LeadDetailPage() {
 
         {/* Right column — Status + Timeline */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="card p-6">
+          <div className="card p-4 lg:p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Statut du lead</h2>
             <div className="flex flex-wrap gap-2">
               {STATUS_OPTIONS.map(({ value, label, badge }) => (
@@ -295,7 +295,7 @@ export default function LeadDetailPage() {
             </div>
           </div>
 
-          <div className="card p-6">
+          <div className="card p-4 lg:p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Timeline</h2>
             <div className="space-y-4">
               <TimelineItem
@@ -344,7 +344,7 @@ export default function LeadDetailPage() {
           </div>
 
           {/* Comments section */}
-          <div className="card p-6">
+          <div className="card p-4 lg:p-6">
             <div className="flex items-center gap-2 mb-4">
               <MessageCircle className="w-4 h-4 text-primary-600" />
               <h2 className="text-sm font-semibold text-gray-900">Commentaires</h2>

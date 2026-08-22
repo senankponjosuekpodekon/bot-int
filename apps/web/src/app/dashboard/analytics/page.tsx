@@ -39,8 +39,8 @@ export default function AnalyticsPage() {
     load();
   }, []);
 
-  if (loading) return <div className="p-6 text-center text-gray-500">Chargement des analytics...</div>;
-  if (!data) return <div className="p-6 text-center text-gray-500">Erreur lors du chargement</div>;
+  if (loading) return <div className="p-4 lg:p-6 text-center text-gray-500">Chargement des analytics...</div>;
+  if (!data) return <div className="p-4 lg:p-6 text-center text-gray-500">Erreur lors du chargement</div>;
 
   const stats = [
     { label: 'Conversations', value: data.conversations.total, sub: `${data.conversations.open} ouvertes • ${data.conversations.handedOff} transférées`, icon: MessageSquare, color: 'text-blue-600 bg-blue-50' },
@@ -54,7 +54,7 @@ export default function AnalyticsPage() {
   const maxTimeline = Math.max(...timeline.map((t) => t.count), 1);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 lg:p-6 max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Analytics</h1>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
@@ -70,7 +70,7 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:p-6">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Clock className="w-4 h-4 text-gray-400" /> Conversations (30 derniers jours)</h2>
           {timeline.length > 0 ? (
@@ -78,7 +78,7 @@ export default function AnalyticsPage() {
               {timeline.map((t, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center group relative">
                   <div className="w-full bg-primary-500 rounded-t hover:bg-primary-600 transition-colors" style={{ height: `${(t.count / maxTimeline) * 100}%`, minHeight: '2px' }} />
-                  <div className="absolute -top-6 opacity-0 group-hover:opacity-100 transition-opacity text-xs bg-gray-800 text-white px-2 py-0.5 rounded whitespace-nowrap">{t.count}</div>
+                  <div className="absolute -top-4 lg:p-6 opacity-0 group-hover:opacity-100 transition-opacity text-xs bg-gray-800 text-white px-2 py-0.5 rounded whitespace-nowrap">{t.count}</div>
                 </div>
               ))}
             </div>

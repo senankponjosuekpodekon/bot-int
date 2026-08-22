@@ -165,7 +165,7 @@ export default function KnowledgePage() {
   };
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 lg:p-8 space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Base de connaissances</h1>
@@ -231,7 +231,7 @@ export default function KnowledgePage() {
 
       {showForm && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="card p-6 w-full max-w-2xl relative">
+          <div className="card p-4 lg:p-6 w-full max-w-2xl relative">
             <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-600" onClick={() => setShowForm(false)}>
               <X className="w-5 h-5" />
             </button>
@@ -305,7 +305,7 @@ export default function KnowledgePage() {
                 <p className="text-sm text-gray-500">
                   Importez un fichier PDF ou texte. Le contenu sera extrait et indexé automatiquement.
                 </p>
-                <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center">
+                <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 lg:p-8 text-center">
                   <Upload className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                   <label className="cursor-pointer">
                     <span className="btn-primary inline-block">{uploading ? 'Import...' : 'Choisir un fichier'}</span>

@@ -651,7 +651,7 @@ export default function ChatPage() {
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="text-gray-500">Aucun lead associé.</span>
                   <select
-                    className="input w-48 text-sm"
+                    className="input w-full sm:w-48 text-sm"
                     value={selectedLeadToAttach}
                     onChange={(e) => setSelectedLeadToAttach(e.target.value)}
                   >
