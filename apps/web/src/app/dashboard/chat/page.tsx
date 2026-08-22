@@ -380,15 +380,15 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-full p-6 gap-4">
-      <div className="flex items-center justify-between flex-shrink-0">
+    <div className="flex flex-col h-full p-4 lg:p-6 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 flex-shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Test des agents</h1>
           <p className="text-gray-500 text-sm mt-1">Discutez avec vos agents en temps réel</p>
         </div>
         <div className="flex items-center gap-3">
           <select
-            className="input w-52"
+            className="input w-full sm:w-52"
             value={selectedAgent}
             onChange={(e) => {
               setSelectedAgent(e.target.value);
@@ -407,8 +407,8 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div className="flex flex-1 gap-4 min-h-0">
-        <aside className="w-72 card p-4 flex flex-col">
+      <div className="flex flex-col lg:flex-row flex-1 gap-4 min-h-0">
+        <aside className="w-full lg:w-72 card p-4 flex flex-col">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-700">Conversations</p>

@@ -108,9 +108,9 @@ export default function OperatorPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-64px)]">
+    <div className="flex h-full min-h-0">
       {/* Sidebar: conversations list */}
-      <div className={`w-80 border-r border-gray-200 flex flex-col ${selected ? 'hidden lg:flex' : 'flex'}`}>
+      <div className={`w-full lg:w-80 border-r border-gray-200 flex flex-col ${selected ? 'hidden lg:flex' : 'flex'}`}>
         <div className="p-4 border-b border-gray-200">
           <h1 className="text-lg font-bold flex items-center gap-2">
             <Headphones className="w-5 h-5 text-primary-600" /> Opérateur
@@ -159,7 +159,7 @@ export default function OperatorPage() {
       {selected ? (
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-3">
               <button onClick={() => setSelected(null)} className="lg:hidden p-1 rounded-lg hover:bg-gray-100">
                 <ArrowLeft className="w-5 h-5" />
@@ -181,7 +181,7 @@ export default function OperatorPage() {
 
           {/* Lead info */}
           {lead && (
-            <div className="p-3 bg-blue-50 border-b border-blue-100 flex items-center gap-4 text-sm">
+            <div className="p-3 bg-blue-50 border-b border-blue-100 flex flex-wrap items-center gap-4 text-sm">
               {lead.email && <span className="flex items-center gap-1 text-blue-700"><Mail className="w-3 h-3" /> {lead.email}</span>}
               {lead.phone && <span className="flex items-center gap-1 text-blue-700"><Phone className="w-3 h-3" /> {lead.phone}</span>}
               {lead.company && <span className="text-blue-700">{lead.company}</span>}
