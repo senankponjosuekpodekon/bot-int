@@ -1,5 +1,5 @@
 {
-  "framework": null,
+  "framework": "nextjs",
   "buildCommand": "npx turbo run build --filter=@stiamond/web...",
   "devCommand": "npx turbo run dev --filter=@stiamond/web...",
   "installCommand": "npm ci",
