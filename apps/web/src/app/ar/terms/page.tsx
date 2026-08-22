@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'شروط الخدمة',
-  description: 'شروط خدمة Stiamond — شروط الاستخدام، الاستخدام المقبول، الدفع والإلغاء.',
+  description: 'شروط خدمة Stiamond Agents — شروط الاستخدام، الاستخدام المقبول، الدفع والإلغاء.',
 };
 
 export default function TermsARPage() {
@@ -15,12 +15,12 @@ export default function TermsARPage() {
         <div className="prose prose-gray max-w-none space-y-4 lg:space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">1. قبول الشروط</h2>
-            <p>بالوصول إلى Stiamond أو استخدامها („الخدمة")، فإنك توافق على الالتزام بشروط الخدمة هذه. إذا كنت لا توافق، فلا تستخدم الخدمة. Stiamond تديرها شركة Stiamond SAS، شركة فرنسية.</p>
+            <p>بالوصول إلى Stiamond Agents أو استخدامها („الخدمة")، فإنك توافق على الالتزام بشروط الخدمة هذه. إذا كنت لا توافق، فلا تستخدم الخدمة. Stiamond Agents تديرها شركة Stiamond Agents SAS، شركة فرنسية.</p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">2. وصف الخدمة</h2>
-            <p>تقدم Stiamond منصة وكلاء محادثة مدعومة بالذكاء الاصطناعي تمكّن الشركات من تأهيل العملاء المحتملين، والتوصية بالمنتجات، وحجز المواعيد، والتأثير على المبيعات عبر قنوات متعددة (دردشة ويب، بريد إلكتروني، رسائل قصيرة، تيليجرام). تشمل الخدمة لوحة تحكم، ووصول API (حسب الخطة)، وتكاملات مع خدمات خارجية.</p>
+            <p>تقدم Stiamond Agents منصة وكلاء محادثة مدعومة بالذكاء الاصطناعي تمكّن الشركات من تأهيل العملاء المحتملين، والتوصية بالمنتجات، وحجز المواعيد، والتأثير على المبيعات عبر قنوات متعددة (دردشة ويب، بريد إلكتروني، رسائل قصيرة، تيليجرام). تشمل الخدمة لوحة تحكم، ووصول API (حسب الخطة)، وتكاملات مع خدمات خارجية.</p>
           </section>
 
           <section>
@@ -71,7 +71,7 @@ export default function TermsARPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">9. حدود المسؤولية</h2>
-            <p>تُقدم Stiamond „كما هي" دون أي ضمانات. لسنا مسؤولين عن الأضرار غير المباشرة أو العرضية أو التبعية. إجمالي مسؤوليتنا لن يتجاوز المبلغ الذي دفعته في الأشهر الثلاثة السابقة للمطالبة.</p>
+            <p>تُقدم Stiamond Agents „كما هي" دون أي ضمانات. لسنا مسؤولين عن الأضرار غير المباشرة أو العرضية أو التبعية. إجمالي مسؤوليتنا لن يتجاوز المبلغ الذي دفعته في الأشهر الثلاثة السابقة للمطالبة.</p>
           </section>
 
           <section>
@@ -81,7 +81,7 @@ export default function TermsARPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">11. التواصل</h2>
-            <p>Stiamond SAS — البريد الإلكتروني: support@stiamond.com — البيانات مستضافة في الاتحاد الأوروبي.</p>
+            <p>Stiamond Agents SAS — البريد الإلكتروني: support@stiamond.com — البيانات مستضافة في الاتحاد الأوروبي.</p>
           </section>
         </div>
 

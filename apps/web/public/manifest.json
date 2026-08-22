@@ -1,6 +1,6 @@
 {
-  "name": "Stiamond — Agents IA",
-  "short_name": "Stiamond",
+  "name": "Stiamond Agents — Agents IA",
+  "short_name": "Stiamond Agents",
   "description": "Agents IA autonomes qui qualifient, recommandent, bookent et vendent.",
   "start_url": "/",
   "display": "standalone",

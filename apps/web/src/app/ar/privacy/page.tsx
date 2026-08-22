@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'سياسة الخصوصية',
-  description: 'سياسة خصوصية Stiamond — كيف نجمع ونستخدم ونحمي بياناتك. متوافقة مع GDPR، استضافة في الاتحاد الأوروبي.',
+  description: 'سياسة خصوصية Stiamond Agents — كيف نجمع ونستخدم ونحمي بياناتك. متوافقة مع GDPR، استضافة في الاتحاد الأوروبي.',
 };
 
 export default function PrivacyARPage() {
@@ -15,7 +15,7 @@ export default function PrivacyARPage() {
         <div className="prose prose-gray max-w-none space-y-4 lg:space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">1. المراقب للبيانات</h2>
-            <p>شركة Stiamond SAS هي المراقب للبيانات الشخصية المعالجة عبر الخدمة. تُستضاف البيانات في الاتحاد الأوروبي (فرنسا). التواصل: privacy@stiamond.com.</p>
+            <p>شركة Stiamond Agents SAS هي المراقب للبيانات الشخصية المعالجة عبر الخدمة. تُستضاف البيانات في الاتحاد الأوروبي (فرنسا). التواصل: privacy@stiamond.com.</p>
           </section>
 
           <section>
@@ -109,7 +109,7 @@ export default function PrivacyARPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">11. التواصل</h2>
-            <p>Stiamond SAS — البريد الإلكتروني: privacy@stiamond.com — مسؤول حماية البيانات متاح عند الطلب.</p>
+            <p>Stiamond Agents SAS — البريد الإلكتروني: privacy@stiamond.com — مسؤول حماية البيانات متاح عند الطلب.</p>
           </section>
         </div>
 

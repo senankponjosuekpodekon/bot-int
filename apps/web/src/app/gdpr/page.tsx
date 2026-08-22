@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'GDPR Compliance',
-  description: 'Stiamond GDPR compliance — EU-hosted data, tenant isolation, DPA, and data subject rights.',
+  description: 'Stiamond Agents GDPR compliance — EU-hosted data, tenant isolation, DPA, and data subject rights.',
 };
 
 export default function GdprPage() {
@@ -15,7 +15,7 @@ export default function GdprPage() {
         <div className="prose prose-gray max-w-none space-y-4 lg:space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">Overview</h2>
-            <p>Stiamond is fully compliant with the General Data Protection Regulation (GDPR, Regulation EU 2016/679). As a French company hosting data in the European Union, we process personal data in accordance with GDPR principles: lawfulness, fairness, transparency, purpose limitation, data minimization, accuracy, storage limitation, integrity, and accountability.</p>
+            <p>Stiamond Agents is fully compliant with the General Data Protection Regulation (GDPR, Regulation EU 2016/679). As a French company hosting data in the European Union, we process personal data in accordance with GDPR principles: lawfulness, fairness, transparency, purpose limitation, data minimization, accuracy, storage limitation, integrity, and accountability.</p>
           </section>
 
           <section>
@@ -36,7 +36,7 @@ export default function GdprPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">Data Processing Agreement (DPA)</h2>
-            <p>Stiamond acts as both data controller (for account data) and data processor (for end-user conversation data) under GDPR. A Data Processing Agreement is available for Enterprise customers and can be requested at privacy@stiamond.com. The DPA covers:</p>
+            <p>Stiamond Agents acts as both data controller (for account data) and data processor (for end-user conversation data) under GDPR. A Data Processing Agreement is available for Enterprise customers and can be requested at privacy@stiamond.com. The DPA covers:</p>
             <ul className="list-disc pl-6 space-y-2">
               <li>Subject matter and duration of processing.</li>
               <li>Nature and purpose of processing.</li>
@@ -95,12 +95,12 @@ export default function GdprPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">Breach Notification</h2>
-            <p>In the event of a personal data breach, Stiamond will notify affected customers within 72 hours of becoming aware of the breach, in accordance with GDPR Article 33. Notifications will include the nature of the breach, likely consequences, and measures taken.</p>
+            <p>In the event of a personal data breach, Stiamond Agents will notify affected customers within 72 hours of becoming aware of the breach, in accordance with GDPR Article 33. Notifications will include the nature of the breach, likely consequences, and measures taken.</p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">Supervisory Authority</h2>
-            <p>Stiamond SAS is subject to the jurisdiction of the CNIL (Commission Nationale de l'Informatique et des Libertés), the French data protection authority. Complaints can be filed with the CNIL at www.cnil.fr.</p>
+            <p>Stiamond Agents SAS is subject to the jurisdiction of the CNIL (Commission Nationale de l'Informatique et des Libertés), the French data protection authority. Complaints can be filed with the CNIL at www.cnil.fr.</p>
           </section>
 
           <section>

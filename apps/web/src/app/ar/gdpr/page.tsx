@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'امتثال GDPR',
-  description: 'امتثال Stiamond لـ GDPR — استضافة في الاتحاد الأوروبي، عزل المستأجرين، اتفاقية معالجة البيانات وحقوق الأشخاص.',
+  description: 'امتثال Stiamond Agents لـ GDPR — استضافة في الاتحاد الأوروبي، عزل المستأجرين، اتفاقية معالجة البيانات وحقوق الأشخاص.',
 };
 
 export default function GdprARPage() {
@@ -15,7 +15,7 @@ export default function GdprARPage() {
         <div className="prose prose-gray max-w-none space-y-4 lg:space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">نظرة عامة</h2>
-            <p>Stiamond متوافقة بالكامل مع اللائحة العامة لحماية البيانات (GDPR، اللائحة الأوروبية 2016/679). كشركة فرنسية تستضيف البيانات في الاتحاد الأوروبي، نعالج البيانات الشخصية وفقاً لمبادئ GDPR: المشروعية، الإنصاف، الشفافية، تحديد الغرض، التقليل، الدقة، تحديد التخزين، النزاهة والمساءلة.</p>
+            <p>Stiamond Agents متوافقة بالكامل مع اللائحة العامة لحماية البيانات (GDPR، اللائحة الأوروبية 2016/679). كشركة فرنسية تستضيف البيانات في الاتحاد الأوروبي، نعالج البيانات الشخصية وفقاً لمبادئ GDPR: المشروعية، الإنصاف، الشفافية، تحديد الغرض، التقليل، الدقة، تحديد التخزين، النزاهة والمساءلة.</p>
           </section>
 
           <section>
@@ -36,7 +36,7 @@ export default function GdprARPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">اتفاقية معالجة البيانات (DPA)</h2>
-            <p>تعمل Stiamond كمراقب للبيانات (لبيانات الحساب) ومعالج للبيانات (لبيانات محادثات المستخدمين النهائيين) بموجب GDPR. اتفاقية معالجة البيانات متاحة لعملاء Enterprise ويمكن طلبها من privacy@stiamond.com. تغطي DPA:</p>
+            <p>تعمل Stiamond Agents كمراقب للبيانات (لبيانات الحساب) ومعالج للبيانات (لبيانات محادثات المستخدمين النهائيين) بموجب GDPR. اتفاقية معالجة البيانات متاحة لعملاء Enterprise ويمكن طلبها من privacy@stiamond.com. تغطي DPA:</p>
             <ul className="list-disc pr-6 space-y-2">
               <li>موضوع ومدة المعالجة.</li>
               <li>طبيعة وغرض المعالجة.</li>
@@ -95,12 +95,12 @@ export default function GdprARPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">إخطار الخرق</h2>
-            <p>في حالة خرق البيانات الشخصية، ستُخطّر Stiamond العملاء المتأثرين خلال 72 ساعة من العلم بالخرق، وفقاً للمادة 33 من GDPR. ستشمل الإخطارات طبيعة الخرق والعواقب المحتملة والتدابير المتخذة.</p>
+            <p>في حالة خرق البيانات الشخصية، ستُخطّر Stiamond Agents العملاء المتأثرين خلال 72 ساعة من العلم بالخرق، وفقاً للمادة 33 من GDPR. ستشمل الإخطارات طبيعة الخرق والعواقب المحتملة والتدابير المتخذة.</p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">السلطة الإشرافية</h2>
-            <p>تخضع Stiamond SAS لولاية CNIL (اللجنة الوطنية للمعلوماتية والحريات)، السلطة الفرنسية لحماية البيانات. يمكن تقديم شكاوى إلى CNIL على www.cnil.fr.</p>
+            <p>تخضع Stiamond Agents SAS لولاية CNIL (اللجنة الوطنية للمعلوماتية والحريات)، السلطة الفرنسية لحماية البيانات. يمكن تقديم شكاوى إلى CNIL على www.cnil.fr.</p>
           </section>
 
           <section>

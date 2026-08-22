@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://stiamond.com';
 
 export const metadata: Metadata = {
-  title: 'Stiamond — وكلاء ذكاء اصطناعي يبيعون، لا مجرد دردشة',
+  title: 'Stiamond Agents — وكلاء ذكاء اصطناعي يبيعون، لا مجرد دردشة',
   description: 'منصة وكلاء ذكاء اصطناعي مستقلين للشركات الصغيرة والمتوسطة. يقوم الوكلاء بتأهيل العملاء المحتملين، توصية المنتجات، حجز المواعيد، والتأثير على المبيعات عبر الويب والبريد الإلكتروني والرسائل القصيرة وتيليجرام.',
   keywords: [
     'وكيل ذكاء اصطناعي', 'روبوت دردشة ذكي', 'أتمتة المبيعات', 'تأهيل العملاء المحتملين',
@@ -24,14 +24,14 @@ export const metadata: Metadata = {
     locale: 'ar_AE',
     alternateLocale: ['en_US', 'fr_FR', 'de_DE'],
     url: `${SITE_URL}/ar`,
-    siteName: 'Stiamond',
-    title: 'Stiamond — وكلاء ذكاء اصطناعي يبيعون، لا مجرد دردشة',
+    siteName: 'Stiamond Agents',
+    title: 'Stiamond Agents — وكلاء ذكاء اصطناعي يبيعون، لا مجرد دردشة',
     description: 'وكلاء الذكاء الاصطناعي يؤهلون العملاء، يوصون بالمنتجات، يحجزون المواعيد، ويؤثرون على المبيعات. متوسط تحويل 42%. بدون اعتماد على Meta.',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Stiamond — وكلاء ذكاء اصطناعي مستقلون' }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Stiamond Agents — وكلاء ذكاء اصطناعي مستقلون' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Stiamond — وكلاء ذكاء اصطناعي يبيعون، لا مجرد دردشة',
+    title: 'Stiamond Agents — وكلاء ذكاء اصطناعي يبيعون، لا مجرد دردشة',
     description: 'وكلاء الذكاء الاصطناعي يؤهلون، يوصون، يحجزون، ويبيعون. متوسط تحويل 42%. متعدد القنوات.',
     images: ['/og-image.png'],
   },

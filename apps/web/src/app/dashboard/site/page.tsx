@@ -380,7 +380,7 @@ export default function SiteConfigPage() {
               {tab === 'domain' && (
                 <>
                   <div className="bg-blue-50 rounded-lg p-4 space-y-3">
-                    <p className="text-sm font-medium text-blue-800">Sous-domaine Stiamond</p>
+                    <p className="text-sm font-medium text-blue-800">Sous-domaine Stiamond Agents</p>
                     <div className="flex items-center gap-2">
                       <input value={editing.subdomain || ''} onChange={(e) => update('subdomain', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} placeholder="mon-business" className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
                       <span className="text-sm text-gray-500">.stiamond.com</span>

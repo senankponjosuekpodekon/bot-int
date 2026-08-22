@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: "Conformité RGPD",
-  description: "Stiamond conformité RGPD — hébergement UE, isolation par tenant, DPA et droits des personnes concernées.",
+  description: "Stiamond Agents conformité RGPD — hébergement UE, isolation par tenant, DPA et droits des personnes concernées.",
 };
 
 export default function GdprFRPage() {
@@ -15,7 +15,7 @@ export default function GdprFRPage() {
         <div className="prose prose-gray max-w-none space-y-4 lg:space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">Vue d'ensemble</h2>
-            <p>Stiamond est entièrement conforme au Règlement Général sur la Protection des Données (RGPD, Règlement UE 2016/679). En tant que société française hébergeant les données dans l'Union Européenne, nous traitons les données personnelles conformément aux principes du RGPD : licéité, loyauté, transparence, limitation des finalités, minimisation, exactitude, limitation de conservation, intégrité et responsabilité.</p>
+            <p>Stiamond Agents est entièrement conforme au Règlement Général sur la Protection des Données (RGPD, Règlement UE 2016/679). En tant que société française hébergeant les données dans l'Union Européenne, nous traitons les données personnelles conformément aux principes du RGPD : licéité, loyauté, transparence, limitation des finalités, minimisation, exactitude, limitation de conservation, intégrité et responsabilité.</p>
           </section>
 
           <section>
@@ -36,7 +36,7 @@ export default function GdprFRPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">Accord de Traitement des Données (DPA)</h2>
-            <p>Stiamond agit à la fois comme responsable du traitement (pour les données de compte) et sous-traitant (pour les données de conversation des utilisateurs finaux) au titre du RGPD. Un Accord de Traitement des Données est disponible pour les clients Enterprise et peut être demandé à privacy@stiamond.com. Le DPA couvre :</p>
+            <p>Stiamond Agents agit à la fois comme responsable du traitement (pour les données de compte) et sous-traitant (pour les données de conversation des utilisateurs finaux) au titre du RGPD. Un Accord de Traitement des Données est disponible pour les clients Enterprise et peut être demandé à privacy@stiamond.com. Le DPA couvre :</p>
             <ul className="list-disc pl-6 space-y-2">
               <li>Objet et durée du traitement.</li>
               <li>Nature et finalité du traitement.</li>
@@ -95,12 +95,12 @@ export default function GdprFRPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">Notification de violation</h2>
-            <p>En cas de violation de données personnelles, Stiamond notifiera les clients concernés dans les 72 heures après en avoir pris connaissance, conformément à l'article 33 du RGPD. Les notifications incluront la nature de la violation, les conséquences probables et les mesures prises.</p>
+            <p>En cas de violation de données personnelles, Stiamond Agents notifiera les clients concernés dans les 72 heures après en avoir pris connaissance, conformément à l'article 33 du RGPD. Les notifications incluront la nature de la violation, les conséquences probables et les mesures prises.</p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">Autorité de contrôle</h2>
-            <p>Stiamond SAS relève de la compétence de la CNIL (Commission Nationale de l'Informatique et des Libertés), l'autorité française de protection des données. Des plaintes peuvent être déposées auprès de la CNIL sur www.cnil.fr.</p>
+            <p>Stiamond Agents SAS relève de la compétence de la CNIL (Commission Nationale de l'Informatique et des Libertés), l'autorité française de protection des données. Des plaintes peuvent être déposées auprès de la CNIL sur www.cnil.fr.</p>
           </section>
 
           <section>

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: "Conditions Générales d'Utilisation",
-  description: "Stiamond CGU — conditions d'utilisation, politique d'usage acceptable, paiement et résiliation.",
+  description: "Stiamond Agents CGU — conditions d'utilisation, politique d'usage acceptable, paiement et résiliation.",
 };
 
 export default function TermsFRPage() {
@@ -15,12 +15,12 @@ export default function TermsFRPage() {
         <div className="prose prose-gray max-w-none space-y-4 lg:space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">1. Acceptation des conditions</h2>
-            <p>En accédant ou en utilisant Stiamond (« le Service »), vous acceptez d'être lié par ces Conditions Générales d'Utilisation. Si vous n'acceptez pas, n'utilisez pas le Service. Stiamond est exploité par Stiamond SAS, société française.</p>
+            <p>En accédant ou en utilisant Stiamond Agents (« le Service »), vous acceptez d'être lié par ces Conditions Générales d'Utilisation. Si vous n'acceptez pas, n'utilisez pas le Service. Stiamond Agents est exploité par Stiamond Agents SAS, société française.</p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">2. Description du Service</h2>
-            <p>Stiamond fournit une plateforme d'agents IA conversationnels permettant aux entreprises de qualifier des leads, recommander des produits, prendre des rendez-vous et influencer les ventes sur plusieurs canaux (web chat, email, SMS, Telegram). Le Service inclut un tableau de bord, un accès API (selon le plan) et des intégrations avec des services tiers.</p>
+            <p>Stiamond Agents fournit une plateforme d'agents IA conversationnels permettant aux entreprises de qualifier des leads, recommander des produits, prendre des rendez-vous et influencer les ventes sur plusieurs canaux (web chat, email, SMS, Telegram). Le Service inclut un tableau de bord, un accès API (selon le plan) et des intégrations avec des services tiers.</p>
           </section>
 
           <section>
@@ -71,7 +71,7 @@ export default function TermsFRPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">9. Limitation de responsabilité</h2>
-            <p>Stiamond est fourni « tel quel » sans garantie d'aucune sorte. Nous ne sommes pas responsables des dommages indirects, accessoires ou consécutifs. Notre responsabilité totale ne dépassera pas le montant payé par vous dans les 3 mois précédant la réclamation.</p>
+            <p>Stiamond Agents est fourni « tel quel » sans garantie d'aucune sorte. Nous ne sommes pas responsables des dommages indirects, accessoires ou consécutifs. Notre responsabilité totale ne dépassera pas le montant payé par vous dans les 3 mois précédant la réclamation.</p>
           </section>
 
           <section>
@@ -81,7 +81,7 @@ export default function TermsFRPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">11. Contact</h2>
-            <p>Stiamond SAS — Email : support@stiamond.com — Données hébergées dans l'Union Européenne.</p>
+            <p>Stiamond Agents SAS — Email : support@stiamond.com — Données hébergées dans l'Union Européenne.</p>
           </section>
         </div>
 

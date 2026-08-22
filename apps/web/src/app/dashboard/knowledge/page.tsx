@@ -363,7 +363,7 @@ export default function KnowledgePage() {
                     className="input"
                     value={companyForm}
                     onChange={(e) => setCompanyForm(e.target.value)}
-                    placeholder="Ex: Stiamond, OpenAI, Renault..."
+                    placeholder="Ex: Stiamond Agents, OpenAI, Renault..."
                     required
                   />
                 </div>

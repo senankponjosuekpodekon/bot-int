@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
-  description: 'Stiamond Privacy Policy — how we collect, use, and protect your data. GDPR compliant, EU-hosted.',
+  description: 'Stiamond Agents Privacy Policy — how we collect, use, and protect your data. GDPR compliant, EU-hosted.',
 };
 
 export default function PrivacyPage() {
@@ -15,7 +15,7 @@ export default function PrivacyPage() {
         <div className="prose prose-gray max-w-none space-y-4 lg:space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">1. Data Controller</h2>
-            <p>Stiamond SAS is the data controller for personal data processed through the Service. Data is hosted in the European Union (France). Contact: privacy@stiamond.com.</p>
+            <p>Stiamond Agents SAS is the data controller for personal data processed through the Service. Data is hosted in the European Union (France). Contact: privacy@stiamond.com.</p>
           </section>
 
           <section>
@@ -109,7 +109,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">11. Contact</h2>
-            <p>Stiamond SAS — Email: privacy@stiamond.com — Data Protection Officer available upon request.</p>
+            <p>Stiamond Agents SAS — Email: privacy@stiamond.com — Data Protection Officer available upon request.</p>
           </section>
         </div>
 

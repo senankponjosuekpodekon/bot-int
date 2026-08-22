@@ -17,7 +17,7 @@ const fr: TranslationDict = {
   'hero.badge': 'Offre lancement : 14 jours gratuits + 50 conversations offertes sans CB',
   'hero.title': 'Vos agents IA vendent pendant que vous dormez.',
   'hero.subtitle': '42% de conversion. 0% de dépendance Meta.',
-  'hero.desc': "Stiamond crée des agents IA qui qualifient vos leads, recommandent vos produits, prennent des rendez-vous et influencent vos ventes — sur web, email, SMS et Telegram.",
+  'hero.desc': "Stiamond Agents crée des agents IA qui qualifient vos leads, recommandent vos produits, prennent des rendez-vous et influencent vos ventes — sur web, email, SMS et Telegram.",
   'hero.desc.bold': ' Vous gardez le contrôle total de vos canaux et de vos données.',
   'hero.cta': 'Créer mon agent gratuit',
   'hero.demo': 'Voir la démo →',
@@ -39,7 +39,7 @@ const fr: TranslationDict = {
   'guarantee.title': 'Garantie 30 jours satisfait ou remboursé',
   'guarantee.desc': 'Pas de résultats ? Vous êtes remboursé intégralement. Sans questions.',
   // Testimonials
-  'testimonials.title': 'Ils génèrent du revenu avec Stiamond',
+  'testimonials.title': 'Ils génèrent du revenu avec Stiamond Agents',
   // FAQ
   'faq.title': 'Questions fréquentes',
   // CTA
@@ -51,7 +51,7 @@ const fr: TranslationDict = {
   'footer.product': 'Produit',
   'footer.company': 'Entreprise',
   'footer.legal': 'Légal',
-  'footer.rights': '© 2026 Stiamond. Tous droits réservés. Construit avec ❤️ pour les PME.',
+  'footer.rights': '© 2026 Stiamond Agents. Tous droits réservés. Construit avec ❤️ pour les PME.',
 };
 
 const en: TranslationDict = {
@@ -64,7 +64,7 @@ const en: TranslationDict = {
   'hero.badge': 'Launch offer: 14 days free + 50 conversations free, no credit card',
   'hero.title': 'Your AI agents sell while you sleep.',
   'hero.subtitle': '42% conversion. 0% Meta dependency.',
-  'hero.desc': 'Stiamond creates AI agents that qualify your leads, recommend your products, book appointments and influence sales — across web, email, SMS and Telegram.',
+  'hero.desc': 'Stiamond Agents creates AI agents that qualify your leads, recommend your products, book appointments and influence sales — across web, email, SMS and Telegram.',
   'hero.desc.bold': ' You keep full control of your channels and your data.',
   'hero.cta': 'Create my free agent',
   'hero.demo': 'See demo →',
@@ -81,7 +81,7 @@ const en: TranslationDict = {
   'pricing.subtitle': 'Pay for what you use. Transparent overage. Cancel anytime.',
   'guarantee.title': '30-day money-back guarantee',
   'guarantee.desc': 'No results? Full refund. No questions asked.',
-  'testimonials.title': 'They generate revenue with Stiamond',
+  'testimonials.title': 'They generate revenue with Stiamond Agents',
   'faq.title': 'Frequently asked questions',
   'cta.title': 'Ready to generate revenue through conversation?',
   'cta.subtitle': 'Start in 5 minutes. No credit card.',
@@ -90,7 +90,7 @@ const en: TranslationDict = {
   'footer.product': 'Product',
   'footer.company': 'Company',
   'footer.legal': 'Legal',
-  'footer.rights': '© 2026 Stiamond. All rights reserved. Built with ❤️ for SMBs.',
+  'footer.rights': '© 2026 Stiamond Agents. All rights reserved. Built with ❤️ for SMBs.',
 };
 
 const translations: Record<Locale, TranslationDict> = { fr, en };

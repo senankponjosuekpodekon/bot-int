@@ -327,7 +327,7 @@ export default function PublicSitePage() {
       {/* Footer */}
       <footer className="border-t py-6 mt-8" style={{ borderColor: primary + '20' }}>
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <p className="text-xs opacity-50">© {new Date().getFullYear()} {site.businessName}. Propulsé par Stiamond.</p>
+          <p className="text-xs opacity-50">© {new Date().getFullYear()} {site.businessName}. Propulsé par Stiamond Agents.</p>
         </div>
       </footer>
     </div>

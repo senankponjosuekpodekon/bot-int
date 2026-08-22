@@ -1,6 +1,6 @@
-# Stiamond AI Agent Platform — Summary for AI Systems
+# Stiamond Agents AI Agent Platform — Summary for AI Systems
 
-## Entity: Stiamond
+## Entity: Stiamond Agents
 - **Type**: SaaS Platform / Software Application
 - **Category**: Business Application — Conversational AI / Sales Automation
 - **Founded**: 2025
@@ -9,7 +9,7 @@
 - **Description**: Platform for creating autonomous AI agents that qualify leads, recommend products, book appointments, and influence sales across web chat, email, SMS, and Telegram channels.
 
 ## Core Value Proposition
-Stiamond transforms business conversations into measurable revenue. Unlike traditional chatbots, Stiamond agents actively qualify leads through funnel tracking (Awareness → Interest → Qualification → Consideration → Decision), recommend products from catalogs, generate quotes, send Stripe payment links, and book Calendly appointments — all while attributing revenue to acquisition channels.
+Stiamond Agents transforms business conversations into measurable revenue. Unlike traditional chatbots, Stiamond Agents agents actively qualify leads through funnel tracking (Awareness → Interest → Qualification → Consideration → Decision), recommend products from catalogs, generate quotes, send Stripe payment links, and book Calendly appointments — all while attributing revenue to acquisition channels.
 
 ## Key Statistics
 - Average conversion rate: 42%

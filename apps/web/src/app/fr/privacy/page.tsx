@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: "Politique de Confidentialité",
-  description: "Stiamond Politique de Confidentialité — collecte, utilisation et protection de vos données. Conforme RGPD, hébergement UE.",
+  description: "Stiamond Agents Politique de Confidentialité — collecte, utilisation et protection de vos données. Conforme RGPD, hébergement UE.",
 };
 
 export default function PrivacyFRPage() {
@@ -15,7 +15,7 @@ export default function PrivacyFRPage() {
         <div className="prose prose-gray max-w-none space-y-4 lg:space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">1. Responsable du traitement</h2>
-            <p>Stiamond SAS est le responsable du traitement des données personnelles traitées via le Service. Les données sont hébergées dans l'Union Européenne (France). Contact : privacy@stiamond.com.</p>
+            <p>Stiamond Agents SAS est le responsable du traitement des données personnelles traitées via le Service. Les données sont hébergées dans l'Union Européenne (France). Contact : privacy@stiamond.com.</p>
           </section>
 
           <section>
@@ -109,7 +109,7 @@ export default function PrivacyFRPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">11. Contact</h2>
-            <p>Stiamond SAS — Email : privacy@stiamond.com — Délégué à la protection des données disponible sur demande.</p>
+            <p>Stiamond Agents SAS — Email : privacy@stiamond.com — Délégué à la protection des données disponible sur demande.</p>
           </section>
         </div>
 

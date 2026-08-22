@@ -94,7 +94,7 @@ export default function LandingPageAR() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bot className="w-7 h-7 text-indigo-600" />
-            <span className="font-bold text-lg">Stiamond</span>
+            <span className="font-bold text-lg">Stiamond Agents</span>
           </div>
           <div className="hidden md:flex items-center gap-4 lg:p-6 text-sm text-gray-600">
             <a href="#features" className="hover:text-indigo-600 transition-colors">الميزات</a>
@@ -124,7 +124,7 @@ export default function LandingPageAR() {
               {' '}، لا مجرد دردشة
             </h1>
             <p className="mt-6 text-lg text-gray-600 leading-relaxed">
-              منصة Stiamond تنشئ وكلاء يؤهلون العملاء المحتملين، يوصون بالمنتجات، يحجزون المواعيد، ويؤثرون على المبيعات. متوسط تحويل 42%. عبر الويب والبريد والرسائل وتيليجرام.
+              منصة Stiamond Agents تنشئ وكلاء يؤهلون العملاء المحتملين، يوصون بالمنتجات، يحجزون المواعيد، ويؤثرون على المبيعات. متوسط تحويل 42%. عبر الويب والبريد والرسائل وتيليجرام.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
               <button onClick={() => router.push('/register')} className="w-full sm:w-auto bg-indigo-600 text-white px-8 py-3.5 rounded-xl font-semibold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
@@ -258,7 +258,7 @@ export default function LandingPageAR() {
       <section className="py-20 bg-gradient-to-br from-indigo-600 to-purple-600">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl sm:text-3xl sm:text-4xl font-bold text-white">جاهز لتسريع مبيعاتك؟</h2>
-          <p className="mt-4 text-indigo-100">انضم للشركات التي تستخدم Stiamond لأتمتة مبيعاتها.</p>
+          <p className="mt-4 text-indigo-100">انضم للشركات التي تستخدم Stiamond Agents لأتمتة مبيعاتها.</p>
           <button onClick={() => router.push('/register')} className="mt-8 bg-white text-indigo-600 px-8 py-3.5 rounded-xl font-semibold hover:bg-gray-50 transition-colors inline-flex items-center gap-2">
             ابدأ تجربة 14 يوماً مجاناً
             <ArrowLeft className="w-4 h-4" />
@@ -274,7 +274,7 @@ export default function LandingPageAR() {
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <Bot className="w-6 h-6 text-indigo-400" />
-                <span className="font-bold text-white">Stiamond</span>
+                <span className="font-bold text-white">Stiamond Agents</span>
               </div>
               <p className="text-sm">وكلاء ذكاء اصطناعي يبيعون، لا مجرد دردشة.</p>
             </div>
@@ -303,7 +303,7 @@ export default function LandingPageAR() {
             </div>
           </div>
           <div className="pt-8 border-t border-gray-800 text-center text-sm text-gray-500">
-            © 2026 Stiamond. جميع الحقوق محفوظة. بُني بـ ❤️ للشركات الصغيرة والمتوسطة.
+            © 2026 Stiamond Agents. جميع الحقوق محفوظة. بُني بـ ❤️ للشركات الصغيرة والمتوسطة.
           </div>
         </div>
       </footer>

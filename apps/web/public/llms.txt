@@ -1,6 +1,6 @@
-# Stiamond
+# Stiamond Agents
 
-> Stiamond est une plateforme d'agents IA autonomes pour PME et entrepreneurs. Les agents qualifient les leads, recommandent des produits, prennent des rendez-vous et influencent les ventes sur web, email, SMS et Telegram. Tracking funnel natif, attribution multi-canal, pricing au résultat.
+> Stiamond Agents est une plateforme d'agents IA autonomes pour PME et entrepreneurs. Les agents qualifient les leads, recommandent des produits, prennent des rendez-vous et influencent les ventes sur web, email, SMS et Telegram. Tracking funnel natif, attribution multi-canal, pricing au résultat.
 
 ## Core Features
 

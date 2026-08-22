@@ -10,8 +10,8 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://stiamond.com';
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Stiamond — AI Agents That Sell, Not Just Chat',
-    template: '%s | Stiamond',
+    default: 'Stiamond Agents — AI Agents That Sell, Not Just Chat',
+    template: '%s | Stiamond Agents',
   },
   description: 'Autonomous AI agent platform for SMBs and entrepreneurs. Agents qualify leads, recommend products, book appointments, and influence sales across web, email, SMS, and Telegram.',
   keywords: [
@@ -20,9 +20,9 @@ export const metadata: Metadata = {
     'multi-channel AI', 'business automation', 'AI CRM', 'autonomous agent',
     'MCP server', 'revenue attribution',
   ],
-  authors: [{ name: 'Stiamond' }],
-  creator: 'Stiamond',
-  publisher: 'Stiamond',
+  authors: [{ name: 'Stiamond Agents' }],
+  creator: 'Stiamond Agents',
+  publisher: 'Stiamond Agents',
   alternates: {
     canonical: '/',
     languages: {
@@ -38,21 +38,21 @@ export const metadata: Metadata = {
     locale: 'en_US',
     alternateLocale: ['fr_FR', 'de_DE', 'ar_AE'],
     url: SITE_URL,
-    siteName: 'Stiamond',
-    title: 'Stiamond — AI Agents That Sell, Not Just Chat',
+    siteName: 'Stiamond Agents',
+    title: 'Stiamond Agents — AI Agents That Sell, Not Just Chat',
     description: 'Your AI agents qualify leads, recommend products, book appointments, and influence sales. 42% average conversion. No Meta dependency.',
     images: [
       {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Stiamond — Autonomous AI Agents',
+        alt: 'Stiamond Agents — Autonomous AI Agents',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Stiamond — AI Agents That Sell, Not Just Chat',
+    title: 'Stiamond Agents — AI Agents That Sell, Not Just Chat',
     description: 'Your AI agents qualify, recommend, book, and sell. 42% average conversion. Multi-channel. No Meta dependency.',
     images: ['/og-image.png'],
     creator: '@stiamond',
@@ -89,7 +89,7 @@ export const viewport: Viewport = {
 const jsonLdSoftware = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
-  name: 'Stiamond',
+  name: 'Stiamond Agents',
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web',
   offers: {
@@ -105,7 +105,7 @@ const jsonLdSoftware = {
   },
   publisher: {
     '@type': 'Organization',
-    name: 'Stiamond',
+    name: 'Stiamond Agents',
     url: SITE_URL,
   },
 };
@@ -113,7 +113,7 @@ const jsonLdSoftware = {
 const jsonLdOrg = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'Stiamond',
+  name: 'Stiamond Agents',
   url: SITE_URL,
   description: "Plateforme d'agents IA autonomes pour PME et entrepreneurs. Qualifient les leads, recommandent des produits, prennent des rendez-vous et influencent les ventes.",
   foundingDate: '2025',
@@ -125,8 +125,8 @@ const jsonLdOrg = {
 const jsonLdService = {
   '@context': 'https://schema.org',
   '@type': 'SaaS',
-  name: 'Stiamond Agent Platform',
-  provider: { '@type': 'Organization', name: 'Stiamond', url: SITE_URL },
+  name: 'Stiamond Agents Agent Platform',
+  provider: { '@type': 'Organization', name: 'Stiamond Agents', url: SITE_URL },
   description: 'Agents IA autonomes pour qualification de leads, recommandation produits, prise de rendez-vous et attribution de revenus multi-canal.',
   audience: { '@type': 'BusinessAudience' },
   featureList: [
@@ -145,15 +145,15 @@ const jsonLdFaq = {
   mainEntity: [
     {
       '@type': 'Question',
-      name: 'Stiamond dépend-il de WhatsApp ?',
+      name: 'Stiamond Agents dépend-il de WhatsApp ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Non. Stiamond est channel-agnostic. Web chat, email, SMS, Telegram, et WhatsApp en option. Vous gardez le contrôle total de vos canaux et de vos données.',
+        text: 'Non. Stiamond Agents est channel-agnostic. Web chat, email, SMS, Telegram, et WhatsApp en option. Vous gardez le contrôle total de vos canaux et de vos données.',
       },
     },
     {
       '@type': 'Question',
-      name: "Comment fonctionne l'agent IA Stiamond ?",
+      name: "Comment fonctionne l'agent IA Stiamond Agents ?",
       acceptedAnswer: {
         '@type': 'Answer',
         text: "L'agent utilise un LLM (Ollama en local ou API) avec votre base de connaissances, catalogue produits et personnalité. Il qualifie les leads, recommande des produits, envoie des devis, prend des rendez-vous et influence les ventes.",
@@ -169,10 +169,10 @@ const jsonLdFaq = {
     },
     {
       '@type': 'Question',
-      name: 'Qu\'est-ce que le MCP Server de Stiamond ?',
+      name: 'Qu\'est-ce que le MCP Server de Stiamond Agents ?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "Le Model Context Protocol est le standard ouvert pour connecter les agents IA à des outils externes. Stiamond expose vos agents comme MCP Server : n'importe quel client MCP (Claude, Cursor, VS Code) peut les appeler pour qualifier des leads, récupérer des conversations ou créer des agents.",
+        text: "Le Model Context Protocol est le standard ouvert pour connecter les agents IA à des outils externes. Stiamond Agents expose vos agents comme MCP Server : n'importe quel client MCP (Claude, Cursor, VS Code) peut les appeler pour qualifier des leads, récupérer des conversations ou créer des agents.",
       },
     },
     {
@@ -197,8 +197,8 @@ const jsonLdFaq = {
 const jsonLdHowTo = {
   '@context': 'https://schema.org',
   '@type': 'HowTo',
-  name: 'Comment créer un agent IA avec Stiamond',
-  description: 'De la pub à la vente en 4 étapes avec Stiamond',
+  name: 'Comment créer un agent IA avec Stiamond Agents',
+  description: 'De la pub à la vente en 4 étapes avec Stiamond Agents',
   step: [
     {
       '@type': 'HowToStep',

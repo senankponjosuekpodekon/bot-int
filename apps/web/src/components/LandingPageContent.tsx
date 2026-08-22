@@ -73,7 +73,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-lg text-gray-900">Stiamond</span>
+            <span className="font-bold text-lg text-gray-900">Stiamond Agents</span>
           </div>
           <div className="hidden md:flex items-center gap-4 lg:p-8 text-sm text-gray-600">
             <a href="#features" className="hover:text-gray-900 transition-colors">{t('nav.features')}</a>
@@ -455,7 +455,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
                 <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                   <Sparkles className="w-4 h-4 text-white" />
                 </div>
-                <span className="font-bold text-gray-900">Stiamond</span>
+                <span className="font-bold text-gray-900">Stiamond Agents</span>
               </div>
               <p className="text-sm text-gray-500">{t('footer.tagline')}</p>
             </div>

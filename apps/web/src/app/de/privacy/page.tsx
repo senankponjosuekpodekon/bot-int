@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Datenschutzerklärung',
-  description: 'Stiamond Datenschutzerklärung — Erhebung, Verwendung und Schutz Ihrer Daten. DSGVO-konform, EU-Hosting.',
+  description: 'Stiamond Agents Datenschutzerklärung — Erhebung, Verwendung und Schutz Ihrer Daten. DSGVO-konform, EU-Hosting.',
 };
 
 export default function PrivacyDEPage() {
@@ -15,7 +15,7 @@ export default function PrivacyDEPage() {
         <div className="prose prose-gray max-w-none space-y-4 lg:space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">1. Verantwortlicher</h2>
-            <p>Stiamond SAS ist der Verantwortliche für die über den Dienst verarbeiteten personenbezogenen Daten. Daten werden in der Europäischen Union (Frankreich) gehostet. Kontakt: privacy@stiamond.com.</p>
+            <p>Stiamond Agents SAS ist der Verantwortliche für die über den Dienst verarbeiteten personenbezogenen Daten. Daten werden in der Europäischen Union (Frankreich) gehostet. Kontakt: privacy@stiamond.com.</p>
           </section>
 
           <section>
@@ -109,7 +109,7 @@ export default function PrivacyDEPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">11. Kontakt</h2>
-            <p>Stiamond SAS — E-Mail: privacy@stiamond.com — Datenschutzbeauftragter auf Anfrage verfügbar.</p>
+            <p>Stiamond Agents SAS — E-Mail: privacy@stiamond.com — Datenschutzbeauftragter auf Anfrage verfügbar.</p>
           </section>
         </div>
 

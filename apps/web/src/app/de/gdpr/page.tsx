@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'DSGVO-Konformität',
-  description: 'Stiamond DSGVO-Konformität — EU-Hosting, Tenant-Isolation, AVV und Betroffenenrechte.',
+  description: 'Stiamond Agents DSGVO-Konformität — EU-Hosting, Tenant-Isolation, AVV und Betroffenenrechte.',
 };
 
 export default function GdprDEPage() {
@@ -15,7 +15,7 @@ export default function GdprDEPage() {
         <div className="prose prose-gray max-w-none space-y-4 lg:space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">Überblick</h2>
-            <p>Stiamond ist vollständig konform mit der Datenschutz-Grundverordnung (DSGVO, Verordnung EU 2016/679). Als französisches Unternehmen mit Datenhosting in der Europäischen Union verarbeiten wir personenbezogene Daten gemäß den DSGVO-Prinzipien: Rechtmäßigkeit, Fairness, Transparenz, Zweckbindung, Datenminimierung, Richtigkeit, Speicherbegrenzung, Integrität und Rechenschaftspflicht.</p>
+            <p>Stiamond Agents ist vollständig konform mit der Datenschutz-Grundverordnung (DSGVO, Verordnung EU 2016/679). Als französisches Unternehmen mit Datenhosting in der Europäischen Union verarbeiten wir personenbezogene Daten gemäß den DSGVO-Prinzipien: Rechtmäßigkeit, Fairness, Transparenz, Zweckbindung, Datenminimierung, Richtigkeit, Speicherbegrenzung, Integrität und Rechenschaftspflicht.</p>
           </section>
 
           <section>
@@ -36,7 +36,7 @@ export default function GdprDEPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">Auftragsverarbeitungsvertrag (AVV)</h2>
-            <p>Stiamond agiert sowohl als Verantwortlicher (für Kontodaten) als auch als Auftragsverarbeiter (für Endnutzer-Konversationsdaten) gemäß DSGVO. Ein Auftragsverarbeitungsvertrag ist für Enterprise-Kunden verfügbar und kann unter privacy@stiamond.com angefordert werden. Der AVV umfasst:</p>
+            <p>Stiamond Agents agiert sowohl als Verantwortlicher (für Kontodaten) als auch als Auftragsverarbeiter (für Endnutzer-Konversationsdaten) gemäß DSGVO. Ein Auftragsverarbeitungsvertrag ist für Enterprise-Kunden verfügbar und kann unter privacy@stiamond.com angefordert werden. Der AVV umfasst:</p>
             <ul className="list-disc pl-6 space-y-2">
               <li>Gegenstand und Dauer der Verarbeitung.</li>
               <li>Art und Zweck der Verarbeitung.</li>
@@ -95,12 +95,12 @@ export default function GdprDEPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">Verletzungsmitteilung</h2>
-            <p>Im Falle einer Verletzung personenbezogener Daten benachrichtigt Stiamond betroffene Kunden innerhalb von 72 Stunden nach Kenntnisnahme gemäß DSGVO Art. 33. Benachrichtigungen umfassen die Art der Verletzung, wahrscheinliche Folgen und ergriffene Maßnahmen.</p>
+            <p>Im Falle einer Verletzung personenbezogener Daten benachrichtigt Stiamond Agents betroffene Kunden innerhalb von 72 Stunden nach Kenntnisnahme gemäß DSGVO Art. 33. Benachrichtigungen umfassen die Art der Verletzung, wahrscheinliche Folgen und ergriffene Maßnahmen.</p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">Aufsichtsbehörde</h2>
-            <p>Stiamond SAS unterliegt der Zuständigkeit der CNIL (Commission Nationale de l'Informatique et des Libertés), der französischen Datenschutzbehörde. Beschwerden können bei der CNIL unter www.cnil.fr eingereicht werden.</p>
+            <p>Stiamond Agents SAS unterliegt der Zuständigkeit der CNIL (Commission Nationale de l'Informatique et des Libertés), der französischen Datenschutzbehörde. Beschwerden können bei der CNIL unter www.cnil.fr eingereicht werden.</p>
           </section>
 
           <section>
