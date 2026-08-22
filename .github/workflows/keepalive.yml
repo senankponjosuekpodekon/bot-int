@@ -1,0 +1,15 @@
+name: Keep Render API alive
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping API health
+        run: |
+          URL="${{ vars.KEEPALIVE_URL || 'https://bot-int.onrender.com/api/health' }}"
+          curl -fsS -m 30 "$URL" -o /dev/null || true
