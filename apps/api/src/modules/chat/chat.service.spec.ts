@@ -3,7 +3,7 @@ import { ObjectLiteral, Repository } from 'typeorm';
 import { ChatService } from './chat.service';
 import { Conversation, ConversationChannel, ConversationStatus } from './conversation.entity';
 import { Message, MessageRole } from './message.entity';
-import { OllamaService } from './ollama.service';
+import { LLMService } from './llm.service';
 import { AgentsService } from '../agents/agents.service';
 import { LeadsService } from '../leads/leads.service';
 import { LeadTagService } from '../leads/lead-tag.service';
@@ -29,14 +29,14 @@ describe('ChatService', () => {
   let convRepo: RepositoryMock<Conversation>;
   let msgRepo: RepositoryMock<Message>;
   let agentsService: { findById: jest.Mock };
-  let ollamaService: { chat: jest.Mock };
+  let llmService: { chat: jest.Mock };
   let leadsService: { create: jest.Mock; findById: jest.Mock };
 
   beforeEach(() => {
     convRepo = createRepositoryMock<Conversation>();
     msgRepo = createRepositoryMock<Message>();
     agentsService = { findById: jest.fn() };
-    ollamaService = { chat: jest.fn() };
+    llmService = { chat: jest.fn() };
     leadsService = { create: jest.fn(), findById: jest.fn() };
 
     service = new ChatService(
@@ -44,7 +44,7 @@ describe('ChatService', () => {
       msgRepo as unknown as Repository<Message>,
       { create: jest.fn(), find: jest.fn() } as any, // feedbackRepo
       agentsService as unknown as AgentsService,
-      ollamaService as unknown as OllamaService,
+      llmService as unknown as LLMService,
       leadsService as unknown as LeadsService,
       new LeadTagService(),
       noopService() as any, // knowledgeService
@@ -55,6 +55,9 @@ describe('ChatService', () => {
       { checkQuota: jest.fn().mockResolvedValue({ allowed: true }), incrementUsage: jest.fn().mockResolvedValue(undefined) } as any, // billingService
       { detectRegion: jest.fn().mockResolvedValue('international'), buildSystemPrompt: jest.fn().mockImplementation((base: string) => base), getProfile: jest.fn() } as any, // regionsService
       { trigger: jest.fn().mockResolvedValue(undefined) } as any, // webhookService
+      { recallAsContext: jest.fn().mockResolvedValue(null), extractAndStore: jest.fn().mockResolvedValue(undefined), remember: jest.fn().mockResolvedValue(undefined) } as any, // agentMemoryService
+      { detectAndExecuteTools: jest.fn().mockResolvedValue([]) } as any, // agentToolsService
+      { findByTrigger: jest.fn().mockResolvedValue(null), execute: jest.fn().mockResolvedValue({ completed: true, output: '', handoff: false }) } as any, // agentWorkflowService
     );
 
     jest.clearAllMocks();
@@ -79,7 +82,7 @@ describe('ChatService', () => {
         const saved = conversationId === 'conv-1' ? [{ id: 'msg-1', role: MessageRole.USER, content: 'Salut', createdAt: new Date() }] : [];
         return Promise.resolve(saved);
       });
-      ollamaService.chat.mockResolvedValue('Bonjour !');
+      llmService.chat.mockResolvedValue('Bonjour !');
 
       const result = await service.sendMessage('t-1', 'agent-1', 'Salut');
 
@@ -100,7 +103,7 @@ describe('ChatService', () => {
       msgRepo.find?.mockResolvedValue([
         { id: 'm-1', role: MessageRole.USER, content: 'Salut', createdAt: new Date() } as Message,
       ]);
-      ollamaService.chat.mockResolvedValue('Comment puis-je vous aider ?');
+      llmService.chat.mockResolvedValue('Comment puis-je vous aider ?');
 
       const result = await service.sendMessage('t-1', 'agent-1', 'Aide', 'conv-1');
 

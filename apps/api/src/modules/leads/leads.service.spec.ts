@@ -5,6 +5,8 @@ import { Lead, LeadStatus } from './lead.entity';
 
 type RepositoryMock<T extends ObjectLiteral> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
+import { LeadComment } from './lead-comment.entity';
+
 const createRepositoryMock = <T extends ObjectLiteral>(): RepositoryMock<T> => ({
   create: jest.fn(),
   save: jest.fn(),
@@ -17,10 +19,15 @@ const createRepositoryMock = <T extends ObjectLiteral>(): RepositoryMock<T> => (
 describe('LeadsService', () => {
   let service: LeadsService;
   let leadRepo: RepositoryMock<Lead>;
+  let commentRepo: RepositoryMock<LeadComment>;
 
   beforeEach(() => {
     leadRepo = createRepositoryMock<Lead>();
-    service = new LeadsService(leadRepo as unknown as Repository<Lead>);
+    commentRepo = createRepositoryMock<LeadComment>();
+    service = new LeadsService(
+      leadRepo as unknown as Repository<Lead>,
+      commentRepo as unknown as Repository<LeadComment>,
+    );
     jest.clearAllMocks();
   });
 

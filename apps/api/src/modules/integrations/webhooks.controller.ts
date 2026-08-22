@@ -101,6 +101,25 @@ export class WebhooksController {
     }
   }
 
+  @Post('email/:tenantId')
+  async receiveEmail(@Param('tenantId') tenantId: string, @Body() body: any) {
+    try {
+      const from = body.from || body.sender || '';
+      const subject = body.subject || '(No subject)';
+      const text = body.text || body.html || '';
+      const emailBody = text.replace(/<[^>]*>/g, '').trim();
+
+      if (emailBody && from) {
+        const fromEmail = from.match(/[\w.+-]+@[\w-]+\.[\w.-]+/)?.[0] || from;
+        await this.processIncomingMessage(tenantId, 'email', fromEmail, emailBody);
+      }
+      return { status: 'ok' };
+    } catch (err: any) {
+      this.logger.error(`Email webhook error: ${err?.message}`);
+      return { status: 'error' };
+    }
+  }
+
   private async processIncomingMessage(
     tenantId: string,
     channel: string,

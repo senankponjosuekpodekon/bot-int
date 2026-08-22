@@ -3,6 +3,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator';
 import { WebhookService } from './webhook.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard, Roles } from '../auth/guards/roles.guard';
+import { UserRole } from '../auth/user.entity';
 
 class CreateWebhookDto {
   @IsString() @IsUrl() @IsNotEmpty() url: string;
@@ -18,12 +20,13 @@ class UpdateWebhookDto {
 
 @ApiTags('webhooks')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('webhooks')
 export class WebhooksController {
   constructor(private readonly webhookService: WebhookService) {}
 
   @Post()
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a webhook endpoint' })
   @ApiResponse({ status: 201, description: 'Webhook created' })
   create(@Request() req, @Body() dto: CreateWebhookDto) {
@@ -38,6 +41,7 @@ export class WebhooksController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update webhook endpoint' })
   @ApiResponse({ status: 200, description: 'Webhook updated' })
   update(@Request() req, @Param('id') id: string, @Body() dto: UpdateWebhookDto) {
@@ -45,6 +49,7 @@ export class WebhooksController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Delete webhook endpoint' })
   @ApiResponse({ status: 200, description: 'Webhook deleted' })
   remove(@Request() req, @Param('id') id: string) {

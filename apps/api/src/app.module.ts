@@ -24,6 +24,9 @@ import { BillingModule } from './modules/billing/billing.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { RegionsModule } from './modules/regions/regions.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { ChannelsModule } from './modules/channels/channels.module';
+import { GdprModule } from './modules/gdpr/gdpr.module';
+import { QueueModule } from './modules/queue/queue.module';
 import { LoggingMiddleware } from './common/logging.middleware';
 import { CacheModule } from './common/cache.module';
 
@@ -42,22 +45,26 @@ import { CacheModule } from './common/cache.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        host: config.get('DB_HOST', 'localhost'),
-        port: config.get<number>('DB_PORT', 5432),
-        username: config.get('DB_USER', 'postgres'),
-        password: config.get('DB_PASSWORD', 'postgres'),
-        database: config.get('DB_NAME', 'stiamond_agent'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: config.get('NODE_ENV') !== 'production',
-        logging: config.get('NODE_ENV') === 'development',
-        poolSize: config.get<number>('DB_POOL_SIZE', 20),
-        extra: {
-          max: config.get<number>('DB_POOL_SIZE', 20),
-          connectionTimeoutMillis: 10000,
-        },
-      }),
+      useFactory: (config: ConfigService) => {
+        const databaseUrl = config.get<string>('DATABASE_URL');
+        return {
+          type: 'postgres',
+          ...(databaseUrl ? { url: databaseUrl } : {}),
+          host: config.get('DB_HOST', 'localhost'),
+          port: config.get<number>('DB_PORT', 5432),
+          username: config.get('DB_USER', 'postgres'),
+          password: config.get('DB_PASSWORD', 'postgres'),
+          database: config.get('DB_NAME', 'stiamond_agent'),
+          entities: [__dirname + '/**/*.entity{.ts,.js}'],
+          synchronize: config.get('NODE_ENV') !== 'production',
+          logging: config.get('NODE_ENV') === 'development',
+          poolSize: config.get<number>('DB_POOL_SIZE', 20),
+          extra: {
+            max: config.get<number>('DB_POOL_SIZE', 20),
+            connectionTimeoutMillis: 10000,
+          },
+        };
+      },
     }),
     CacheModule,
     AuthModule,
@@ -80,6 +87,9 @@ import { CacheModule } from './common/cache.module';
     AdminModule,
     RegionsModule,
     WebhooksModule,
+    ChannelsModule,
+    GdprModule,
+    QueueModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

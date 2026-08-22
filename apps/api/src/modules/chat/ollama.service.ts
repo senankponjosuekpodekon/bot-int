@@ -1,89 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
+import { OllamaProvider } from './providers/ollama.provider';
+import { LLMMessage } from './llm-provider.interface';
 
-export interface OllamaMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
+export type OllamaMessage = LLMMessage;
 
+/**
+ * @deprecated Use LLMService instead. This wrapper exists for backward compatibility.
+ */
 @Injectable()
-export class OllamaService {
-  private readonly logger = new Logger(OllamaService.name);
-  private readonly baseUrl: string;
-  private readonly model: string;
-
-  constructor(private readonly config: ConfigService) {
-    this.baseUrl = config.get('OLLAMA_URL', 'http://localhost:11434');
-    this.model = config.get('OLLAMA_MODEL', 'llama3.2');
-  }
-
-  async chat(messages: OllamaMessage[]): Promise<string> {
-    try {
-      const response = await axios.post(`${this.baseUrl}/api/chat`, {
-        model: this.model,
-        messages,
-        stream: false,
-      });
-      return response.data.message.content;
-    } catch (error: any) {
-      this.logger.error('Ollama request failed', error?.message);
-      throw new Error('AI service unavailable');
-    }
-  }
-
-  async *chatStream(messages: OllamaMessage[]): AsyncGenerator<string> {
-    try {
-      const response = await axios.post(`${this.baseUrl}/api/chat`, {
-        model: this.model,
-        messages,
-        stream: true,
-      }, { responseType: 'stream' });
-
-      const stream = response.data;
-      let buffer = '';
-
-      for await (const chunk of stream) {
-        buffer += chunk.toString('utf8');
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const parsed = JSON.parse(line);
-            if (parsed.message?.content) {
-              yield parsed.message.content;
-            }
-            if (parsed.done) return;
-          } catch { /* skip invalid JSON */ }
-        }
-      }
-    } catch (error: any) {
-      this.logger.error('Ollama stream failed', error?.message);
-      throw new Error('AI streaming unavailable');
-    }
-  }
-
-  async embed(text: string): Promise<number[]> {
-    try {
-      const response = await axios.post(`${this.baseUrl}/api/embeddings`, {
-        model: this.model,
-        prompt: text,
-      });
-      return response.data.embedding;
-    } catch (error: any) {
-      this.logger.error('Ollama embedding failed', error?.message);
-      throw new Error('Embedding service unavailable');
-    }
-  }
-
-  async isAvailable(): Promise<boolean> {
-    try {
-      await axios.get(`${this.baseUrl}/api/tags`);
-      return true;
-    } catch {
-      return false;
-    }
+export class OllamaService extends OllamaProvider {
+  constructor(config: ConfigService) {
+    super(config);
   }
 }

@@ -3,6 +3,8 @@ import { IsString, IsNotEmpty, IsObject, IsBoolean, IsOptional } from 'class-val
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { IntegrationsService } from './integrations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard, Roles } from '../auth/guards/roles.guard';
+import { UserRole } from '../auth/user.entity';
 
 class UpsertIntegrationDto {
   @IsString() @IsNotEmpty() type: string;
@@ -33,7 +35,7 @@ class MessageDto {
 
 @ApiTags('integrations')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('integrations')
 export class IntegrationsController {
   constructor(private readonly service: IntegrationsService) {}
@@ -46,6 +48,7 @@ export class IntegrationsController {
   }
 
   @Post()
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create or update integration' })
   @ApiResponse({ status: 201, description: 'Integration saved' })
   upsert(@Request() req, @Body() dto: UpsertIntegrationDto) {

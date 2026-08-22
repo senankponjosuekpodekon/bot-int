@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { KnowledgeDocument, DocumentType } from './knowledge-document.entity';
 import { KnowledgeChunk } from './knowledge-chunk.entity';
-import { OllamaService } from '../chat/ollama.service';
+import { LLMService } from '../chat/llm.service';
 import { PaginatedResult } from '../../common/pagination.dto';
 import { PDFParse } from 'pdf-parse';
 import * as mammoth from 'mammoth';
@@ -15,6 +15,7 @@ const CHUNK_SIZE = 800;
 const CHUNK_OVERLAP = 100;
 const MAX_SEARCH_RESULTS = 3;
 const MAX_CRAWL_PAGES = 5;
+const EMBEDDING_DIMS = 3072;
 
 interface ScrapedPage {
   url: string;
@@ -24,16 +25,43 @@ interface ScrapedPage {
 }
 
 @Injectable()
-export class KnowledgeService {
+export class KnowledgeService implements OnModuleInit {
   private readonly logger = new Logger(KnowledgeService.name);
+  private hasPgvector = false;
 
   constructor(
     @InjectRepository(KnowledgeDocument)
     private readonly docRepo: Repository<KnowledgeDocument>,
     @InjectRepository(KnowledgeChunk)
     private readonly chunkRepo: Repository<KnowledgeChunk>,
-    private readonly ollamaService: OllamaService,
+    private readonly llmService: LLMService,
+    private readonly dataSource: DataSource,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    try {
+      const available = await this.dataSource.query<{ name: string }[]>(
+        "SELECT name FROM pg_available_extensions WHERE name = 'vector'",
+      );
+      if (available.length === 0) {
+        this.logger.warn('pgvector not available — falling back to JS cosine similarity');
+        this.hasPgvector = false;
+        return;
+      }
+      await this.dataSource.query('CREATE EXTENSION IF NOT EXISTS vector');
+      await this.dataSource.query(`ALTER TABLE knowledge_chunks ADD COLUMN IF NOT EXISTS embedding_vector vector(${EMBEDDING_DIMS})`);
+      await this.dataSource.query(`
+        CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_embedding_vector
+        ON knowledge_chunks USING ivfflat (embedding_vector vector_cosine_ops)
+        WITH (lists = 100)
+      `);
+      this.hasPgvector = true;
+      this.logger.log('pgvector enabled — semantic search will use vector index');
+    } catch (error: any) {
+      this.logger.warn('pgvector setup failed — falling back to JS cosine similarity', error?.message);
+      this.hasPgvector = false;
+    }
+  }
 
   async addText(tenantId: string, content: string, filename?: string): Promise<KnowledgeDocument> {
     const doc = this.docRepo.create({
@@ -432,7 +460,24 @@ export class KnowledgeService {
 
   async searchRelevant(tenantId: string, query: string): Promise<string[]> {
     try {
-      const queryEmbedding = await this.ollamaService.embed(query);
+      const queryEmbedding = await this.llmService.embed(query);
+
+      if (this.hasPgvector) {
+        const embeddingStr = `[${queryEmbedding.join(',')}]`;
+        const results = await this.dataSource.query(
+          `SELECT chunk.content
+           FROM knowledge_chunks chunk
+           INNER JOIN knowledge_documents doc ON chunk."documentId" = doc.id
+           WHERE doc."tenantId" = $1
+             AND chunk.embedding_vector IS NOT NULL
+           ORDER BY chunk.embedding_vector <=> $2::vector
+           LIMIT $3`,
+          [tenantId, embeddingStr, MAX_SEARCH_RESULTS],
+        );
+        if (results.length > 0) return results.map((r: any) => r.content);
+      }
+
+      // Fallback: JS cosine similarity (loads chunks into memory)
       const chunks = await this.chunkRepo
         .createQueryBuilder('chunk')
         .innerJoin('chunk.document', 'doc')
@@ -468,14 +513,16 @@ export class KnowledgeService {
 
     for (let i = 0; i < chunks.length; i++) {
       let embedding: string | null = null;
+      let embeddingVec: string | null = null;
       try {
-        const vec = await this.ollamaService.embed(chunks[i]);
+        const vec = await this.llmService.embed(chunks[i]);
         embedding = JSON.stringify(vec);
+        embeddingVec = `[${vec.join(',')}]`;
       } catch (error: any) {
         this.logger.warn(`Embedding failed for chunk ${i} of doc ${documentId}`, error?.message);
       }
 
-      await this.chunkRepo.save(
+      const saved = await this.chunkRepo.save(
         this.chunkRepo.create({
           documentId,
           content: chunks[i],
@@ -483,6 +530,17 @@ export class KnowledgeService {
           chunkIndex: i,
         }),
       );
+
+      if (embeddingVec && this.hasPgvector) {
+        try {
+          await this.dataSource.query(
+            `UPDATE knowledge_chunks SET embedding_vector = $1::vector WHERE id = $2`,
+            [embeddingVec, saved.id],
+          );
+        } catch (err: any) {
+          this.logger.warn(`Failed to set vector for chunk ${i}`, err?.message);
+        }
+      }
     }
   }
 

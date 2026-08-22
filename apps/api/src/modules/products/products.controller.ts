@@ -19,6 +19,7 @@ import { AutoSyncService } from './auto-sync.service';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CacheService } from '../../common/cache.service';
+import { QueueService } from '../queue/queue.service';
 import { UpdateProductDto } from './dto/update-product.dto';
 class CreateProductDto {
   @IsString() @IsNotEmpty() name: string;
@@ -73,13 +74,14 @@ export class ProductsController {
     private readonly autoSyncService: AutoSyncService,
     private readonly integrationsService: IntegrationsService,
     private readonly cacheService: CacheService,
+    private readonly queueService: QueueService,
   ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a product' })
   @ApiResponse({ status: 201, description: 'Product created' })
-  create(@Request() req, @Body() dto: CreateProductDto) {
-    this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
+  async create(@Request() req, @Body() dto: CreateProductDto) {
+    await this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
     return this.productsService.create(req.user.tenantId, dto);
   }
 
@@ -88,10 +90,10 @@ export class ProductsController {
   @ApiResponse({ status: 200, description: 'Paginated list of products' })
   async findAll(@Request() req, @Query() query: ListProductsDto) {
     const cacheKey = `products:${req.user.tenantId}:${JSON.stringify(query)}`;
-    const cached = this.cacheService.get(cacheKey);
+    const cached = await this.cacheService.get(cacheKey);
     if (cached) return cached;
     const result = await this.productsService.findByTenant(req.user.tenantId, query);
-    this.cacheService.set(cacheKey, result, 60);
+    await this.cacheService.set(cacheKey, result, 60);
     return result;
   }
 
@@ -100,10 +102,10 @@ export class ProductsController {
   @ApiResponse({ status: 200, description: 'List of categories' })
   async getCategories(@Request() req) {
     const cacheKey = `products:${req.user.tenantId}:categories`;
-    const cached = this.cacheService.get(cacheKey);
+    const cached = await this.cacheService.get(cacheKey);
     if (cached) return cached;
     const result = await this.productsService.getCategories(req.user.tenantId);
-    this.cacheService.set(cacheKey, result, 300);
+    await this.cacheService.set(cacheKey, result, 300);
     return result;
   }
 
@@ -117,24 +119,26 @@ export class ProductsController {
   @Patch(':id')
   @ApiOperation({ summary: 'Update product by ID' })
   @ApiResponse({ status: 200, description: 'Product updated' })
-  update(@Request() req, @Param('id') id: string, @Body() dto: UpdateProductDto) {
-    this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
+  async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateProductDto) {
+    await this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
     return this.productsService.update(id, req.user.tenantId, dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete product by ID' })
   @ApiResponse({ status: 200, description: 'Product deleted' })
-  remove(@Request() req, @Param('id') id: string) {
-    this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
+  async remove(@Request() req, @Param('id') id: string) {
+    await this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
     return this.productsService.delete(id, req.user.tenantId);
   }
 
   @Post('import/shopify')
   @ApiOperation({ summary: 'Import products from Shopify' })
-  @ApiResponse({ status: 201, description: 'Products imported' })
-  importShopify(@Request() req, @Body() dto: ImportShopifyDto) {
-    return this.productsService.importFromShopify(req.user.tenantId, dto.shopDomain, dto.accessToken);
+  @ApiResponse({ status: 201, description: 'Products import queued' })
+  async importShopify(@Request() req, @Body() dto: ImportShopifyDto) {
+    await this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
+    await this.queueService.addShopifyImport(req.user.tenantId, dto.shopDomain, dto.accessToken, 'shopify');
+    return { queued: true, shopDomain: dto.shopDomain };
   }
 
   @Post('import/woocommerce')

@@ -1,0 +1,54 @@
+services:
+  - type: web
+    name: stiamond-api
+    runtime: docker
+    dockerfilePath: Dockerfile.api
+    branch: dev
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: 10000
+      - key: DB_HOST
+        fromDatabase:
+          name: stiamond-pg
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: stiamond-pg
+          property: port
+      - key: DB_USERNAME
+        fromDatabase:
+          name: stiamond-pg
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: stiamond-pg
+          property: password
+      - key: DB_DATABASE
+        fromDatabase:
+          name: stiamond-pg
+          property: database
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stiamond-pg
+          property: connectionString
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+        optional: true
+
+databases:
+  - name: stiamond-pg
+    databaseName: stiamond
+    user: stiamond
+    plan: free

@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: stiamond-api
+    runtime: docker
+    dockerfilePath: Dockerfile.api
+    branch: dev
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+        optional: true

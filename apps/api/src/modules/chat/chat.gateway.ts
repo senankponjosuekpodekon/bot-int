@@ -11,7 +11,6 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
-import { OllamaService } from './ollama.service';
 
 @WebSocketGateway({
   cors: { origin: true, credentials: true },
@@ -25,7 +24,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(
     private readonly chatService: ChatService,
-    private readonly ollamaService: OllamaService,
     private readonly config: ConfigService,
   ) {}
 

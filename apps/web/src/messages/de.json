@@ -1,0 +1,202 @@
+{
+  "nav": {
+    "features": "Funktionen",
+    "pricing": "Preise",
+    "how": "So funktioniert's",
+    "faq": "FAQ",
+    "signin": "Anmelden",
+    "freetrial": "Gratis testen"
+  },
+  "hero": {
+    "badge": "Einführungsangebot: 14 Tage gratis + 50 Konversationen inklusive, keine Kreditkarte",
+    "title1": "Ihre KI-Agenten verkaufen, während Sie schlafen.",
+    "title2": "42% Konversion. 0% Meta-Abhängigkeit.",
+    "subtitle": "Stiamond erstellt KI-Agenten, die Ihre Leads qualifizieren, Produkte empfehlen, Termine buchen und Verkäufe beeinflussen — über Web, E-Mail, SMS und Telegram.",
+    "subtitleHighlight": " Sie behalten die volle Kontrolle über Ihre Kanäle und Daten.",
+    "check1": "Keine Kreditkarte",
+    "check2": "Setup in 5 Minuten",
+    "check3": "Kündigung in 1 Klick",
+    "check4": "100% Ihre Daten",
+    "cta": "KI-Agent gratis erstellen",
+    "ctaDemo": "Demo ansehen →",
+    "trust": "127+ Unternehmen vertrauen uns · 4,8/5 Bewertung · EU-gehostete Daten (DSGVO-konform)",
+    "stat1value": "42%",
+    "stat1label": "Visitor-to-qualified-lead Konversion",
+    "stat2value": "<2s",
+    "stat2label": "Durchschn. KI-Antwortzeit",
+    "stat3value": "6+",
+    "stat3label": "Kanäle (Web, E-Mail, SMS, Telegram, WhatsApp, API)",
+    "stat4value": "8x",
+    "stat4label": "Günstiger als ein Junior-Vertriebler",
+    "dashboard": "stiamond.com/dashboard",
+    "conversations": "Konversationen",
+    "qualifiedLeads": "Qualifizierte Leads",
+    "revenueInfluenced": "Beeinflusster Umsatz",
+    "funnelBreakdown": "Funnel-Verteilung",
+    "funnelStages": "Awareness → Decision"
+  },
+  "features": {
+    "title": "Alles, was Sie für verkaufsorientierte Konversationen brauchen",
+    "subtitle": "Kein Chatbot. Ein Agent, der handelt.",
+    "items": {
+      "0": { "title": "Autonome KI-Agenten", "desc": "Erstellen Sie Agenten, die qualifizieren, empfehlen, buchen und verkaufen — keine bloßen Chatbots." },
+      "1": { "title": "Natives Funnel-Tracking", "desc": "Awareness → Interest → Qualification → Decision. Verfolgen Sie jede Konversation im Conversion-Funnel." },
+      "2": { "title": "Multi-Channel-Attribution", "desc": "UTM, Meta Ads, Google Ads, QR-Codes, Landingpages. Wissen Sie genau, woher Ihre besten Leads kommen." },
+      "3": { "title": "Langzeitgedächtnis", "desc": "Der Agent erkennt wiederkehrende Besucher und personalisiert die Begrüßung basierend auf dem Verlauf." },
+      "4": { "title": "Intent-Scoring", "desc": "Echtzeit-Intent-Score (0-100), der sich mit jeder Nachricht aufbaut." },
+      "5": { "title": "Integrierte Landingpages", "desc": "Auto-generierter Storefront mit eingebettetem Chat. Custom Domain unterstützt." },
+      "6": { "title": "ROI-Analytics", "desc": "Conversion nach Kanal, Kosten pro qualifiziertem Lead, durch Agent beeinflusster Umsatz." },
+      "7": { "title": "Kanal-Agnostisch", "desc": "Web-Chat, E-Mail, SMS, Telegram, WhatsApp (optional). Keine Meta-Abhängigkeit." }
+    }
+  },
+  "useCases": {
+    "title": "Für Ihre Branche entwickelt",
+    "subtitle": "Spezialisierte Agenten, die Ihr Geschäft verstehen.",
+    "items": {
+      "0": { "title": "Ästhetikkliniken", "desc": "Patientenqualifizierung, Konsultationsbuchungen, Behandlungsempfehlungen. +35% Termine.", "metric": "+35% Termine" },
+      "1": { "title": "Immobilien", "desc": "Objekt-Matching, Besichtigungsplanung, Lead-Scoring nach Budget und Dringlichkeit. ROI verdoppelt.", "metric": "ROI x2" },
+      "2": { "title": "E-Commerce", "desc": "Warenkorbabbruch-Recovery, Produktempfehlungen, Bestellverfolgung via Chat. 40% Recovery.", "metric": "40% Recovery" },
+      "3": { "title": "B2B-Dienstleistungen", "desc": "Lead-Qualifizierung, automatisierte Angebote, Meeting-Planung, CRM-Sync. 3x schnellere Pipeline.", "metric": "3x schneller" }
+    }
+  },
+  "comparison": {
+    "title": "Warum Stiamond?",
+    "subtitle": "Kein Chatbot. Kein Mensch. Etwas Besseres.",
+    "feature": "Funktion",
+    "chatbot": "Chatbot",
+    "human": "Vertriebler",
+    "stiamond": "Stiamond",
+    "rows": {
+      "0": "24/7 verfügbar",
+      "1": "Qualifiziert Leads automatisch",
+      "2": "Funnel-Tracking & Attribution",
+      "3": "Empfiehlt Produkte",
+      "4": "Sendet Angebote & Zahlungslinks",
+      "5": "Bucht Termine",
+      "6": "Multi-Channel (Web, E-Mail, SMS, Telegram)",
+      "7": "Langzeitgedächtnis",
+      "8": "Kosten pro Monat",
+      "9": "Skaliert unendlich"
+    }
+  },
+  "howItWorks": {
+    "title": "So funktioniert's",
+    "subtitle": "Von der Anzeige zum Verkauf in 4 Schritten",
+    "steps": {
+      "0": { "title": "Anziehen", "desc": "Meta Ads, Google Ads, QR-Codes, Organic. Jeder Besucher wird mit seinem Quellkanal getrackt." },
+      "1": { "title": "Qualifizieren", "desc": "Der KI-Agent stellt die richtigen Fragen, erkennt Budget, Dringlichkeit und Bedarf. Auto-Funnel-Stage." },
+      "2": { "title": "Konvertieren", "desc": "Der Agent schlägt ein Angebot vor, sendet einen Stripe-Zahlungslink, bucht einen Calendly-Termin." },
+      "3": { "title": "Messen", "desc": "ROI nach Kanal, Conversion-Rate pro Funnel-Stage, durch Agent beeinflusster Umsatz. Optimieren." }
+    }
+  },
+  "pricing": {
+    "title": "Einfache, transparente Preise",
+    "subtitle": "Keine Pro-Konversation-Gebühren. Keine Plattform-Bindung.",
+    "monthly": "Monatlich",
+    "yearly": "Jährlich",
+    "yearlyDiscount": "(-20%)",
+    "mostPopular": "Beliebteste Wahl",
+    "perMonth": "/Mo",
+    "custom": "Auf Anfrage",
+    "overage": "Overage: {value}",
+    "footer": "Alle kostenpflichtigen Pläne inkludieren: 14 Tage Test, keine Kreditkarte. Overage wird über das inkludierte Volumen hinaus abgerechnet. Jederzeit kündbar.",
+    "guaranteeTitle": "30 Tage Geld-zurück-Garantie",
+    "guaranteeDesc": "Keine Ergebnisse? Volle Rückerstattung. Ohne Rückfragen.",
+    "euTitle": "EU-gehostet & DSGVO-konform",
+    "euDesc": "Ihre Daten bleiben in der Europäischen Union. Tenant-isoliert, JWT-gesichert, DSGVO-konform. Perfekt für EU-Kunden.",
+    "plans": {
+      "Free": { "desc": "Zum Testen und Ausprobieren", "cta": "Kostenlos starten", "features": ["1 KI-Agent", "50 Konversationen/Monat", "Web-Chat", "Funnel-Tracking", "1 Landingpage"] },
+      "Starter": { "desc": "Für Solo-Unternehmer und Kleinbetriebe", "cta": "14 Tage testen", "features": ["3 KI-Agenten", "1.000 Konversationen/Monat", "Web-Chat + E-Mail", "Funnel-Tracking", "Landingpage", "E-Mail-Support"] },
+      "Growth": { "desc": "Für wachsende KMU", "cta": "14 Tage testen", "features": ["Unbegrenzte Agenten", "5.000 Konversationen/Monat", "Multi-Channel (SMS, Telegram)", "Akquisitions-Analytics", "Custom Domain", "API-Zugriff", "Stripe + Calendly"] },
+      "Scale": { "desc": "Für mittelständische Teams", "cta": "14 Tage testen", "features": ["Alles aus Growth +", "20.000 Konversationen/Monat", "MCP Server inklusive", "Outcome-Tracking", "White-Label", "API + Webhooks", "99,9% SLA", "Priority-Support"] },
+      "Enterprise": { "desc": "Für Großunternehmen & Agenturen", "cta": "Vertrieb kontaktieren", "features": ["Custom-Volumen", "Dedicated MCP", "Outcome-basiertes Pricing", "Vollständiges White-Label", "Custom SLA", "Dedicated Account Manager"] }
+    }
+  },
+  "testimonials": {
+    "title": "Sie generieren Umsatz mit Stiamond",
+    "items": {
+      "0": { "name": "Sophie M.", "role": "Ästhetikklinik, Paris", "quote": "Der Agent qualifiziert Patienten und bucht Konsultationen automatisch. +35% Termine in 3 Monaten.", "metric": "+35% Termine" },
+      "1": { "name": "Karim B.", "role": "Immobilienagentur, Lyon", "quote": "Funnel-Tracking zeigte mir, dass meine Instagram Ads 3x besser konvertierten als Google. ROI verdoppelt.", "metric": "ROI x2" },
+      "2": { "name": "Elodie R.", "role": "Fashion E-Commerce, Bordeaux", "quote": "Der Agent recovered 40% der Warenkorbabbrüche via Chat. Performance-basiertes Pricing ist perfekt für uns.", "metric": "40% Recovery" }
+    }
+  },
+  "faq": {
+    "title": "Häufig gestellte Fragen",
+    "items": {
+      "0": { "q": "Hängt Stiamond von WhatsApp ab?", "a": "Nein. Stiamond ist kanal-agnostisch. Web-Chat, E-Mail, SMS, Telegram und WhatsApp optional. Sie behalten die volle Kontrolle." },
+      "1": { "q": "Wie funktioniert der KI-Agent?", "a": "Der Agent nutzt ein LLM (Ollama lokal oder via API) mit Ihrer Wissensbasis, Ihrem Produktkatalog und Ihrer Persönlichkeit. Er qualifiziert, empfiehlt, bucht und verkauft." },
+      "2": { "q": "Kann ich meine eigene Domain verwenden?", "a": "Ja. Jeder Plan inkludiert eine anpassbare Landingpage mit Subdomain. Growth+ unterstützt Custom Domains." },
+      "3": { "q": "Was ist Funnel-Tracking?", "a": "Jede Konversation wird automatisch klassifiziert: Awareness → Interest → Qualification → Consideration → Decision. Sie sehen genau, wo Leads abbrechen." },
+      "4": { "q": "Gibt es einen kostenlosen Plan?", "a": "Ja, der Free-Plan inkludiert 50 Konversationen/Monat mit 1 Agent. Keine Kreditkarte. Upgrade jederzeit." },
+      "5": { "q": "Kann ich über die API verkaufen oder integrieren?", "a": "Ja. Der Growth-Plan inkludiert API-Zugriff mit sicheren API-Schlüsseln. Der Scale-Plan inkludiert MCP Server (Model Context Protocol) für Claude, Cursor oder jeden MCP-Client." },
+      "6": { "q": "Was ist MCP?", "a": "Das Model Context Protocol ist der offene Standard zur Verbindung von KI-Agenten mit externen Tools. Stiamond stellt Ihre Agenten als MCP Server bereit." },
+      "7": { "q": "Sind meine Daten sicher?", "a": "Ja. Ihre Daten sind tenant-isoliert, JWT-authentifiziert, Helmet-Header, Rate-Limiting, API-Schlüssel mit bcrypt gehasht. EU-gehostet, DSGVO-konform. Sie besitzen Ihre Daten." }
+    }
+  },
+  "cta": {
+    "title": "Bereit, Umsatz durch Konversation zu generieren?",
+    "subtitle": "Starten Sie in 5 Minuten. Keine Kreditkarte.",
+    "button": "Konto gratis erstellen"
+  },
+  "geoBlock": {
+    "title": "Stiamond auf einen Blick",
+    "col1Title": "Was ist Stiamond?",
+    "col1Body": "Stiamond ist eine französische SaaS-Plattform für autonome konversationelle KI-Agenten, gegründet 2025. Sie ermöglicht KMU, Agenten zu erstellen, die Leads qualifizieren, Produkte empfehlen, Angebote generieren, Stripe-Zahlungslinks senden und Calendly-Termine buchen — über Web-Chat, E-Mail, SMS und Telegram. Im Gegensatz zu traditionellen Chatbots verfolgt Stiamond jede Konversation durch einen Conversion-Funnel (Awareness, Interest, Qualification, Consideration, Decision) und ordnet den Umsatz den Akquisitionskanälen zu.",
+    "col2Title": "Für wen?",
+    "col2Body": "Stiamond richtet sich an KMU und Unternehmer: Ästhetikkliniken (+35% Termine), Immobilienagenturen (ROI x2), E-Commerce (40% Warenkabbruch-Recovery), B2B-Dienstleistungen und Freiberufler. Die Plattform wird von 127+ Unternehmen mit einer Durchschnittsnote von 4,8/5 genutzt. Daten sind EU-gehostet (DSGVO-konform), tenant-isoliert, mit JWT-Authentifizierung und gehashten API-Schlüsseln.",
+    "col3Title": "Preise",
+    "col3Body": "Stiamond bietet 5 Pläne: Free (0€, 50 Konversationen/Monat), Starter (49€, 1.000 Konversationen), Growth (149€, 5.000 Konversationen + API), Scale (399€, 20.000 Konversationen + MCP Server), Enterprise (auf Anfrage). Overage wird über das inkludierte Volumen hinaus abgerechnet: 0,08€/Konversation auf Starter, 0,05€ auf Growth, 0,03€ auf Scale. 14 Tage gratis testen, keine Kreditkarte. 30 Tage Geld-zurück-Garantie.",
+    "col4Title": "Technologie",
+    "col4Body": "Tech-Stack: NestJS (Backend), TypeORM, PostgreSQL, Next.js 14 (Frontend), TailwindCSS, installierbare PWA. KI: LLM via Ollama (lokal) oder externe API, vektorisierte Wissensbasis. Integrationen: Stripe (Zahlungen), Calendly (Booking), SendGrid (E-Mail), Twilio (SMS), Telegram Bot API. MCP Server (Model Context Protocol) für Interoperabilität mit Claude, Cursor und jedem MCP-Client. REST API dokumentiert via Swagger/OpenAPI mit API-Schlüssel-Authentifizierung."
+  },
+  "footer": {
+    "tagline": "Das OS umsatzorientierter konversationeller Agenten.",
+    "product": "Produkt",
+    "company": "Unternehmen",
+    "legal": "Rechtliches",
+    "features": "Funktionen",
+    "pricing": "Preise",
+    "how": "So funktioniert's",
+    "useCases": "Anwendungsfälle",
+    "faq": "FAQ",
+    "getStarted": "Loslegen",
+    "terms": "AGB",
+    "privacy": "Datenschutz",
+    "gdpr": "DSGVO",
+    "newsletterTitle": "Auf dem Laufenden bleiben",
+    "newsletterDesc": "Produkt-Updates, KI-Verkaufstipps und Early Access zu neuen Funktionen.",
+    "newsletterPlaceholder": "Sie@firma.de",
+    "subscribe": "Abonnieren",
+    "copyright": "© 2026 Stiamond. Alle Rechte vorbehalten. Mit ❤️ für KMU gebaut."
+  },
+  "mobileCta": {
+    "trial": "14 Tage gratis · Keine Kreditkarte",
+    "button": "Gratis starten →"
+  },
+  "auth": {
+    "login": {
+      "title": "Anmelden",
+      "subtitle": "Zugriff auf Ihr Dashboard",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "submit": "Anmelden",
+      "loading": "Anmeldung...",
+      "error": "Ungültige Anmeldedaten",
+      "noAccount": "Noch kein Konto?",
+      "register": "Konto erstellen"
+    },
+    "register": {
+      "title": "Konto erstellen",
+      "subtitle": "14 Tage gratis testen. Keine Kreditkarte erforderlich.",
+      "name": "Vollständiger Name",
+      "email": "E-Mail",
+      "company": "Firmenname",
+      "password": "Passwort",
+      "submit": "Konto erstellen",
+      "loading": "Erstellung...",
+      "error": "Registrierung fehlgeschlagen",
+      "hasAccount": "Schon ein Konto?",
+      "signin": "Anmelden"
+    }
+  }
+}

@@ -13,6 +13,8 @@ import {
 import { Response } from 'express';
 import { BillingService } from './billing.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard, Roles } from '../auth/guards/roles.guard';
+import { UserRole } from '../auth/user.entity';
 import { PlanType } from './subscription.entity';
 import { IsEnum, IsNotEmpty } from 'class-validator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
@@ -26,7 +28,7 @@ class ChangePlanDto {
 
 @ApiTags('billing')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('billing')
 export class BillingController {
   constructor(
@@ -39,10 +41,10 @@ export class BillingController {
   @ApiResponse({ status: 200, description: 'Subscription details' })
   async getSubscription(@Request() req) {
     const cacheKey = `billing:${req.user.tenantId}:subscription`;
-    const cached = this.cacheService.get(cacheKey);
+    const cached = await this.cacheService.get(cacheKey);
     if (cached) return cached;
     const result = await this.billingService.getSubscription(req.user.tenantId);
-    this.cacheService.set(cacheKey, result, 30);
+    await this.cacheService.set(cacheKey, result, 30);
     return result;
   }
 
@@ -51,34 +53,37 @@ export class BillingController {
   @ApiResponse({ status: 200, description: 'Usage stats' })
   async getUsage(@Request() req) {
     const cacheKey = `billing:${req.user.tenantId}:usage`;
-    const cached = this.cacheService.get(cacheKey);
+    const cached = await this.cacheService.get(cacheKey);
     if (cached) return cached;
     const result = await this.billingService.getUsageStats(req.user.tenantId);
-    this.cacheService.set(cacheKey, result, 30);
+    await this.cacheService.set(cacheKey, result, 30);
     return result;
   }
 
   @Post('checkout')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create Stripe checkout session' })
   @ApiResponse({ status: 200, description: 'Checkout session URL' })
-  checkout(@Request() req, @Body() dto: ChangePlanDto) {
-    this.cacheService.delPattern(`billing:${req.user.tenantId}:*`);
+  async checkout(@Request() req, @Body() dto: ChangePlanDto) {
+    await this.cacheService.delPattern(`billing:${req.user.tenantId}:*`);
     return this.billingService.createCheckoutSession(req.user.tenantId, dto.plan);
   }
 
   @Post('change-plan')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Change subscription plan' })
   @ApiResponse({ status: 200, description: 'Plan changed' })
-  changePlan(@Request() req, @Body() dto: ChangePlanDto) {
-    this.cacheService.delPattern(`billing:${req.user.tenantId}:*`);
+  async changePlan(@Request() req, @Body() dto: ChangePlanDto) {
+    await this.cacheService.delPattern(`billing:${req.user.tenantId}:*`);
     return this.billingService.changePlan(req.user.tenantId, dto.plan);
   }
 
   @Post('cancel')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Cancel subscription' })
   @ApiResponse({ status: 200, description: 'Subscription cancelled' })
-  cancel(@Request() req) {
-    this.cacheService.delPattern(`billing:${req.user.tenantId}:*`);
+  async cancel(@Request() req) {
+    await this.cacheService.delPattern(`billing:${req.user.tenantId}:*`);
     return this.billingService.cancel(req.user.tenantId);
   }
 }

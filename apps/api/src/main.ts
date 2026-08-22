@@ -62,25 +62,27 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  // Swagger/OpenAPI
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Stiamond API')
-    .setDescription('Agent conversationnel IA — API documentation')
-    .setVersion('1.0.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document);
+  // Swagger/OpenAPI — disabled in production
+  const port = process.env.PORT || 3001;
+  if (process.env.NODE_ENV !== 'production') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Stiamond API')
+      .setDescription('Agent conversationnel IA — API documentation')
+      .setVersion('1.0.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, document);
+    logger.log(`Swagger docs at http://localhost:${port}/api/docs`);
+  }
 
   // Health check endpoint
   app.use('/health', (req: any, res: any) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  const port = process.env.PORT || 3001;
   await app.listen(port);
   logger.log(`API running on http://localhost:${port}/api`);
-  logger.log(`Swagger docs at http://localhost:${port}/api/docs`);
   logger.log(`CORS origins: ${allowedOrigins.join(', ')}`);
 }
 

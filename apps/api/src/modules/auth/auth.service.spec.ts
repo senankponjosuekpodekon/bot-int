@@ -13,6 +13,8 @@ jest.mock('bcryptjs', () => ({
   compare: jest.fn().mockResolvedValue(true),
 }));
 
+import { SessionService } from './session.service';
+
 type RepositoryMock<T extends ObjectLiteral> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
 const createRepositoryMock = <T extends ObjectLiteral>(): RepositoryMock<T> => ({
@@ -29,6 +31,7 @@ describe('AuthService', () => {
   let tenantsService: { findByEmail: jest.Mock; create: jest.Mock };
   let jwtService: { sign: jest.Mock };
   let configService: { get: jest.Mock };
+  let sessionService: { create: jest.Mock; remove: jest.Mock };
 
   beforeEach(() => {
     userRepo = createRepositoryMock<User>();
@@ -47,6 +50,10 @@ describe('AuthService', () => {
         return defaultValue;
       }),
     };
+    sessionService = {
+      create: jest.fn().mockResolvedValue(undefined),
+      remove: jest.fn().mockResolvedValue(undefined),
+    };
 
     service = new AuthService(
       userRepo as unknown as Repository<User>,
@@ -54,6 +61,7 @@ describe('AuthService', () => {
       tenantsService as unknown as TenantsService,
       jwtService as unknown as JwtService,
       configService as unknown as ConfigService,
+      sessionService as unknown as SessionService,
     );
 
     jest.clearAllMocks();

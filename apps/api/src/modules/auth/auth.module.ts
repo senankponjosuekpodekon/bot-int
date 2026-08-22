@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -6,9 +7,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { RolesGuard } from './guards/roles.guard';
 import { User } from './user.entity';
 import { RefreshToken } from './refresh-token.entity';
 import { TenantsModule } from '../tenants/tenants.module';
+import { CacheModule } from '../../common/cache.module';
+import { SessionService } from './session.service';
+import { SessionController } from './session.controller';
 
 @Module({
   imports: [
@@ -23,9 +28,10 @@ import { TenantsModule } from '../tenants/tenants.module';
       }),
     }),
     TenantsModule,
+    CacheModule,
   ],
-  providers: [AuthService, JwtStrategy],
-  controllers: [AuthController],
-  exports: [AuthService],
+  providers: [AuthService, JwtStrategy, RolesGuard, SessionService],
+  controllers: [AuthController, SessionController],
+  exports: [AuthService, RolesGuard],
 })
 export class AuthModule {}

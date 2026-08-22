@@ -5,7 +5,12 @@ import { Conversation, ConversationStatus, FunnelStage, AcquisitionChannel } fro
 import { Message, MessageRole } from './message.entity';
 import { AgentFeedback } from './agent-feedback.entity';
 import { AgentsService } from '../agents/agents.service';
-import { OllamaService, OllamaMessage } from './ollama.service';
+import { AgentMemoryService } from '../agents/agent-memory.service';
+import { AgentToolsService } from '../agents/agent-tools.service';
+import { AgentWorkflowService } from '../agents/agent-workflow.service';
+import { MemoryScope } from '../agents/agent-memory.entity';
+import { OllamaMessage } from './ollama.service';
+import { LLMService } from './llm.service';
 import { LeadsService } from '../leads/leads.service';
 import { LeadTagService } from '../leads/lead-tag.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
@@ -55,7 +60,7 @@ export class ChatService {
     @InjectRepository(AgentFeedback)
     private readonly feedbackRepo: Repository<AgentFeedback>,
     private readonly agentsService: AgentsService,
-    private readonly ollamaService: OllamaService,
+    private readonly llmService: LLMService,
     private readonly leadsService: LeadsService,
     private readonly leadTagService: LeadTagService,
     @Inject(forwardRef(() => KnowledgeService))
@@ -67,6 +72,9 @@ export class ChatService {
     private readonly billingService: BillingService,
     private readonly regionsService: RegionsService,
     private readonly webhookService: WebhookService,
+    private readonly agentMemoryService: AgentMemoryService,
+    private readonly agentToolsService: AgentToolsService,
+    private readonly agentWorkflowService: AgentWorkflowService,
   ) {}
 
   async sendMessage(
@@ -296,6 +304,57 @@ export class ChatService {
       }
     }
 
+    // Persistent agent memory: recall stored facts about this visitor/lead (only if memory is enabled)
+    if (personalityConfig.memoryEnabled !== false) {
+      if (visitorId) {
+        try {
+          const memoryContext = await this.agentMemoryService.recallAsContext(
+            tenantId, MemoryScope.VISITOR, visitorId, 10,
+          );
+          if (memoryContext) {
+            messages.splice(1, 0, {
+              role: 'system',
+              content: `Mémoire persistante sur ce visiteur:\n${memoryContext}\n\nUtilise ces informations pour personnaliser tes réponses.`,
+            });
+          }
+        } catch {
+          // Memory recall is optional
+        }
+      } else if (conversation.leadId) {
+        try {
+          const memoryContext = await this.agentMemoryService.recallAsContext(
+            tenantId, MemoryScope.LEAD, conversation.leadId, 10,
+          );
+          if (memoryContext) {
+            messages.splice(1, 0, {
+              role: 'system',
+              content: `Mémoire persistante sur ce lead:\n${memoryContext}\n\nUtilise ces informations pour personnaliser tes réponses.`,
+          });
+        }
+      } catch {
+        // Memory recall is optional
+      }
+      }
+    }
+
+    // Agent tools: detect and execute relevant tools before LLM response (only if tools are enabled and message is substantial)
+    if (personalityConfig.toolsEnabled === true && userMessage.length > 15) {
+      try {
+        const toolResults = await this.agentToolsService.detectAndExecuteTools(userMessage, tenantId);
+        if (toolResults.length > 0) {
+          const toolContext = toolResults
+            .map((r) => `[Tool: ${r.toolName}] ${r.result}`)
+            .join('\n');
+          messages.splice(1, 0, {
+            role: 'system',
+            content: `Résultats d'outils externes pour cette conversation. Utilise-les si pertinent:\n${toolContext}`,
+          });
+        }
+      } catch {
+        // Tool execution is optional
+      }
+    }
+
     // Apply feedback corrections to system prompt
     try {
       const recentFeedback = await this.feedbackRepo.find({
@@ -427,7 +486,7 @@ export class ChatService {
       });
     }
 
-    const reply = await this.ollamaService.chat(messages);
+    const reply = await this.llmService.chat(messages);
 
     let finalReply = reply;
 
@@ -450,6 +509,43 @@ export class ChatService {
         await this.convRepo.update(conversation.id, { status: ConversationStatus.HANDED_OFF });
         finalReply += '\n\nJe transfère votre demande à un agent humain qui pourra mieux vous aider sur ce sujet.';
       }
+    }
+
+    // Workflow auto-trigger: check for keyword or funnel_stage triggers
+    try {
+      const keywordWorkflow = await this.agentWorkflowService.findByTrigger(tenantId, agentId, 'keyword', userMessage.toLowerCase());
+      if (keywordWorkflow) {
+        const wfResult = await this.agentWorkflowService.execute(keywordWorkflow.id, {
+          tenantId, agentId, conversationId: conversation.id, visitorId,
+          leadId: conversation.leadId,
+          userMessage,
+          variables: { intentScore: String(newIntentScore) },
+        });
+        if (wfResult.output && wfResult.completed) {
+          finalReply = wfResult.output;
+        }
+        if (wfResult.handoff) {
+          await this.convRepo.update(conversation.id, { status: ConversationStatus.HANDED_OFF });
+        }
+      } else {
+        const stageWorkflow = await this.agentWorkflowService.findByTrigger(tenantId, agentId, 'funnel_stage', conversation.funnelStage);
+        if (stageWorkflow) {
+          const wfResult = await this.agentWorkflowService.execute(stageWorkflow.id, {
+            tenantId, agentId, conversationId: conversation.id, visitorId,
+            leadId: conversation.leadId,
+            userMessage,
+            variables: { intentScore: String(newIntentScore) },
+          });
+          if (wfResult.output && wfResult.completed) {
+            finalReply = wfResult.output;
+          }
+          if (wfResult.handoff) {
+            await this.convRepo.update(conversation.id, { status: ConversationStatus.HANDED_OFF });
+          }
+        }
+      }
+    } catch {
+      // Workflow auto-trigger is optional
     }
 
     // Pacing: simulate natural response delay
@@ -500,6 +596,27 @@ export class ChatService {
         content: finalReply,
       }),
     );
+
+    // Extract and store persistent memories from this exchange (only if memory is enabled)
+    if (personalityConfig.memoryEnabled !== false) {
+      if (visitorId) {
+        try {
+          await this.agentMemoryService.extractAndStore(
+            tenantId, MemoryScope.VISITOR, visitorId, userMessage, finalReply, agentId,
+          );
+        } catch {
+          // Memory extraction is optional
+        }
+      } else if (conversation.leadId) {
+        try {
+          await this.agentMemoryService.extractAndStore(
+            tenantId, MemoryScope.LEAD, conversation.leadId, userMessage, finalReply, agentId,
+          );
+        } catch {
+          // Memory extraction is optional
+        }
+      }
+    }
 
     const responseLeadId = conversation.leadId ?? createdLeadId;
 

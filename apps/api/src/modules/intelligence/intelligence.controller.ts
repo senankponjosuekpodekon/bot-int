@@ -55,4 +55,9 @@ export class IntelligenceController {
   platformRecommendations() {
     return this.service.getPlatformRecommendations();
   }
+
+  @Get('channels')
+  channelAnalytics(@Request() req, @Query('days') days?: string) {
+    return this.service.getChannelAnalytics(req.user.tenantId, days ? Number(days) : 30);
+  }
 }

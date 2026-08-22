@@ -128,7 +128,7 @@ export default function AgentsPage() {
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 <label className="label">Nom de l'agent</label>
-                <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Assistant Support" required />
+                <input name="name" className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Assistant Support" required />
               </div>
               <div>
                 <label className="label">Type</label>
@@ -157,6 +157,7 @@ export default function AgentsPage() {
                   </div>
                 )}
                 <textarea
+                  name="systemPrompt"
                   className="input resize-none"
                   rows={4}
                   value={form.systemPrompt}

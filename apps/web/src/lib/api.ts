@@ -148,6 +148,27 @@ export const agentsApi = {
   create: (data: any) => api.post('/agents', data).then((r) => r.data),
   update: (id: string, data: any) => api.patch(`/agents/${id}`, data).then((r) => r.data),
   delete: (id: string) => api.delete(`/agents/${id}`).then((r) => r.data),
+
+  // Memory
+  remember: (data: { scope: string; scopeId: string; key: string; value: string; agentId?: string; importance?: number }) =>
+    api.post('/agents/memory/remember', data).then((r) => r.data),
+  recall: (data: { scope: string; scopeId: string; keys?: string[] }) =>
+    api.post('/agents/memory/recall', data).then((r) => r.data),
+  forget: (scope: string, scopeId: string, key?: string) =>
+    api.delete(`/agents/memory/${scope}/${scopeId}`, { params: { key } }).then((r) => r.data),
+
+  // Tools
+  listTools: () => api.get('/agents/tools/list').then((r) => r.data),
+
+  // Workflows
+  listWorkflows: (params?: { page?: number; limit?: number }) =>
+    api.get('/agents/workflows', { params }).then((r) => r.data),
+  getWorkflow: (id: string) => api.get(`/agents/workflows/${id}`).then((r) => r.data),
+  createWorkflow: (data: any) => api.post('/agents/workflows', data).then((r) => r.data),
+  updateWorkflow: (id: string, data: any) => api.patch(`/agents/workflows/${id}`, data).then((r) => r.data),
+  deleteWorkflow: (id: string) => api.delete(`/agents/workflows/${id}`).then((r) => r.data),
+  executeWorkflow: (id: string, data: { userMessage: string; conversationId?: string; visitorId?: string; leadId?: string }) =>
+    api.post(`/agents/workflows/${id}/execute`, data).then((r) => r.data),
 };
 
 export const chatApi = {

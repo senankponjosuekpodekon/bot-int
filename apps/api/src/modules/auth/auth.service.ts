@@ -16,6 +16,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshToken } from './refresh-token.entity';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { SessionService } from './session.service';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +28,7 @@ export class AuthService {
     private readonly tenantsService: TenantsService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly sessionService: SessionService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -73,7 +75,8 @@ export class AuthService {
   }
 
   private async issueTokens(userId: string, tenantId: string) {
-    const payload = { sub: userId, tenantId };
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    const payload = { sub: userId, tenantId, role: user?.role };
     const expiresIn = this.config.get('JWT_EXPIRES_IN', '15m');
     const refreshTtlMinutes = Number(this.config.get('REFRESH_TOKEN_TTL_MINUTES', 60 * 24 * 7));
     const { tokenId, secret, token: refreshPlain } = this.generateRefreshToken();
@@ -83,6 +86,7 @@ export class AuthService {
     await this.refreshRepo.save(
       this.refreshRepo.create({ userId, tenantId, tokenId, hashedToken, expiresAt }),
     );
+    await this.sessionService.create(userId, tenantId, tokenId, refreshTtlMinutes * 60);
 
     return {
       access_token: this.jwtService.sign(payload, { expiresIn }),
@@ -145,6 +149,7 @@ export class AuthService {
     token.isRevoked = true;
     token.revokedAt = new Date();
     await this.refreshRepo.save(token);
+    await this.sessionService.remove(token.userId, token.tokenId);
   }
 
   private async findLegacyToken(secret: string) {

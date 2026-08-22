@@ -18,6 +18,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/fr/terms`, priority: 0.3, changeFrequency: 'yearly' as const },
     { url: `${SITE_URL}/fr/privacy`, priority: 0.3, changeFrequency: 'yearly' as const },
     { url: `${SITE_URL}/fr/gdpr`, priority: 0.3, changeFrequency: 'yearly' as const },
+    { url: `${SITE_URL}/de/terms`, priority: 0.3, changeFrequency: 'yearly' as const },
+    { url: `${SITE_URL}/de/privacy`, priority: 0.3, changeFrequency: 'yearly' as const },
+    { url: `${SITE_URL}/de/gdpr`, priority: 0.3, changeFrequency: 'yearly' as const },
+    { url: `${SITE_URL}/ar/terms`, priority: 0.3, changeFrequency: 'yearly' as const },
+    { url: `${SITE_URL}/ar/privacy`, priority: 0.3, changeFrequency: 'yearly' as const },
+    { url: `${SITE_URL}/ar/gdpr`, priority: 0.3, changeFrequency: 'yearly' as const },
   ];
 
   return staticRoutes.map((route) => ({

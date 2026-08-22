@@ -289,9 +289,9 @@ export default function LandingPageAR() {
             <div>
               <h4 className="font-medium text-white mb-3 text-sm">القانونية</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="/terms" className="hover:text-white transition-colors">شروط الخدمة</a></li>
-                <li><a href="/privacy" className="hover:text-white transition-colors">سياسة الخصوصية</a></li>
-                <li><a href="/gdpr" className="hover:text-white transition-colors">GDPR</a></li>
+                <li><a href="/ar/terms" className="hover:text-white transition-colors">شروط الخدمة</a></li>
+                <li><a href="/ar/privacy" className="hover:text-white transition-colors">سياسة الخصوصية</a></li>
+                <li><a href="/ar/gdpr" className="hover:text-white transition-colors">GDPR</a></li>
               </ul>
             </div>
             <div>

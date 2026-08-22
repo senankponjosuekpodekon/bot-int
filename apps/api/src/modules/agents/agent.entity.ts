@@ -59,6 +59,8 @@ export class Agent {
     audience?: 'all' | 'new_only' | 'returning_only';
     escalationTopics?: string[];
     forbiddenTopics?: string[];
+    toolsEnabled?: boolean;
+    memoryEnabled?: boolean;
   };
 
   @CreateDateColumn()

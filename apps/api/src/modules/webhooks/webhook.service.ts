@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, Index } from 'typeorm';
 import axios from 'axios';
+import { CryptoService } from '../../common/crypto.service';
 import { IntegrationsService } from '../integrations/integrations.service';
 
 export type WebhookEvent = 'lead.created' | 'lead.updated' | 'conversation.created' | 'conversation.closed';
@@ -39,10 +40,12 @@ export class WebhookService {
   constructor(
     @InjectRepository(WebhookEndpoint)
     private readonly webhookRepo: Repository<WebhookEndpoint>,
+    private readonly crypto: CryptoService,
   ) {}
 
   async create(tenantId: string, url: string, events: string[], secret?: string): Promise<WebhookEndpoint> {
-    const endpoint = this.webhookRepo.create({ tenantId, url, events, secret: secret ?? null });
+    const encryptedSecret = secret ? this.crypto.encrypt(secret) : null;
+    const endpoint = this.webhookRepo.create({ tenantId, url, events, secret: encryptedSecret });
     return this.webhookRepo.save(endpoint);
   }
 
@@ -51,6 +54,9 @@ export class WebhookService {
   }
 
   async update(id: string, tenantId: string, data: Partial<WebhookEndpoint>): Promise<WebhookEndpoint> {
+    if (data.secret) {
+      data.secret = this.crypto.encrypt(data.secret);
+    }
     await this.webhookRepo.update({ id, tenantId }, data);
     return this.webhookRepo.findOne({ where: { id, tenantId } });
   }
@@ -82,7 +88,7 @@ export class WebhookService {
               'X-Webhook-Event': event,
             };
             if (endpoint.secret) {
-              headers['X-Webhook-Signature'] = endpoint.secret;
+              headers['X-Webhook-Signature'] = this.crypto.decrypt(endpoint.secret);
             }
 
             await axios.post(endpoint.url, body, {

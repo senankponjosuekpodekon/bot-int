@@ -16,7 +16,7 @@ import { ChatModule } from '../chat/chat.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Subscription, ApiKey, Conversation]),
-    AgentsModule,
+    forwardRef(() => AgentsModule),
     forwardRef(() => ChatModule),
   ],
   providers: [BillingService, ApiKeyService, ApiKeyGuard],

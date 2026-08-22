@@ -808,4 +808,87 @@ export class IntelligenceService {
       .filter(([, count]) => count >= 2)
       .map(([word]) => word);
   }
+
+  async getChannelAnalytics(tenantId: string, days = 30): Promise<{
+    channels: Array<{
+      channel: string;
+      conversations: number;
+      leads: number;
+      qualifiedLeads: number;
+      conversionRate: number;
+      avgIntentScore: number;
+      messages: number;
+    }>;
+    dailyVolume: Array<{ date: string; channel: string; count: number }>;
+    summary: { totalConversations: number; totalLeads: number; totalMessages: number; avgConversionRate: number };
+  }> {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const channels = await this.convRepo
+      .createQueryBuilder('conv')
+      .leftJoin('conv.lead', 'lead')
+      .select('conv.channel', 'channel')
+      .addSelect('COUNT(DISTINCT conv.id)', 'conversations')
+      .addSelect('COUNT(DISTINCT lead.id)', 'leads')
+      .addSelect(`COUNT(DISTINCT CASE WHEN lead.status IN ('qualified','hot','closed_won') THEN lead.id END)`, 'qualifiedLeads')
+      .addSelect('COALESCE(AVG(conv.intentScore), 0)', 'avgIntentScore')
+      .where('conv.tenantId = :tenantId', { tenantId })
+      .andWhere('conv.createdAt >= :since', { since })
+      .groupBy('conv.channel')
+      .getRawMany();
+
+    const messageCounts = await this.msgRepo
+      .createQueryBuilder('msg')
+      .innerJoin('msg.conversation', 'conv')
+      .select('conv.channel', 'channel')
+      .addSelect('COUNT(*)', 'messages')
+      .where('conv.tenantId = :tenantId', { tenantId })
+      .andWhere('msg.createdAt >= :since', { since })
+      .groupBy('conv.channel')
+      .getRawMany();
+
+    const msgMap = new Map(messageCounts.map((m: any) => [m.channel, Number(m.messages)]));
+
+    const channelStats = channels.map((c: any) => {
+      const convs = Number(c.conversations);
+      const leads = Number(c.leads);
+      const qualified = Number(c.qualifiedLeads);
+      return {
+        channel: c.channel,
+        conversations: convs,
+        leads,
+        qualifiedLeads: qualified,
+        conversionRate: convs > 0 ? Math.round((leads / convs) * 100) : 0,
+        avgIntentScore: Math.round(Number(c.avgIntentScore)),
+        messages: msgMap.get(c.channel) || 0,
+      };
+    });
+
+    const dailyVolume = await this.convRepo
+      .createQueryBuilder('conv')
+      .select("TO_CHAR(conv.createdAt, 'YYYY-MM-DD')", 'date')
+      .addSelect('conv.channel', 'channel')
+      .addSelect('COUNT(*)', 'count')
+      .where('conv.tenantId = :tenantId', { tenantId })
+      .andWhere('conv.createdAt >= :since', { since })
+      .groupBy("TO_CHAR(conv.createdAt, 'YYYY-MM-DD'), conv.channel")
+      .orderBy('date', 'ASC')
+      .getRawMany();
+
+    const totalConversations = channelStats.reduce((s, c) => s + c.conversations, 0);
+    const totalLeads = channelStats.reduce((s, c) => s + c.leads, 0);
+    const totalMessages = channelStats.reduce((s, c) => s + c.messages, 0);
+
+    return {
+      channels: channelStats,
+      dailyVolume: dailyVolume.map((d: any) => ({ date: d.date, channel: d.channel, count: Number(d.count) })),
+      summary: {
+        totalConversations,
+        totalLeads,
+        totalMessages,
+        avgConversionRate: totalConversations > 0 ? Math.round((totalLeads / totalConversations) * 100) : 0,
+      },
+    };
+  }
 }

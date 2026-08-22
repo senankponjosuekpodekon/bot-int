@@ -1,0 +1,178 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { LLMService } from '../chat/llm.service';
+
+export interface AgentTool {
+  name: string;
+  description: string;
+  parameters: { name: string; type: string; description: string; required: boolean }[];
+  execute: (args: Record<string, string>, tenantId: string) => Promise<string>;
+}
+
+export interface ToolCallResult {
+  toolName: string;
+  result: string;
+}
+
+@Injectable()
+export class AgentToolsService {
+  private readonly logger = new Logger(AgentToolsService.name);
+  private readonly tools: Map<string, AgentTool> = new Map();
+
+  constructor(private readonly llmService: LLMService) {
+    this.registerTool(this.webSearchTool());
+    this.registerTool(this.calculatorTool());
+    this.registerTool(this.calendarTool());
+    this.registerTool(this.memoryRecallTool());
+  }
+
+  private registerTool(tool: AgentTool) {
+    this.tools.set(tool.name, tool);
+  }
+
+  getAvailableTools(): AgentTool[] {
+    return Array.from(this.tools.values());
+  }
+
+  getToolsDescription(): string {
+    return this.getAvailableTools()
+      .map((t) => `- ${t.name}: ${t.description}. Parameters: ${t.parameters.map((p) => `${p.name}(${p.type}${p.required ? ', required' : ''})`).join(', ')}`)
+      .join('\n');
+  }
+
+  async detectAndExecuteTools(
+    userMessage: string,
+    tenantId: string,
+    availableToolNames?: string[],
+  ): Promise<ToolCallResult[]> {
+    const tools = availableToolNames
+      ? this.getAvailableTools().filter((t) => availableToolNames.includes(t.name))
+      : this.getAvailableTools();
+
+    if (tools.length === 0) return [];
+
+    const toolPrompt = `You are a tool router. Given the user message, determine which tools to call and with what parameters.
+Available tools:
+${tools.map((t) => `- ${t.name}: ${t.description}. Parameters: ${t.parameters.map((p) => `${p.name}=${p.type}`).join(', ')}`).join('\n')}
+
+User message: "${userMessage}"
+
+Respond in JSON format only:
+{"calls": [{"tool": "tool_name", "args": {"param": "value"}}]}
+
+If no tool is needed, respond: {"calls": []}`;
+
+    try {
+      const response = await this.llmService.chat([
+        { role: 'system', content: toolPrompt },
+        { role: 'user', content: userMessage },
+      ]);
+
+      const parsed = JSON.parse(response.trim());
+      if (!parsed.calls || !Array.isArray(parsed.calls)) return [];
+
+      const results: ToolCallResult[] = [];
+      for (const call of parsed.calls) {
+        const tool = this.tools.get(call.tool);
+        if (!tool) continue;
+
+        try {
+          const result = await tool.execute(call.args || {}, tenantId);
+          results.push({ toolName: call.tool, result });
+        } catch (err: any) {
+          this.logger.warn(`Tool ${call.tool} failed: ${err?.message}`);
+          results.push({ toolName: call.tool, result: `Error: ${err?.message}` });
+        }
+      }
+      return results;
+    } catch (err: any) {
+      this.logger.warn(`Tool detection failed: ${err?.message}`);
+      return [];
+    }
+  }
+
+  private webSearchTool(): AgentTool {
+    return {
+      name: 'web_search',
+      description: 'Search the web for current information using DuckDuckGo',
+      parameters: [
+        { name: 'query', type: 'string', description: 'Search query', required: true },
+      ],
+      execute: async (args) => {
+        const query = args.query;
+        if (!query) return 'No query provided';
+        try {
+          const response = await fetch(
+            `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
+            { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BotInt/1.0)' } },
+          );
+          const html = await response.text();
+          const snippets: string[] = [];
+          const resultRegex = /<a[^>]*class="result__a"[^>]*>(.*?)<\/a>[\s\S]*?<a[^>]*class="result__snippet"[^>]*>(.*?)<\/a>/gi;
+          let match;
+          while ((match = resultRegex.exec(html)) !== null && snippets.length < 3) {
+            const title = match[1].replace(/<[^>]+>/g, '').trim();
+            const snippet = match[2].replace(/<[^>]+>/g, '').trim();
+            snippets.push(`${title}: ${snippet.slice(0, 200)}`);
+          }
+          return snippets.length > 0 ? snippets.join('\n') : 'No results found';
+        } catch (err: any) {
+          return `Search failed: ${err?.message}`;
+        }
+      },
+    };
+  }
+
+  private calculatorTool(): AgentTool {
+    return {
+      name: 'calculator',
+      description: 'Evaluate a mathematical expression',
+      parameters: [
+        { name: 'expression', type: 'string', description: 'Math expression to evaluate (e.g. "25 * 0.20", "100 + 50")', required: true },
+      ],
+      execute: async (args) => {
+        const expr = args.expression;
+        if (!expr) return 'No expression provided';
+        if (!/^[\d\s+\-*/().,%]+$/.test(expr)) return 'Invalid expression';
+        try {
+          const sanitized = expr.replace(/,/g, '.').replace(/%/g, '/100');
+          const result = Function(`"use strict"; return (${sanitized})`)();
+          return `Result: ${result}`;
+        } catch {
+          return 'Could not evaluate expression';
+        }
+      },
+    };
+  }
+
+  private calendarTool(): AgentTool {
+    return {
+      name: 'calendar',
+      description: 'Get current date and time or check day of week',
+      parameters: [
+        { name: 'action', type: 'string', description: 'Action: "now" for current datetime, "day" for day of week', required: true },
+      ],
+      execute: async (args) => {
+        const now = new Date();
+        switch (args.action) {
+          case 'now':
+            return `Current date and time: ${now.toISOString()}`;
+          case 'day':
+            return `Today is: ${now.toLocaleDateString('en-US', { weekday: 'long' })}`;
+          default:
+            return `Current date and time: ${now.toISOString()}`;
+        }
+      },
+    };
+  }
+
+  private memoryRecallTool(): AgentTool {
+    return {
+      name: 'memory_recall',
+      description: 'Placeholder for memory recall — handled by ChatService directly',
+      parameters: [
+        { name: 'key', type: 'string', description: 'Memory key to recall', required: false },
+      ],
+      execute: async () => 'Memory recall is handled by the chat service',
+    };
+  }
+}

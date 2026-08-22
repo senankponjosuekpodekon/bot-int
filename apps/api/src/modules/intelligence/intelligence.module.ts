@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Insight } from './insight.entity';
 import { ConversationAnalytics } from './conversation-analytics.entity';
@@ -17,7 +17,7 @@ import { LeadsModule } from '../leads/leads.module';
   imports: [
     TypeOrmModule.forFeature([Insight, ConversationAnalytics, PlatformInsight, Message, Conversation, Lead, Agent]),
     KnowledgeModule,
-    AgentsModule,
+    forwardRef(() => AgentsModule),
     LeadsModule,
   ],
   providers: [IntelligenceService],

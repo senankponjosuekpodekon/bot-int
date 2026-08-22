@@ -135,9 +135,10 @@ export default function ChatPage() {
   );
 
   useEffect(() => {
-    agentsApi.list().then((data) => {
-      setAgents(data);
-      if (data.length > 0) setSelectedAgent(data[0].id);
+    agentsApi.list().then((res) => {
+      const list = res.data || res;
+      setAgents(list);
+      if (list.length > 0) setSelectedAgent(list[0].id);
     });
   }, []);
 
@@ -696,6 +697,7 @@ export default function ChatPage() {
                   )}
                 </div>
                 <div
+                  data-testid={msg.role === 'assistant' ? 'assistant-message' : 'user-message'}
                   className={clsx(
                     'max-w-[75%] px-4 py-3 rounded-2xl text-sm leading-relaxed',
                     msg.role === 'user'
@@ -775,6 +777,7 @@ export default function ChatPage() {
               onClick={handleSend}
               disabled={!input.trim() || !selectedAgent || sending || isHandedOff}
               className="btn-primary px-5 self-end"
+              aria-label="Envoyer"
             >
               <Send className="w-4 h-4" />
             </button>

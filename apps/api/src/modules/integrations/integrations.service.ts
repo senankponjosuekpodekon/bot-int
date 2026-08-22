@@ -3,6 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Integration } from './integration.entity';
 import axios from 'axios';
+import { CryptoService } from '../../common/crypto.service';
+
+const SENSITIVE_CONFIG_KEYS = ['secretKey', 'accessToken', 'apiKey', 'botToken', 'authToken', 'verifyToken'];
 
 @Injectable()
 export class IntegrationsService {
@@ -11,24 +14,69 @@ export class IntegrationsService {
   constructor(
     @InjectRepository(Integration)
     private readonly repo: Repository<Integration>,
+    private readonly crypto: CryptoService,
   ) {}
 
+  private encryptConfig(config: Record<string, any>): Record<string, any> {
+    if (!config || typeof config !== 'object') return config;
+    const encrypted: Record<string, any> = {};
+    for (const [key, value] of Object.entries(config)) {
+      if (SENSITIVE_CONFIG_KEYS.includes(key) && typeof value === 'string') {
+        encrypted[key] = this.crypto.encrypt(value);
+      } else if (typeof value === 'object' && value !== null) {
+        encrypted[key] = this.encryptConfig(value);
+      } else {
+        encrypted[key] = value;
+      }
+    }
+    return encrypted;
+  }
+
+  private decryptConfig(config: Record<string, any>): Record<string, any> {
+    if (!config || typeof config !== 'object') return config;
+    const decrypted: Record<string, any> = {};
+    for (const [key, value] of Object.entries(config)) {
+      if (SENSITIVE_CONFIG_KEYS.includes(key) && typeof value === 'string') {
+        try {
+          decrypted[key] = this.crypto.decrypt(value);
+        } catch {
+          decrypted[key] = value;
+        }
+      } else if (typeof value === 'object' && value !== null) {
+        decrypted[key] = this.decryptConfig(value);
+      } else {
+        decrypted[key] = value;
+      }
+    }
+    return decrypted;
+  }
+
+  private withDecryptedConfig(integration: Integration | null): Integration | null {
+    if (!integration) return null;
+    if (integration.config) {
+      integration.config = this.decryptConfig(integration.config);
+    }
+    return integration;
+  }
+
   async findAll(tenantId: string): Promise<Integration[]> {
-    return this.repo.find({ where: { tenantId } });
+    const results = await this.repo.find({ where: { tenantId } });
+    return results.map((i) => this.withDecryptedConfig(i) as Integration);
   }
 
   async findByType(tenantId: string, type: string): Promise<Integration | null> {
-    return this.repo.findOne({ where: { tenantId, type } });
+    const result = await this.repo.findOne({ where: { tenantId, type } });
+    return this.withDecryptedConfig(result);
   }
 
   async upsert(tenantId: string, type: string, config: Record<string, any>): Promise<Integration> {
     let existing = await this.findByType(tenantId, type);
     if (existing) {
-      existing.config = { ...existing.config, ...config };
+      existing.config = this.encryptConfig({ ...existing.config, ...config });
       existing.enabled = true;
       return this.repo.save(existing);
     }
-    const integration = this.repo.create({ tenantId, type, config, enabled: true });
+    const integration = this.repo.create({ tenantId, type, config: this.encryptConfig(config), enabled: true });
     return this.repo.save(integration);
   }
 
