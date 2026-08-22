@@ -42,6 +42,12 @@ const SLASH_COMMANDS: Record<string, string> = {
   '/contact': `Pour être recontacté, laissez-moi votre nom, votre email et/ou votre numéro de téléphone dans le chat. Je transmettrai ces informations à notre équipe.`,
 };
 
+const MARKDOWN_STYLE = `Format de réponse : rédiges TOUTES tes réponses en Markdown propre et structuré.
+- Utilise des titres (#, ##), des listes à puces, du texte en gras et des tableaux quand cela aide la lisibilité.
+- Pour les offres, devis ou tarifs, préfère un tableau comparatif avec les colonnes : Offre, Fonctionnalités clés, Prix, Modalités de paiement.
+- Ne réponds jamais en texte brut non formaté.
+- Reste concis et actionnable.`;
+
 interface ExtractedData {
   email?: string;
   phone?: string;
@@ -283,6 +289,7 @@ export class ChatService {
 
     const messages: OllamaMessage[] = [
       { role: 'system', content: this.regionsService.buildSystemPrompt(agent.systemPrompt, detectedRegion) },
+      { role: 'system', content: MARKDOWN_STYLE },
       ...history.map((m) => ({
         role: m.role as 'user' | 'assistant' | 'system',
         content: m.content,

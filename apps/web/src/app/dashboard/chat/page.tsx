@@ -5,6 +5,7 @@ import { agentsApi, chatApi, leadsApi } from '@/lib/api';
 import { Send, Bot, User, RefreshCw, MessageSquare, ArrowUpRight, Info, Copy, CheckCircle2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import clsx from 'clsx';
+import Markdown from '@/components/Markdown';
 
 const CONVERSATION_PAGE_SIZE = 12;
 
@@ -103,7 +104,9 @@ export default function ChatPage() {
 
       try {
         const response = await chatApi.conversations(params);
-        const { data = [], meta = {} } = response;
+        const payload = Array.isArray(response) ? { data: response } : response;
+        const data = payload?.data ?? [];
+        const meta = payload?.meta ?? {};
         const incoming = Array.isArray(data) ? data : [];
         setConversationMeta((prevMeta) => {
           const total = meta.total ?? (append ? prevMeta.total : incoming.length);
@@ -705,7 +708,11 @@ export default function ChatPage() {
                       : 'bg-gray-100 text-gray-800 rounded-tl-sm',
                   )}
                 >
-                  {msg.content}
+                  {msg.role === 'assistant' ? (
+                    <Markdown content={msg.content} />
+                  ) : (
+                    msg.content
+                  )}
                   {msg.role === 'assistant' && selectedConversation && (
                     <button
                       onClick={() => {
