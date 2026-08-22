@@ -12,20 +12,20 @@ import { agentsApi, knowledgeApi } from '@/lib/api';
 
 const TEMPLATES: Record<string, Array<{ label: string; prompt: string }>> = {
   general: [
-    { label: 'Assistant polyvalent', prompt: 'Tu es un assistant IA polyvalent. Tu réponds de manière claire, concise et utile. Tu réponds toujours en français.' },
-    { label: 'Guide conversationnel', prompt: 'Tu es un guide conversationnel bienveillant. Tu accueilles chaleureusement et orientes vers les bonnes ressources. Tu réponds en français.' },
+    { label: 'Assistant polyvalent', prompt: 'Tu es un assistant IA polyvalent spécialisé dans le secteur {{industry}}. Tu réponds de manière claire, concise et utile. Tu réponds toujours en français.' },
+    { label: 'Guide conversationnel', prompt: 'Tu es un guide conversationnel bienveillant pour le secteur {{industry}}. Tu accueilles chaleureusement et orientes vers les bonnes ressources. Tu réponds en français.' },
   ],
   sales: [
-    { label: 'Commercial B2B', prompt: 'Tu es un expert commercial B2B. Tu qualifies les prospects, identifies leurs pain points et demandes email/téléphone pour qualification. Tu réponds en français.' },
-    { label: 'Vendeur e-commerce', prompt: 'Tu es un conseiller de vente e-commerce. Tu aides à choisir les produits et proposes des upsells pertinents. Tu réponds en français.' },
+    { label: 'Commercial B2B', prompt: 'Tu es un expert commercial B2B spécialisé dans le secteur {{industry}}. Tu qualifies les prospects, identifies leurs pain points et demandes email/téléphone pour qualification. Tu réponds en français.' },
+    { label: 'Vendeur e-commerce', prompt: 'Tu es un conseiller de vente e-commerce pour le secteur {{industry}}. Tu aides à choisir les produits et proposes des upsells pertinents. Tu réponds en français.' },
   ],
   support: [
-    { label: 'Support N1', prompt: 'Tu es un support technique niveau 1. Tu diagnostiques avec des questions méthodiques et escalades si besoin. Tu réponds en français.' },
-    { label: 'FAQ', prompt: 'Tu réponds aux questions fréquentes et proposes de transmettre à un humain si tu ne sais pas. Tu réponds en français.' },
+    { label: 'Support N1', prompt: 'Tu es un support technique niveau 1 spécialisé dans le secteur {{industry}}. Tu diagnostiques avec des questions méthodiques et escalades si besoin. Tu réponds en français.' },
+    { label: 'FAQ', prompt: 'Tu réponds aux questions fréquentes du secteur {{industry}} et proposes de transmettre à un humain si tu ne sais pas. Tu réponds en français.' },
   ],
   hr: [
-    { label: 'RH onboarding', prompt: 'Tu es un assistant RH. Tu accueilles les nouveaux employés et guides leurs premières étapes. Tu réponds en français.' },
-    { label: 'RH FAQ', prompt: 'Tu réponds aux questions RH internes (congés, paie, avantages) de manière professionnelle. Tu réponds en français.' },
+    { label: 'RH onboarding', prompt: 'Tu es un assistant RH dans le secteur {{industry}}. Tu accueilles les nouveaux employés et guides leurs premières étapes. Tu réponds en français.' },
+    { label: 'RH FAQ', prompt: 'Tu réponds aux questions RH internes du secteur {{industry}} (congés, paie, avantages) de manière professionnelle. Tu réponds en français.' },
   ],
 };
 
@@ -34,6 +34,12 @@ const TONES = [
   { value: 'friendly', label: 'Amical' },
   { value: 'formal', label: 'Formel' },
   { value: 'casual', label: 'Décontracté' },
+];
+
+const INDUSTRIES = [
+  'E-commerce', 'SaaS', 'Immobilier', 'Santé', 'Banque / Finance', 'Éducation',
+  'Restauration', 'Tourisme', 'Mode / Retail', 'Automobile', 'BTP', 'Logistique',
+  'RH / Recrutement', 'Juridique', 'Marketing', 'Autre',
 ];
 
 const DAYS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
@@ -50,6 +56,7 @@ export default function CreateAgentPage() {
   const [identity, setIdentity] = useState({
     name: '',
     type: 'general',
+    industry: '',
     systemPrompt: '',
     personality: '',
   });
@@ -76,6 +83,7 @@ export default function CreateAgentPage() {
       const agent = await agentsApi.create({
         name: identity.name,
         type: identity.type,
+        industry: identity.industry,
         systemPrompt: identity.systemPrompt,
         personality: identity.personality,
         isActive: true,
@@ -200,10 +208,17 @@ export default function CreateAgentPage() {
               </select>
             </div>
             <div>
+              <label className="label">Secteur d&apos;activité</label>
+              <select className="input" value={identity.industry} onChange={(e) => setIdentity({ ...identity, industry: e.target.value })}>
+                <option value="">-- Choisir un secteur --</option>
+                {INDUSTRIES.map((ind) => <option key={ind} value={ind}>{ind}</option>)}
+              </select>
+            </div>
+            <div>
               <label className="label">Prompt système</label>
               <div className="flex flex-wrap gap-2 mb-2">
                 {(TEMPLATES[identity.type] || []).map((tpl) => (
-                  <button key={tpl.label} type="button" onClick={() => setIdentity({ ...identity, systemPrompt: tpl.prompt })} className="px-3 py-1.5 rounded-lg border border-primary-200 bg-primary-50 text-primary-700 text-xs font-medium hover:bg-primary-100 flex items-center gap-1">
+                  <button key={tpl.label} type="button" onClick={() => setIdentity({ ...identity, systemPrompt: tpl.prompt.replace(/{{industry}}/g, identity.industry || 'de votre entreprise') })} className="px-3 py-1.5 rounded-lg border border-primary-200 bg-primary-50 text-primary-700 text-xs font-medium hover:bg-primary-100 flex items-center gap-1">
                     <Sparkles className="w-3 h-3" /> {tpl.label}
                   </button>
                 ))}

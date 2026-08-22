@@ -12,6 +12,10 @@ export class UpdateAgentDto {
   type?: AgentType;
 
   @IsString()
+  @IsOptional()
+  industry?: string;
+
+  @IsString()
   @MinLength(10)
   @IsOptional()
   systemPrompt?: string;

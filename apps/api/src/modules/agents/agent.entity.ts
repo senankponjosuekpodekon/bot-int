@@ -34,6 +34,9 @@ export class Agent {
   @Column({ type: 'enum', enum: AgentType, default: AgentType.GENERAL })
   type: AgentType;
 
+  @Column({ nullable: true })
+  industry?: string;
+
   @Column({ type: 'text', nullable: true })
   personality: string;
 

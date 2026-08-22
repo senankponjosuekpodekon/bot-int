@@ -11,6 +11,10 @@ export class CreateAgentDto {
   type?: AgentType;
 
   @IsString()
+  @IsOptional()
+  industry?: string;
+
+  @IsString()
   @MinLength(10)
   systemPrompt: string;
 
