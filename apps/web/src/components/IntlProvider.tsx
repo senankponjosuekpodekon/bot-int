@@ -5,7 +5,7 @@ import { ReactNode } from 'react';
 export default function IntlProvider({
   locale,
   messages,
-  timeZone,
+  timeZone = 'UTC',
   children,
 }: {
   locale: string;
