@@ -77,9 +77,11 @@ async function bootstrap() {
   }
 
   // Health check endpoint
-  app.use('/health', (req: any, res: any) => {
+  const healthHandler = (req: any, res: any) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
+  };
+  app.use('/health', healthHandler);
+  app.use('/api/health', healthHandler);
 
   await app.listen(port);
   logger.log(`API running on http://localhost:${port}/api`);
