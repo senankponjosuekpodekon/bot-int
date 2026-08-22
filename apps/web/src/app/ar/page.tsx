@@ -96,7 +96,7 @@ export default function LandingPageAR() {
             <Bot className="w-7 h-7 text-indigo-600" />
             <span className="font-bold text-lg">Stiamond</span>
           </div>
-          <div className="hidden md:flex items-center gap-6 text-sm text-gray-600">
+          <div className="hidden md:flex items-center gap-4 lg:p-6 text-sm text-gray-600">
             <a href="#features" className="hover:text-indigo-600 transition-colors">الميزات</a>
             <a href="#use-cases" className="hover:text-indigo-600 transition-colors">حالات الاستخدام</a>
             <a href="#pricing" className="hover:text-indigo-600 transition-colors">الأسعار</a>
@@ -139,14 +139,14 @@ export default function LandingPageAR() {
           </div>
 
           {/* Stats */}
-          <div className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="mt-16 grid grid-cols-2 lg:grid-cols-4 gap-4 lg:p-6">
             {[
               { value: '42%', label: 'متوسط معدل التحويل' },
               { value: '15-20h', label: 'ساعات موفرة أسبوعياً' },
               { value: '24/7', label: 'توفر دائم' },
               { value: '6+', label: 'قنوات مدعومة' },
             ].map((stat, i) => (
-              <div key={i} className="text-center p-6 bg-white rounded-2xl shadow-sm border border-gray-50">
+              <div key={i} className="text-center p-4 lg:p-6 bg-white rounded-2xl shadow-sm border border-gray-50">
                 <div className="text-3xl font-bold text-indigo-600">{stat.value}</div>
                 <div className="mt-1 text-sm text-gray-500">{stat.label}</div>
               </div>
@@ -162,9 +162,9 @@ export default function LandingPageAR() {
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">كل ما تحتاجه لأتمتة المبيعات</h2>
             <p className="mt-4 text-gray-600">من تأهيل العملاء إلى إغلاق الصفقات — كل شيء في منصة واحدة.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:p-6">
             {features.map((feature, i) => (
-              <div key={i} className="p-6 rounded-2xl border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all">
+              <div key={i} className="p-4 lg:p-6 rounded-2xl border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all">
                 <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center mb-4">
                   <feature.icon className="w-6 h-6 text-indigo-600" />
                 </div>
@@ -183,9 +183,9 @@ export default function LandingPageAR() {
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">حالات الاستخدام</h2>
             <p className="mt-4 text-gray-600">يعمل في أي صناعة تقريباً.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:p-6">
             {useCases.map((uc, i) => (
-              <div key={i} className="p-6 bg-white rounded-2xl shadow-sm">
+              <div key={i} className="p-4 lg:p-6 bg-white rounded-2xl shadow-sm">
                 <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center mb-3">
                   <uc.icon className="w-5 h-5 text-indigo-600" />
                 </div>
@@ -208,9 +208,9 @@ export default function LandingPageAR() {
               <button onClick={() => setBillingCycle('yearly')} className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${billingCycle === 'yearly' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500'}`}>سنوي (خصم 20%)</button>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:p-6">
             {plans.map((plan, i) => (
-              <div key={i} className={`p-6 rounded-2xl border-2 transition-all ${plan.highlight ? 'border-indigo-600 shadow-lg scale-105' : 'border-gray-100'}`}>
+              <div key={i} className={`p-4 lg:p-6 rounded-2xl border-2 transition-all ${plan.highlight ? 'border-indigo-600 shadow-lg scale-105' : 'border-gray-100'}`}>
                 {plan.highlight && <div className="text-center mb-2"><span className="inline-block px-3 py-0.5 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-full">الأكثر شعبية</span></div>}
                 <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
                 <p className="text-sm text-gray-500 mb-4">{plan.desc}</p>
@@ -270,7 +270,7 @@ export default function LandingPageAR() {
       {/* Footer */}
       <footer className="py-12 bg-gray-900 text-gray-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:p-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <Bot className="w-6 h-6 text-indigo-400" />

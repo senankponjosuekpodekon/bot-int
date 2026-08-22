@@ -132,7 +132,7 @@ export default function PublicSurveyPage() {
   if (submitted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8 text-center">
+        <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-4 lg:p-8 text-center">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="w-8 h-8 text-green-600" />
           </div>
@@ -147,7 +147,7 @@ export default function PublicSurveyPage() {
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-lg mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-sm p-6 mb-4">
+        <div className="bg-white rounded-2xl shadow-sm p-4 lg:p-6 mb-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
               <ClipboardList className="w-5 h-5 text-primary-600" />
@@ -163,7 +163,7 @@ export default function PublicSurveyPage() {
         </div>
 
         {/* Questions */}
-        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-6">
+        <div className="bg-white rounded-2xl shadow-sm p-4 lg:p-6 space-y-6">
           {visibleQuestions.map((q: any, idx: number) => (
             <div key={q.id}>
               <label className="block text-sm font-medium text-gray-900 mb-3">

@@ -45,7 +45,7 @@ export default function LoginPageContent() {
           <span className="text-xl font-bold text-gray-900">Stiamond Agents</span>
         </div>
 
-        <div className="card p-8">
+        <div className="card p-4 lg:p-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('title')}</h1>
           <p className="text-gray-500 text-sm mb-6">{t('subtitle')}</p>
 

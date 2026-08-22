@@ -75,7 +75,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
             </div>
             <span className="font-bold text-lg text-gray-900">Stiamond</span>
           </div>
-          <div className="hidden md:flex items-center gap-8 text-sm text-gray-600">
+          <div className="hidden md:flex items-center gap-4 lg:p-8 text-sm text-gray-600">
             <a href="#features" className="hover:text-gray-900 transition-colors">{t('nav.features')}</a>
             <a href="#pricing" className="hover:text-gray-900 transition-colors">{t('nav.pricing')}</a>
             <a href="#how" className="hover:text-gray-900 transition-colors">{t('nav.how')}</a>
@@ -122,7 +122,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
             </button>
           </div>
           <p className="text-xs text-gray-400 mt-6">{t('hero.trust')}</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:p-6 mt-20">
             {[
               { value: t('hero.stat1value'), label: t('hero.stat1label') },
               { value: t('hero.stat2value'), label: t('hero.stat2label') },
@@ -139,7 +139,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
           {/* Product visual */}
           <div className="mt-16 max-w-4xl mx-auto">
             <div className="bg-gray-900 rounded-2xl p-2 shadow-2xl shadow-indigo-200">
-              <div className="bg-gray-800 rounded-xl p-6">
+              <div className="bg-gray-800 rounded-xl p-4 lg:p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-3 h-3 rounded-full bg-red-400" />
                   <div className="w-3 h-3 rounded-full bg-yellow-400" />
@@ -189,9 +189,9 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t('features.title')}</h2>
             <p className="text-lg text-gray-600">{t('features.subtitle')}</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:p-6">
             {featureIcons.map((Icon, i) => (
-              <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-shadow">
+              <div key={i} className="bg-white rounded-2xl p-4 lg:p-6 border border-gray-100 hover:shadow-lg transition-shadow">
                 <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center mb-4">
                   <Icon className="w-6 h-6 text-indigo-600" />
                 </div>
@@ -210,9 +210,9 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t('useCases.title')}</h2>
             <p className="text-lg text-gray-600">{t('useCases.subtitle')}</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:p-6">
             {useCaseIcons.map((Icon, i) => (
-              <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-shadow">
+              <div key={i} className="bg-white rounded-2xl p-4 lg:p-6 border border-gray-100 hover:shadow-lg transition-shadow">
                 <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center mb-4">
                   <Icon className="w-6 h-6 text-indigo-600" />
                 </div>
@@ -276,7 +276,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4" itemProp="name">{t('howItWorks.title')}</h2>
             <p className="text-lg text-gray-600" itemProp="description">{t('howItWorks.subtitle')}</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 lg:p-8">
             {howSteps.map((s) => (
               <div key={s.step} className="relative" itemProp="step" itemScope itemType="https://schema.org/HowToStep">
                 <meta itemProp="position" content={s.step} />
@@ -311,7 +311,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
               const overage = getOverageDisplay(name);
               const features = t.raw(`pricing.plans.${name}.features`) as string[];
               return (
-                <div key={name} className={`bg-white rounded-2xl p-6 border-2 transition-all ${highlight ? 'border-indigo-600 shadow-xl shadow-indigo-100 lg:scale-105' : 'border-gray-100'}`}>
+                <div key={name} className={`bg-white rounded-2xl p-4 lg:p-6 border-2 transition-all ${highlight ? 'border-indigo-600 shadow-xl shadow-indigo-100 lg:scale-105' : 'border-gray-100'}`}>
                   {highlight && <div className="inline-block px-3 py-1 rounded-full bg-indigo-600 text-white text-xs font-medium mb-4">{t('pricing.mostPopular')}</div>}
                   <h3 className="text-xl font-bold text-gray-900 mb-1">{name}</h3>
                   <p className="text-sm text-gray-500 mb-4">{t(`pricing.plans.${name}.desc`)}</p>
@@ -367,9 +367,9 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
           <div className="text-center mb-14">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t('testimonials.title')}</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:p-6">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100">
+              <div key={i} className="bg-white rounded-2xl p-4 lg:p-6 border border-gray-100">
                 <div className="flex items-center gap-1 mb-4">
                   {[...Array(5)].map((_, j) => <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400" />)}
                 </div>
@@ -425,7 +425,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
       <section className="py-16 px-6 bg-gray-900 text-gray-300">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl font-bold text-white mb-6">{t('geoBlock.title')}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm leading-relaxed">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:p-8 text-sm leading-relaxed">
             <div>
               <h3 className="text-white font-semibold mb-3">{t('geoBlock.col1Title')}</h3>
               <p>{t('geoBlock.col1Body')}</p>
@@ -449,7 +449,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
       {/* Footer */}
       <footer className="border-t border-gray-100 py-12 px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:p-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
@@ -486,13 +486,13 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
           </div>
 
           {/* Newsletter capture */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 mt-8 p-6 bg-gray-50 rounded-2xl">
+          <div className="flex flex-col sm:flex-row items-center gap-4 mt-8 p-4 lg:p-6 bg-gray-50 rounded-2xl">
             <div className="flex-1 text-left">
               <p className="font-semibold text-gray-900 text-sm">{t('footer.newsletterTitle')}</p>
               <p className="text-xs text-gray-500">{t('footer.newsletterDesc')}</p>
             </div>
             <form className="flex gap-2 w-full sm:w-auto" onSubmit={(e) => { e.preventDefault(); router.push('/register'); }}>
-              <input type="email" required placeholder={t('footer.newsletterPlaceholder')} className="px-4 py-2 rounded-lg border border-gray-200 text-sm flex-1 sm:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <input type="email" required placeholder={t('footer.newsletterPlaceholder')} className="px-4 py-2 rounded-lg border border-gray-200 text-sm flex-1 sm:w-full lg:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               <button type="submit" className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap">{t('footer.subscribe')}</button>
             </form>
           </div>
