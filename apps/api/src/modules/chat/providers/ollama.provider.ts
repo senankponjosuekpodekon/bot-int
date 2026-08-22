@@ -67,7 +67,7 @@ export class OllamaProvider implements LLMProvider {
     }
   }
 
-  async embed(text: string): Promise<number[]> {
+  async embed(text: string, _options?: { task?: string }): Promise<number[]> {
     try {
       const response = await axios.post(`${this.baseUrl}/api/embeddings`, {
         model: this.embedModel,

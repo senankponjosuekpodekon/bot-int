@@ -93,14 +93,24 @@ export class OpenAIProvider implements LLMProvider {
     }
   }
 
-  async embed(text: string): Promise<number[]> {
+  async embed(text: string, options?: { task?: string }): Promise<number[]> {
     try {
+      const isJina = this.embedBaseUrl.includes('api.jina.ai');
+      const payload = isJina
+        ? {
+            model: this.embedModel,
+            task: options?.task ?? this.config.get('JINA_EMBED_TASK', 'retrieval.query'),
+            normalized: this.config.get('JINA_EMBED_NORMALIZED', 'true') !== 'false',
+            input: [{ text }],
+          }
+        : {
+            model: this.embedModel,
+            input: text,
+          };
+
       const response = await axios.post(
         `${this.embedBaseUrl}/embeddings`,
-        {
-          model: this.embedModel,
-          input: text,
-        },
+        payload,
         {
           headers: {
             Authorization: `Bearer ${this.embedApiKey}`,

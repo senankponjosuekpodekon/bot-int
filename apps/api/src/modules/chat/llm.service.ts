@@ -19,8 +19,8 @@ export class LLMService {
     yield* this.provider.chatStream(messages);
   }
 
-  async embed(text: string): Promise<number[]> {
-    return this.provider.embed(text);
+  async embed(text: string, options?: { task?: string }): Promise<number[]> {
+    return this.provider.embed(text, options);
   }
 
   async isAvailable(): Promise<boolean> {

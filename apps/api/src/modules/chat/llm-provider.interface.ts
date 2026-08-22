@@ -6,7 +6,7 @@ export interface LLMMessage {
 export interface LLMProvider {
   chat(messages: LLMMessage[]): Promise<string>;
   chatStream(messages: LLMMessage[]): AsyncGenerator<string>;
-  embed(text: string): Promise<number[]>;
+  embed(text: string, options?: { task?: string }): Promise<number[]>;
   isAvailable(): Promise<boolean>;
   getProviderName(): string;
 }

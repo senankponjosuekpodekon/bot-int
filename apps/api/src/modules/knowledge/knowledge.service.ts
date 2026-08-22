@@ -467,7 +467,7 @@ export class KnowledgeService implements OnModuleInit {
 
   async searchRelevant(tenantId: string, query: string): Promise<string[]> {
     try {
-      const queryEmbedding = await this.llmService.embed(query);
+      const queryEmbedding = await this.llmService.embed(query, { task: 'retrieval.query' });
 
       if (this.hasPgvector) {
         const embeddingStr = `[${queryEmbedding.join(',')}]`;
@@ -522,7 +522,7 @@ export class KnowledgeService implements OnModuleInit {
       let embedding: string | null = null;
       let embeddingVec: string | null = null;
       try {
-        const vec = await this.llmService.embed(chunks[i]);
+        const vec = await this.llmService.embed(chunks[i], { task: 'retrieval.passage' });
         embedding = JSON.stringify(vec);
         embeddingVec = `[${vec.join(',')}]`;
       } catch (error: any) {
