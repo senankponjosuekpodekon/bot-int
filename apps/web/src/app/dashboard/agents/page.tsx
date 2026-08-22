@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { agentsApi } from '@/lib/api';
-import { Bot, Plus, Pencil, Trash2, X, Sparkles } from 'lucide-react';
+import { Bot, Plus, Pencil, Trash2, X, Sparkles, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 const SYSTEM_PROMPT_TEMPLATES: Record<string, Array<{ label: string; prompt: string }>> = {
@@ -61,6 +61,7 @@ export default function AgentsPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', type: 'general', systemPrompt: '', personality: '' });
   const [saving, setSaving] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -90,6 +91,14 @@ export default function AgentsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const copyPublicUrl = (id: string) => {
+    const url = `${window.location.origin}/chat/${id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
   };
 
   const handleDelete = async (id: string) => {
@@ -203,6 +212,13 @@ export default function AgentsPage() {
                 <p className="text-sm text-gray-500 mt-1 line-clamp-2">{agent.systemPrompt}</p>
               </div>
               <div className="flex gap-2">
+                <button
+                  onClick={() => copyPublicUrl(agent.id)}
+                  title="Copier le lien public"
+                  className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                >
+                  {copiedId === agent.id ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                </button>
                 <a href={`/dashboard/agents/${agent.id}`} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                   <Pencil className="w-4 h-4" />
                 </a>
