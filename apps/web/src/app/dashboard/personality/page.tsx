@@ -33,8 +33,9 @@ export default function PersonalityPage() {
   const load = useCallback(async () => {
     try {
       const data = await agentsApi.list();
-      setAgents(data);
-      if (data.length > 0 && !selectedAgent) setSelectedAgent(data[0].id);
+      const list = Array.isArray(data) ? data : data?.data ?? [];
+      setAgents(list);
+      if (list.length > 0 && !selectedAgent) setSelectedAgent(list[0].id);
     } catch {
       showToast('Erreur lors du chargement', 'error');
     }
@@ -47,9 +48,23 @@ export default function PersonalityPage() {
       const a = agents.find((x) => x.id === selectedAgent);
       setAgent(a);
       if (a?.personalityConfig) {
-        setConfig({ ...config, ...a.personalityConfig });
+        const p = a.personalityConfig;
+        setConfig({
+          ...config,
+          ...p,
+          escalationTopics: Array.isArray(p.escalationTopics) ? p.escalationTopics : [],
+          forbiddenTopics: Array.isArray(p.forbiddenTopics) ? p.forbiddenTopics : [],
+          businessHours: {
+            ...config.businessHours,
+            ...(p.businessHours || {}),
+            days: Array.isArray(p.businessHours?.days) ? p.businessHours.days : config.businessHours.days,
+          },
+        });
       }
-      chatApi.getFeedback(selectedAgent).then(setFeedback).catch(() => setFeedback([]));
+      chatApi
+        .getFeedback(selectedAgent)
+        .then((fb) => setFeedback(Array.isArray(fb) ? fb : fb?.data ?? []))
+        .catch(() => setFeedback([]));
     }
   }, [selectedAgent, agents]);
 
