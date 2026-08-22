@@ -21,10 +21,12 @@ test.describe('Agent → Chat → Lead flow', () => {
   });
 
   test('creates an agent, chats, and produces a lead', async ({ page }) => {
-    await page.goto('/dashboard/agents');
-    await page.click('button:has-text("Nouvel agent")');
+    await page.goto('/dashboard/agents/create');
     await page.fill('input[name="name"]', 'Sales Bot');
     await page.fill('textarea[name="systemPrompt"]', 'You are a helpful sales assistant.');
+    await page.click('button:has-text("Suivant")');
+    await page.click('button:has-text("Suivant")');
+    await page.click('button:has-text("Suivant")');
     await page.click("button:has-text(\"Créer l'agent\")");
     await expect(page.locator('text=Sales Bot')).toBeVisible();
 

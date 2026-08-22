@@ -188,7 +188,7 @@ export default function CreateAgentPage() {
             <h2 className="text-lg font-semibold flex items-center gap-2"><Bot className="w-5 h-5 text-primary-600" /> Identité de l&apos;agent</h2>
             <div>
               <label className="label">Nom</label>
-              <input className="input" value={identity.name} onChange={(e) => setIdentity({ ...identity, name: e.target.value })} placeholder="Assistant Support" required />
+              <input name="name" className="input" value={identity.name} onChange={(e) => setIdentity({ ...identity, name: e.target.value })} placeholder="Assistant Support" required />
             </div>
             <div>
               <label className="label">Type</label>
@@ -208,11 +208,11 @@ export default function CreateAgentPage() {
                   </button>
                 ))}
               </div>
-              <textarea className="input resize-none" rows={4} value={identity.systemPrompt} onChange={(e) => setIdentity({ ...identity, systemPrompt: e.target.value })} placeholder="Tu es..." required />
+              <textarea name="systemPrompt" className="input resize-none" rows={4} value={identity.systemPrompt} onChange={(e) => setIdentity({ ...identity, systemPrompt: e.target.value })} placeholder="Tu es..." required />
             </div>
             <div>
               <label className="label">Description / personnalité courte (optionnel)</label>
-              <input className="input" value={identity.personality} onChange={(e) => setIdentity({ ...identity, personality: e.target.value })} placeholder="Amical, orienté solutions, patient" />
+              <input name="personality" className="input" value={identity.personality} onChange={(e) => setIdentity({ ...identity, personality: e.target.value })} placeholder="Amical, orienté solutions, patient" />
             </div>
           </div>
         )}
