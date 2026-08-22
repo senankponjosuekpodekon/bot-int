@@ -92,6 +92,7 @@ Si tu préfères éviter la base Postgres de Render :
 2. Crée une base **Upstash Redis** → copie l’URL `rediss://...`
 3. Déploie avec `render-neon.yaml` au lieu de `render.yaml`
 4. Dans Render, renseigne `DATABASE_URL` et `REDIS_URL`
+5. Pour le **premier déploiement**, ajoute temporairement `DB_SYNC=true` pour créer les tables, puis repasse-la à `false` ensuite
 
 Le code a été mis à jour (`app.module.ts`) pour lire `DATABASE_URL` en priorité. Upstash fonctionne déjà via `REDIS_URL`.
 
@@ -99,6 +100,7 @@ Le code a été mis à jour (`app.module.ts`) pour lire `DATABASE_URL` en priori
 > ```sql
 > CREATE EXTENSION IF NOT EXISTS vector;
 > ```
+> Après le premier déploiement avec `DB_SYNC=true`, les tables seront créées et l’API pourra utiliser la similarité vectorielle.
 
 ## 4. Vérifier le déploiement
 

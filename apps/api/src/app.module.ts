@@ -56,7 +56,7 @@ import { CacheModule } from './common/cache.module';
           password: config.get('DB_PASSWORD', 'postgres'),
           database: config.get('DB_NAME', 'stiamond_agent'),
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
-          synchronize: config.get('NODE_ENV') !== 'production',
+          synchronize: config.get('DB_SYNC') === 'true' || config.get('NODE_ENV') !== 'production',
           logging: config.get('NODE_ENV') === 'development',
           poolSize: config.get<number>('DB_POOL_SIZE', 20),
           extra: {
