@@ -36,7 +36,7 @@ async function bootstrap() {
   // Security: CORS restricted to known origins
   const allowedOrigins = (config.get('CORS_ORIGINS', 'http://localhost:3000') as string)
     .split(',')
-    .map((s) => s.trim());
+    .map((s) => s.trim().replace(/\/$/, ''));
   app.enableCors({
     origin: (origin, callback) => {
       if (!origin || allowedOrigins.includes(origin)) {
