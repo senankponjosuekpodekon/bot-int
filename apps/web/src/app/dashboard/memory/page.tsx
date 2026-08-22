@@ -60,7 +60,7 @@ export default function MemoryPage() {
     <div className="p-4 lg:p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
             <Brain className="w-6 h-6 text-primary-600" />
             Agent Memory
           </h1>

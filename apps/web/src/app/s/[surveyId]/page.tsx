@@ -163,7 +163,7 @@ export default function PublicSurveyPage() {
         </div>
 
         {/* Questions */}
-        <div className="bg-white rounded-2xl shadow-sm p-4 lg:p-6 space-y-6">
+        <div className="bg-white rounded-2xl shadow-sm p-4 lg:p-6 space-y-4 lg:space-y-6">
           {visibleQuestions.map((q: any, idx: number) => (
             <div key={q.id}>
               <label className="block text-sm font-medium text-gray-900 mb-3">

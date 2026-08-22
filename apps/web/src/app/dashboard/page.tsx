@@ -30,7 +30,7 @@ export default function DashboardPage() {
   return (
     <div className="p-4 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Tableau de bord</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Tableau de bord</h1>
         <p className="text-gray-500 text-sm mt-1">Vue d'ensemble de votre plateforme d'agents IA</p>
       </div>
 
@@ -43,7 +43,7 @@ export default function DashboardPage() {
                 <Icon className="w-5 h-5 text-white" />
               </div>
             </div>
-            <p className="text-3xl font-bold text-gray-900">
+            <p className="text-2xl sm:text-3xl font-bold text-gray-900">
               {loading && typeof value === 'number' ? '...' : value}
             </p>
           </div>

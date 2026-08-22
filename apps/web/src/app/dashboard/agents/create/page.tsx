@@ -146,7 +146,7 @@ export default function CreateAgentPage() {
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Check className="w-8 h-8 text-green-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">{created.name} est prêt</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{created.name} est prêt</h1>
           <p className="text-gray-500 mt-2">Intègre le chat sur ton site avec ce code :</p>
           <div className="mt-6 text-left">
             <div className="flex items-center justify-between mb-2">
@@ -169,7 +169,7 @@ export default function CreateAgentPage() {
   return (
     <div className="p-4 lg:p-6 max-w-5xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Bot className="w-6 h-6 text-primary-600" /> Créer un nouvel agent</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2"><Bot className="w-6 h-6 text-primary-600" /> Créer un nouvel agent</h1>
         <p className="text-gray-500 text-sm mt-1">Assistant pas-à-pas. Chaque étape est optionnelle.</p>
       </div>
 
@@ -222,7 +222,7 @@ export default function CreateAgentPage() {
             <h2 className="text-lg font-semibold flex items-center gap-2"><MessageCircle className="w-5 h-5 text-primary-600" /> Personnalité & comportement</h2>
             <div>
               <label className="label">Ton de voix</label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                 {TONES.map((t) => (
                   <button key={t.value} onClick={() => setConfig({ ...config, tone: t.value })} className={`px-3 py-2 rounded-lg text-sm font-medium ${config.tone === t.value ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700'}`}>{t.label}</button>
                 ))}
@@ -235,7 +235,7 @@ export default function CreateAgentPage() {
               </label>
               {config.discloseAI && <input className="input mt-2" value={config.aiDisclosureMessage} onChange={(e) => setConfig({ ...config, aiDisclosureMessage: e.target.value })} placeholder="Message de divulgation" />}
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="label flex items-center gap-2"><Shield className="w-4 h-4" /> Mode réponse auto</label>
                 <select className="input" value={config.autoReplyMode} onChange={(e) => setConfig({ ...config, autoReplyMode: e.target.value })}>
@@ -263,7 +263,7 @@ export default function CreateAgentPage() {
                 </div>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="label flex items-center gap-2"><Zap className="w-4 h-4" /> Délai min (ms)</label>
                 <input type="number" className="input" value={config.minDelayMs} onChange={(e) => setConfig({ ...config, minDelayMs: parseInt(e.target.value) || 0 })} />
@@ -273,7 +273,7 @@ export default function CreateAgentPage() {
                 <input type="number" className="input" value={config.maxDelayMs} onChange={(e) => setConfig({ ...config, maxDelayMs: parseInt(e.target.value) || 0 })} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <TopicInput label="Sujets à escalader" color="orange" topics={config.escalationTopics} onAdd={addTopic} onRemove={removeTopic} />
               <TopicInput label="Sujets interdits" color="red" topics={config.forbiddenTopics} onAdd={addTopic} onRemove={removeTopic} />
             </div>
@@ -299,7 +299,7 @@ export default function CreateAgentPage() {
         {step === 3 && (
           <div className="space-y-5">
             <h2 className="text-lg font-semibold flex items-center gap-2"><Code2 className="w-5 h-5 text-primary-600" /> Widget</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="label">Titre du widget</label>
                 <input className="input" value={widget.title} onChange={(e) => setWidget({ ...widget, title: e.target.value })} />

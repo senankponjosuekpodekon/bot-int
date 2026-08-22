@@ -165,10 +165,10 @@ export default function KnowledgePage() {
   };
 
   return (
-    <div className="p-4 lg:p-8 space-y-8">
+    <div className="p-4 lg:p-8 space-y-4 lg:space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Base de connaissances</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Base de connaissances</h1>
           <p className="text-sm text-gray-500">Centralisez les documents utilisés par vos agents IA.</p>
         </div>
         <button className="btn-primary flex items-center gap-2" onClick={() => setShowForm(true)}>

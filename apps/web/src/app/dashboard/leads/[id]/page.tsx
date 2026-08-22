@@ -176,7 +176,7 @@ export default function LeadDetailPage() {
 
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{lead.name || 'Sans nom'}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{lead.name || 'Sans nom'}</h1>
           <p className="text-sm text-gray-400 mt-1">#{lead.id.slice(0, 8)}</p>
         </div>
         <span className={`text-xs px-3 py-1 rounded-full font-medium ${statusOption?.badge}`}>
@@ -186,7 +186,7 @@ export default function LeadDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:p-6">
         {/* Left column — Contact info + tags */}
-        <div className="space-y-6">
+        <div className="space-y-4 lg:space-y-6">
           <div className="card p-4 lg:p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Coordonnées</h2>
             <div className="space-y-3">
@@ -225,7 +225,7 @@ export default function LeadDetailPage() {
               <TrendingUp className="w-4 h-4 text-primary-600" />
             </div>
             <div className="flex items-center gap-3">
-              <div className="text-3xl font-bold text-gray-900">{lead.score ?? 0}</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900">{lead.score ?? 0}</div>
               <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-primary-500 rounded-full transition-all"
@@ -274,7 +274,7 @@ export default function LeadDetailPage() {
         </div>
 
         {/* Right column — Status + Timeline */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 lg:space-y-6">
           <div className="card p-4 lg:p-6">
             <h2 className="text-sm font-semibold text-gray-900 mb-4">Statut du lead</h2>
             <div className="flex flex-wrap gap-2">

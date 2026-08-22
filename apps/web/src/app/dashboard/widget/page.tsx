@@ -43,7 +43,7 @@ export default function WidgetConfigPage() {
   return (
     <div className="p-4 lg:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
           <Code2 className="w-6 h-6 text-primary-600" /> Widget & Intégration
         </h1>
         <p className="text-sm text-gray-500 mt-1">Intégrez le chat IA sur n'importe quel site en une ligne de code</p>
@@ -52,7 +52,7 @@ export default function WidgetConfigPage() {
       {/* Configuration */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 mb-6">
         <h2 className="font-semibold text-gray-900 mb-4">Configuration</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium text-gray-700">Agent</label>
             <select value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm">

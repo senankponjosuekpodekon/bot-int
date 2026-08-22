@@ -143,7 +143,7 @@ export default function SurveysPage() {
     <div className="p-4 lg:p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
             <ClipboardList className="w-6 h-6 text-primary-600" /> Sondages
           </h1>
           <p className="text-sm text-gray-500 mt-1">Collectez des feedbacks pre-purchase et post-purchase</p>
@@ -220,7 +220,7 @@ export default function SurveysPage() {
                 <input value={editing.description || ''} onChange={(e) => setEditing({ ...editing, description: e.target.value })} placeholder="Aidez-nous à mieux vous connaître" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700">Type</label>
                   <select value={editing.type} onChange={(e) => setEditing({ ...editing, type: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm">
@@ -395,7 +395,7 @@ export default function SurveysPage() {
             </div>
 
             <div className="mb-4 p-3 bg-primary-50 rounded-lg">
-              <p className="text-2xl font-bold text-primary-700">{results.totalResponses}</p>
+              <p className="text-xl sm:text-2xl font-bold text-primary-700">{results.totalResponses}</p>
               <p className="text-sm text-primary-600">réponses au total</p>
             </div>
 
@@ -403,7 +403,7 @@ export default function SurveysPage() {
             {results.variants && (
               <div className="mb-4 p-3 bg-purple-50 rounded-lg">
                 <p className="text-sm font-medium text-purple-800 mb-2">A/B Testing</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="bg-white rounded-lg p-2 text-center">
                     <p className="text-lg font-bold text-purple-600">{results.variants.variantA.count}</p>
                     <p className="text-xs text-gray-500">Variante A</p>

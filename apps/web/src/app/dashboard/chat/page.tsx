@@ -383,7 +383,7 @@ export default function ChatPage() {
     <div className="flex flex-col h-full p-4 lg:p-6 gap-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 flex-shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Test des agents</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Test des agents</h1>
           <p className="text-gray-500 text-sm mt-1">Discutez avec vos agents en temps réel</p>
         </div>
         <div className="flex items-center gap-3">

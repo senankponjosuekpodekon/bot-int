@@ -55,15 +55,15 @@ export default function AnalyticsPage() {
 
   return (
     <div className="p-4 lg:p-6 max-w-7xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Analytics</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Analytics</h1>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         {stats.map((s) => (
           <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4">
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${s.color}`}>
               <s.icon className="w-5 h-5" />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{s.value}</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-900">{s.value}</p>
             <p className="text-xs text-gray-500 mt-1">{s.label}</p>
             <p className="text-xs text-gray-400 mt-0.5">{s.sub}</p>
           </div>
@@ -131,21 +131,21 @@ export default function AnalyticsPage() {
 
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h2 className="font-semibold text-gray-900 mb-4">Catalogue produits</h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="text-center p-4 rounded-lg bg-gray-50">
-              <p className="text-3xl font-bold text-gray-900">{data.products.total}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900">{data.products.total}</p>
               <p className="text-xs text-gray-500 mt-1">Total produits</p>
             </div>
             <div className="text-center p-4 rounded-lg bg-gray-50">
-              <p className="text-3xl font-bold text-gray-900">{data.products.categories}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900">{data.products.categories}</p>
               <p className="text-xs text-gray-500 mt-1">Catégories</p>
             </div>
             <div className="text-center p-4 rounded-lg bg-green-50">
-              <p className="text-3xl font-bold text-green-600">{data.products.active}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-green-600">{data.products.active}</p>
               <p className="text-xs text-gray-500 mt-1">Actifs</p>
             </div>
             <div className="text-center p-4 rounded-lg bg-red-50">
-              <p className="text-3xl font-bold text-red-600">{data.products.outOfStock}</p>
+              <p className="text-2xl sm:text-3xl font-bold text-red-600">{data.products.outOfStock}</p>
               <p className="text-xs text-gray-500 mt-1">Rupture stock</p>
             </div>
           </div>
@@ -182,7 +182,7 @@ export default function AnalyticsPage() {
                 );
               })}
             </div>
-            <div className="grid grid-cols-4 gap-3 mt-4 pt-4 border-t border-gray-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4 pt-4 border-t border-gray-100">
               <div className="text-center">
                 <p className="text-lg font-bold text-gray-900">{funnel.summary.conversionRate}%</p>
                 <p className="text-xs text-gray-500">Conversion</p>
@@ -249,7 +249,7 @@ export default function AnalyticsPage() {
                     </div>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-gray-100">
                   <div className="text-center">
                     <p className="text-lg font-bold text-green-600">{acquisition.summary.totalTracked}</p>
                     <p className="text-xs text-gray-500">Tracked</p>

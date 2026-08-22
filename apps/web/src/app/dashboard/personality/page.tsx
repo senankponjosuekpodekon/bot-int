@@ -107,7 +107,7 @@ export default function PersonalityPage() {
   return (
     <div className="p-4 lg:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
           <Sparkles className="w-6 h-6 text-primary-600" /> Personnalité & Comportement
         </h1>
         <p className="text-sm text-gray-500 mt-1">Configurez le ton, le rythme, la transparence et l'apprentissage de votre agent</p>
@@ -124,7 +124,7 @@ export default function PersonalityPage() {
       {/* Ton de voix */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
         <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><MessageCircle className="w-4 h-4 text-gray-400" /> Ton de voix</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           {[
             { value: 'professional', label: 'Professionnel' },
             { value: 'friendly', label: 'Amical' },
@@ -171,7 +171,7 @@ export default function PersonalityPage() {
           <span className="text-sm text-gray-700">Simuler un délai naturel avant de répondre</span>
         </label>
         {config.pacingEnabled && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-gray-700">Délai minimum (ms)</label>
               <input type="number" value={config.minDelayMs} onChange={(e) => setConfig({ ...config, minDelayMs: parseInt(e.target.value) || 500 })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
@@ -198,7 +198,7 @@ export default function PersonalityPage() {
         </div>
         {config.autoReplyMode !== 'always' && (
           <>
-            <div className="grid grid-cols-2 gap-4 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
               <div>
                 <label className="text-sm font-medium text-gray-700">Ouverture</label>
                 <input type="time" value={config.businessHours?.start || '09:00'} onChange={(e) => setConfig({ ...config, businessHours: { ...config.businessHours, start: e.target.value } })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />

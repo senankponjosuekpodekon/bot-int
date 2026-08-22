@@ -117,7 +117,7 @@ export default function AgentDetailPage() {
           <Bot className="w-6 h-6 text-primary-600" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{agent.name}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{agent.name}</h1>
           <p className="text-sm text-gray-500">
             Type: {AGENT_TYPES.find((t) => t.value === agent.type)?.label || agent.type} ·{' '}
             {agent.isActive ? 'Actif' : 'Inactif'}
@@ -125,7 +125,7 @@ export default function AgentDetailPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="space-y-6">
+      <form onSubmit={handleSave} className="space-y-4 lg:space-y-6">
         <div className="card p-4 lg:p-6 space-y-4">
           <h2 className="text-lg font-semibold text-gray-900">Configuration</h2>
 

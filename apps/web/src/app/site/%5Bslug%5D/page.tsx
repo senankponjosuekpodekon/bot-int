@@ -132,7 +132,7 @@ export default function PublicSitePage() {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-4 lg:space-y-8">
         {/* About */}
         {sections.showAbout && site.aboutText && (
           <section>
@@ -147,7 +147,7 @@ export default function PublicSitePage() {
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: primary }}>
               <ShoppingBag className="w-5 h-5" /> Nos produits
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {site.products.map((p: any) => (
                 <a
                   key={p.id}
@@ -205,7 +205,7 @@ export default function PublicSitePage() {
         {(sections.showContact || sections.showHours) && (
           <section>
             <h2 className="text-lg font-bold mb-4" style={{ color: primary }}>Contact & Horaires</h2>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-1 sm:grid-cols-2 gap-4">
               {sections.showContact && (
                 <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
                   {contact.email && (

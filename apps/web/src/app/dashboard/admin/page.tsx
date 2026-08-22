@@ -105,7 +105,7 @@ export default function AdminPage() {
     <div className="p-4 lg:p-6 max-w-7xl mx-auto">
       <div className="flex items-center gap-2 mb-2">
         <Crown className="w-6 h-6 text-indigo-600" />
-        <h1 className="text-2xl font-bold text-gray-900">Super Admin</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Super Admin</h1>
       </div>
       <p className="text-gray-500 mb-8">Gestion horizontale et verticale de la plateforme</p>
 
@@ -127,8 +127,8 @@ export default function AdminPage() {
 
       {/* Overview */}
       {tab === 'overview' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="space-y-4 lg:space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
               { label: 'Tenants', value: stats.tenants.total, icon: Building2, color: 'bg-blue-50 text-blue-600' },
               { label: 'Utilisateurs', value: stats.users.total, icon: Users, color: 'bg-indigo-50 text-indigo-600' },
@@ -141,20 +141,20 @@ export default function AdminPage() {
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${s.color}`}>
                   <s.icon className="w-5 h-5" />
                 </div>
-                <p className="text-2xl font-bold text-gray-900">{s.value}</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{s.value}</p>
                 <p className="text-xs text-gray-500">{s.label}</p>
               </div>
             ))}
           </div>
 
           {/* Revenue + Plan distribution */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-2 gap-4 lg:p-6">
             <div className="bg-white rounded-2xl border border-gray-100 p-4 lg:p-6">
               <div className="flex items-center gap-2 mb-4">
                 <DollarSign className="w-5 h-5 text-green-600" />
                 <h3 className="font-semibold text-gray-900">Revenus estimés (MRR)</h3>
               </div>
-              <p className="text-3xl font-bold text-gray-900">
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900">
                 {(stats.revenue.estimatedMrr / 100).toLocaleString('fr-FR')}€
               </p>
               <div className="mt-4 space-y-2">

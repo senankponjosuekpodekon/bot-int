@@ -16,7 +16,7 @@ export default function Error({
         <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
           <AlertCircle className="w-8 h-8 text-red-500" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Une erreur est survenue</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Une erreur est survenue</h1>
         <p className="text-gray-500 mb-6">
           {error.message || 'Quelque chose s\'est mal passé. Veuillez réessayer.'}
         </p>

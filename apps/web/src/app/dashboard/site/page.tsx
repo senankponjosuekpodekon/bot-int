@@ -120,7 +120,7 @@ export default function SiteConfigPage() {
     <div className="p-4 lg:p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Globe className="w-6 h-6 text-primary-600" /> Site & Landing Page
           </h1>
           <p className="text-sm text-gray-500 mt-1">Créez une vitrine en ligne avec chat intégré pour votre business</p>
@@ -214,7 +214,7 @@ export default function SiteConfigPage() {
             <div className="p-4 lg:p-6 space-y-4">
               {tab === 'content' && (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-gray-700">Nom du business *</label>
                       <input value={editing.businessName} onChange={(e) => update('businessName', e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
@@ -230,7 +230,7 @@ export default function SiteConfigPage() {
                     <textarea value={editing.aboutText || ''} onChange={(e) => update('aboutText', e.target.value)} rows={4} placeholder="Présentez votre business..." className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-gray-700">Logo URL</label>
                       <input value={editing.logoUrl || ''} onChange={(e) => update('logoUrl', e.target.value)} placeholder="https://..." className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
@@ -252,7 +252,7 @@ export default function SiteConfigPage() {
                   {/* Contact */}
                   <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                     <p className="text-sm font-medium text-gray-700">Contact</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <input value={editing.contact?.email || ''} onChange={(e) => updateContact('email', e.target.value)} placeholder="Email" className="px-3 py-2 rounded-lg border border-gray-300 text-sm" />
                       <input value={editing.contact?.phone || ''} onChange={(e) => updateContact('phone', e.target.value)} placeholder="Téléphone" className="px-3 py-2 rounded-lg border border-gray-300 text-sm" />
                     </div>
@@ -263,7 +263,7 @@ export default function SiteConfigPage() {
                   {/* Sections */}
                   <div>
                     <p className="text-sm font-medium text-gray-700 mb-2">Sections à afficher</p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {[
                         { key: 'showAbout', label: 'À propos' },
                         { key: 'showProducts', label: 'Produits' },
@@ -320,7 +320,7 @@ export default function SiteConfigPage() {
                 <>
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-2 block">Thème de couleurs</label>
-                    <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
                       {COLOR_PRESETS.map((preset) => (
                         <button
                           key={preset.name}
@@ -339,7 +339,7 @@ export default function SiteConfigPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-gray-700">Couleur principale</label>
                       <div className="flex gap-2 mt-1">

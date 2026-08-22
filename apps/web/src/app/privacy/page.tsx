@@ -9,10 +9,10 @@ export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-white pt-24 pb-20 px-6">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Privacy Policy</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Privacy Policy</h1>
         <p className="text-sm text-gray-500 mb-8">Last updated: January 2026</p>
 
-        <div className="prose prose-gray max-w-none space-y-6 text-sm leading-relaxed text-gray-700">
+        <div className="prose prose-gray max-w-none space-y-4 lg:space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">1. Data Controller</h2>
             <p>Stiamond SAS is the data controller for personal data processed through the Service. Data is hosted in the European Union (France). Contact: privacy@stiamond.com.</p>

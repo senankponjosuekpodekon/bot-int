@@ -9,10 +9,10 @@ export default function TermsDEPage() {
   return (
     <div className="min-h-screen bg-white pt-24 pb-20 px-6">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Allgemeine Geschäftsbedingungen</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Allgemeine Geschäftsbedingungen</h1>
         <p className="text-sm text-gray-500 mb-8">Zuletzt aktualisiert: Januar 2026</p>
 
-        <div className="prose prose-gray max-w-none space-y-6 text-sm leading-relaxed text-gray-700">
+        <div className="prose prose-gray max-w-none space-y-4 lg:space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">1. Annahme der Bedingungen</h2>
             <p>Durch den Zugriff auf oder die Nutzung von Stiamond („der Dienst") erklären Sie sich mit diesen Allgemeinen Geschäftsbedingungen einverstanden. Wenn Sie nicht einverstanden sind, nutzen Sie den Dienst nicht. Stiamond wird von der Stiamond SAS, einem französischen Unternehmen, betrieben.</p>

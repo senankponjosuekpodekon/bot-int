@@ -98,7 +98,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
             <Zap className="w-4 h-4" />
             {t('hero.badge')}
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 tracking-tight mb-6">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-gray-900 tracking-tight mb-6">
             {t('hero.title1')}
             <br />
             <span className="bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">{t('hero.title2')}</span>
@@ -122,7 +122,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
             </button>
           </div>
           <p className="text-xs text-gray-400 mt-6">{t('hero.trust')}</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:p-6 mt-20">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:p-6 mt-20">
             {[
               { value: t('hero.stat1value'), label: t('hero.stat1label') },
               { value: t('hero.stat2value'), label: t('hero.stat2label') },
@@ -130,7 +130,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
               { value: t('hero.stat4value'), label: t('hero.stat4label') },
             ].map((s) => (
               <div key={s.label} className="text-center">
-                <p className="text-3xl font-bold text-gray-900">{s.value}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{s.value}</p>
                 <p className="text-xs text-gray-500 mt-1 max-w-[140px] mx-auto">{s.label}</p>
               </div>
             ))}
@@ -146,7 +146,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
                   <div className="w-3 h-3 rounded-full bg-green-400" />
                   <span className="ml-2 text-xs text-gray-400">{t('hero.dashboard')}</span>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div className="bg-gray-700 rounded-lg p-3">
                     <p className="text-xs text-gray-400 mb-1">{t('hero.conversations')}</p>
                     <p className="text-lg font-bold text-white">1,247</p>
@@ -186,10 +186,10 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
       <section id="features" className="py-20 px-6 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t('features.title')}</h2>
+            <h2 className="text-2xl sm:text-3xl md:text-3xl sm:text-4xl font-bold text-gray-900 mb-4">{t('features.title')}</h2>
             <p className="text-lg text-gray-600">{t('features.subtitle')}</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:p-6">
             {featureIcons.map((Icon, i) => (
               <div key={i} className="bg-white rounded-2xl p-4 lg:p-6 border border-gray-100 hover:shadow-lg transition-shadow">
                 <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center mb-4">
@@ -207,10 +207,10 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
       <section id="use-cases" className="py-20 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t('useCases.title')}</h2>
+            <h2 className="text-2xl sm:text-3xl md:text-3xl sm:text-4xl font-bold text-gray-900 mb-4">{t('useCases.title')}</h2>
             <p className="text-lg text-gray-600">{t('useCases.subtitle')}</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:p-6">
             {useCaseIcons.map((Icon, i) => (
               <div key={i} className="bg-white rounded-2xl p-4 lg:p-6 border border-gray-100 hover:shadow-lg transition-shadow">
                 <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center mb-4">
@@ -229,7 +229,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
       <section className="py-20 px-6 bg-gray-50">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t('comparison.title')}</h2>
+            <h2 className="text-2xl sm:text-3xl md:text-3xl sm:text-4xl font-bold text-gray-900 mb-4">{t('comparison.title')}</h2>
             <p className="text-lg text-gray-600">{t('comparison.subtitle')}</p>
           </div>
           <div className="overflow-x-auto">
@@ -273,10 +273,10 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
       <section id="how" className="py-20 px-6" itemScope itemType="https://schema.org/HowTo">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4" itemProp="name">{t('howItWorks.title')}</h2>
+            <h2 className="text-2xl sm:text-3xl md:text-3xl sm:text-4xl font-bold text-gray-900 mb-4" itemProp="name">{t('howItWorks.title')}</h2>
             <p className="text-lg text-gray-600" itemProp="description">{t('howItWorks.subtitle')}</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 lg:p-8">
+          <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:p-8">
             {howSteps.map((s) => (
               <div key={s.step} className="relative" itemProp="step" itemScope itemType="https://schema.org/HowToStep">
                 <meta itemProp="position" content={s.step} />
@@ -298,7 +298,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
       <section id="pricing" className="py-20 px-6 bg-gray-50">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t('pricing.title')}</h2>
+            <h2 className="text-2xl sm:text-3xl md:text-3xl sm:text-4xl font-bold text-gray-900 mb-4">{t('pricing.title')}</h2>
             <p className="text-lg text-gray-600">{t('pricing.subtitle')}</p>
           </div>
           <div className="flex items-center justify-center gap-4 mb-10">
@@ -317,10 +317,10 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
                   <p className="text-sm text-gray-500 mb-4">{t(`pricing.plans.${name}.desc`)}</p>
                   <div className="flex items-baseline gap-1 mb-2">
                     {name === 'Enterprise' ? (
-                      <span className="text-3xl font-bold text-gray-900">{t('pricing.custom')}</span>
+                      <span className="text-2xl sm:text-3xl font-bold text-gray-900">{t('pricing.custom')}</span>
                     ) : (
                       <>
-                        <span className="text-4xl font-bold text-gray-900">{getPriceDisplay(name)}</span>
+                        <span className="text-3xl sm:text-4xl font-bold text-gray-900">{getPriceDisplay(name)}</span>
                         <span className="text-gray-500">{t('pricing.perMonth')}</span>
                       </>
                     )}
@@ -365,9 +365,9 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
       <section className="py-20 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t('testimonials.title')}</h2>
+            <h2 className="text-2xl sm:text-3xl md:text-3xl sm:text-4xl font-bold text-gray-900 mb-4">{t('testimonials.title')}</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:p-6">
             {[0, 1, 2].map((i) => (
               <div key={i} className="bg-white rounded-2xl p-4 lg:p-6 border border-gray-100">
                 <div className="flex items-center gap-1 mb-4">
@@ -391,7 +391,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
       <section id="faq" className="py-20 px-6 bg-gray-50" itemScope itemType="https://schema.org/FAQPage">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t('faq.title')}</h2>
+            <h2 className="text-2xl sm:text-3xl md:text-3xl sm:text-4xl font-bold text-gray-900 mb-4">{t('faq.title')}</h2>
           </div>
           <div className="space-y-4">
             {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
@@ -413,7 +413,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
       {/* CTA */}
       <section className="py-20 px-6">
         <div className="max-w-4xl mx-auto text-center bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">{t('cta.title')}</h2>
+          <h2 className="text-2xl sm:text-3xl md:text-3xl sm:text-4xl font-bold text-white mb-4">{t('cta.title')}</h2>
           <p className="text-lg text-indigo-100 mb-8">{t('cta.subtitle')}</p>
           <button onClick={() => router.push('/register')} className="inline-flex items-center gap-2 bg-white text-indigo-600 font-semibold px-8 py-4 rounded-xl hover:bg-indigo-50 transition-colors">
             {t('cta.button')} <ArrowRight className="w-5 h-5" />
@@ -424,8 +424,8 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
       {/* GEO content block */}
       <section className="py-16 px-6 bg-gray-900 text-gray-300">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-white mb-6">{t('geoBlock.title')}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:p-8 text-sm leading-relaxed">
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-6">{t('geoBlock.title')}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-2 gap-4 lg:p-8 text-sm leading-relaxed">
             <div>
               <h3 className="text-white font-semibold mb-3">{t('geoBlock.col1Title')}</h3>
               <p>{t('geoBlock.col1Body')}</p>
@@ -449,7 +449,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
       {/* Footer */}
       <footer className="border-t border-gray-100 py-12 px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:p-8 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:p-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">

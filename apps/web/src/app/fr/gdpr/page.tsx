@@ -9,10 +9,10 @@ export default function GdprFRPage() {
   return (
     <div className="min-h-screen bg-white pt-24 pb-20 px-6">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Conformité RGPD</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Conformité RGPD</h1>
         <p className="text-sm text-gray-500 mb-8">Dernière mise à jour : Janvier 2026</p>
 
-        <div className="prose prose-gray max-w-none space-y-6 text-sm leading-relaxed text-gray-700">
+        <div className="prose prose-gray max-w-none space-y-4 lg:space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">Vue d'ensemble</h2>
             <p>Stiamond est entièrement conforme au Règlement Général sur la Protection des Données (RGPD, Règlement UE 2016/679). En tant que société française hébergeant les données dans l'Union Européenne, nous traitons les données personnelles conformément aux principes du RGPD : licéité, loyauté, transparence, limitation des finalités, minimisation, exactitude, limitation de conservation, intégrité et responsabilité.</p>

@@ -132,7 +132,7 @@ export default function QuotesPage() {
     <div className="p-4 lg:p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Devis</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Devis</h1>
           <p className="text-sm text-gray-500 mt-1">{quotes.length} devis • Génération PDF automatique</p>
         </div>
         <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">
@@ -207,7 +207,7 @@ export default function QuotesPage() {
               <button onClick={() => setShowForm(false)} className="p-1 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><label className="text-sm font-medium text-gray-700">Client *</label><input value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
                 <div><label className="text-sm font-medium text-gray-700">Entreprise</label><input value={form.customerCompany} onChange={(e) => setForm({ ...form, customerCompany: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
                 <div><label className="text-sm font-medium text-gray-700">Email</label><input value={form.customerEmail} onChange={(e) => setForm({ ...form, customerEmail: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
@@ -232,7 +232,7 @@ export default function QuotesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 pt-2 border-t border-gray-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2 border-t border-gray-100">
                 <div><label className="text-sm font-medium text-gray-700">TVA (%)</label><input type="number" value={form.taxRate} onChange={(e) => setForm({ ...form, taxRate: parseFloat(e.target.value) || 0 })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
                 <div className="pt-6"><p className="text-sm text-gray-500">Sous-total: <span className="font-bold text-gray-900">{formSubtotal.toFixed(2)}€</span></p></div>
                 <div className="pt-6"><p className="text-sm text-gray-500">Total: <span className="font-bold text-gray-900 text-base">{formTotal.toFixed(2)}€</span></p></div>

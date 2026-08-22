@@ -115,9 +115,9 @@ export default function SettingsPage() {
 
   return (
     <div className="p-4 lg:p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Connecteurs</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Connecteurs</h1>
 
-      <div className="space-y-6">
+      <div className="space-y-4 lg:space-y-6">
         {/* Stripe */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <div className="flex items-center justify-between mb-4">
@@ -180,7 +180,7 @@ export default function SettingsPage() {
           <div className="space-y-3">
             <div><label className="text-sm font-medium text-gray-700">Fournisseur</label><select value={emailForm.provider} onChange={(e) => setEmailForm({ ...emailForm, provider: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"><option value="resend">Resend</option><option value="sendgrid">SendGrid</option></select></div>
             <div><label className="text-sm font-medium text-gray-700">API Key</label><input type="password" value={emailForm.apiKey} onChange={(e) => setEmailForm({ ...emailForm, apiKey: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><label className="text-sm font-medium text-gray-700">Email expéditeur</label><input value={emailForm.fromEmail} onChange={(e) => setEmailForm({ ...emailForm, fromEmail: e.target.value })} placeholder="noreply@example.com" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
               <div><label className="text-sm font-medium text-gray-700">Nom expéditeur</label><input value={emailForm.fromName} onChange={(e) => setEmailForm({ ...emailForm, fromName: e.target.value })} placeholder="Mon Entreprise" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
             </div>

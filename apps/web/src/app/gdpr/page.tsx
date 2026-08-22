@@ -9,10 +9,10 @@ export default function GdprPage() {
   return (
     <div className="min-h-screen bg-white pt-24 pb-20 px-6">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">GDPR Compliance</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">GDPR Compliance</h1>
         <p className="text-sm text-gray-500 mb-8">Last updated: January 2026</p>
 
-        <div className="prose prose-gray max-w-none space-y-6 text-sm leading-relaxed text-gray-700">
+        <div className="prose prose-gray max-w-none space-y-4 lg:space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">Overview</h2>
             <p>Stiamond is fully compliant with the General Data Protection Regulation (GDPR, Regulation EU 2016/679). As a French company hosting data in the European Union, we process personal data in accordance with GDPR principles: lawfulness, fairness, transparency, purpose limitation, data minimization, accuracy, storage limitation, integrity, and accountability.</p>

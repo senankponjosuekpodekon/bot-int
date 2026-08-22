@@ -50,7 +50,7 @@ export function StatsGridSkeleton({ count = 4 }: { count?: number }) {
 
 export function PageSkeleton({ children }: { children?: React.ReactNode }) {
   return (
-    <div className="p-4 lg:p-8 space-y-8">
+    <div className="p-4 lg:p-8 space-y-4 lg:space-y-8">
       <div className="animate-pulse">
         <div className="h-7 w-56 bg-gray-200 rounded mb-2" />
         <div className="h-4 w-full lg:w-72 bg-gray-100 rounded" />

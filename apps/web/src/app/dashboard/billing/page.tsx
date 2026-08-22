@@ -105,7 +105,7 @@ export default function BillingPage() {
 
   return (
     <div className="p-4 lg:p-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Facturation & Abonnement</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Facturation & Abonnement</h1>
       <p className="text-gray-500 mb-8">Gérez votre plan et suivez votre consommation</p>
 
       {/* Current plan status */}
@@ -207,7 +207,7 @@ export default function BillingPage() {
 
         {/* Plan features */}
         {usage && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 pt-6 border-t border-gray-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6 pt-6 border-t border-gray-100">
             <div className="text-center">
               <p className="text-lg font-bold text-gray-900">{usage.maxAgents === 999 ? '∞' : usage.maxAgents}</p>
               <p className="text-xs text-gray-500">Agents</p>
@@ -230,7 +230,7 @@ export default function BillingPage() {
 
       {/* Plan selection */}
       <h2 id="plan-selection" className="text-lg font-semibold text-gray-900 mb-4">Changer de plan</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 lg:grid-cols-5 gap-4">
         {plans.map((p) => {
           const isCurrent = currentPlan === p.id;
           const colorMap: Record<string, string> = {

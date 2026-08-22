@@ -50,7 +50,7 @@ export default function ChannelAnalyticsPage() {
     <div className="p-4 lg:p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
             <BarChart3 className="w-6 h-6 text-primary-600" />
             Channel Analytics
           </h1>
@@ -63,7 +63,7 @@ export default function ChannelAnalyticsPage() {
         </select>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard icon={MessageSquare} label="Conversations" value={data.summary?.totalConversations || 0} color="text-blue-600" />
         <StatCard icon={Users} label="Leads Captured" value={data.summary?.totalLeads || 0} color="text-green-600" />
         <StatCard icon={Activity} label="Messages" value={data.summary?.totalMessages || 0} color="text-purple-600" />
@@ -124,7 +124,7 @@ function StatCard({ icon: Icon, label, value, color }: { icon: any; label: strin
         <Icon className={`w-4 h-4 ${color}`} />
         <span className="text-xs text-gray-500">{label}</span>
       </div>
-      <div className="text-2xl font-bold">{value}</div>
+      <div className="text-xl sm:text-2xl font-bold">{value}</div>
     </div>
   );
 }

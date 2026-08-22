@@ -22,7 +22,7 @@ export default function GlobalError({
             <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <AlertTriangle className="w-8 h-8 text-red-500" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Erreur critique</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Erreur critique</h1>
             <p className="text-gray-500 mb-6">
               L'application a rencontré une erreur inattendue. Notre équipe a été notifiée.
             </p>

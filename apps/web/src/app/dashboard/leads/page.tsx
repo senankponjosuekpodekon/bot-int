@@ -113,10 +113,10 @@ export default function LeadsPage() {
   };
 
   return (
-    <div className="p-4 lg:p-8 space-y-8">
+    <div className="p-4 lg:p-8 space-y-4 lg:space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pipeline des leads</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Pipeline des leads</h1>
           <p className="text-sm text-gray-500">Suivez vos prospects générés par les agents.</p>
         </div>
         <button className="btn-primary flex items-center gap-2" onClick={() => setShowForm(true)}>
@@ -124,30 +124,30 @@ export default function LeadsPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card p-5 flex items-center gap-4">
           <div className="w-10 h-10 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center">
             <Users className="w-5 h-5" />
           </div>
           <div>
             <p className="text-sm text-gray-500">Total leads</p>
-            <p className="text-2xl font-bold">{loading ? '...' : stats.total}</p>
+            <p className="text-xl sm:text-2xl font-bold">{loading ? '...' : stats.total}</p>
           </div>
         </div>
         <div className="card p-5">
           <p className="text-sm text-gray-500">Qualifiés</p>
-          <p className="text-2xl font-bold">{loading ? '...' : stats.qualified}</p>
+          <p className="text-xl sm:text-2xl font-bold">{loading ? '...' : stats.qualified}</p>
         </div>
         <div className="card p-5">
           <p className="text-sm text-gray-500">Convertis</p>
-          <p className="text-2xl font-bold">{loading ? '...' : stats.converted}</p>
+          <p className="text-xl sm:text-2xl font-bold">{loading ? '...' : stats.converted}</p>
         </div>
         <div className="card p-5">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">Taux de conversion</p>
             <ArrowUpRight className="w-4 h-4 text-green-500" />
           </div>
-          <p className="text-2xl font-bold">{loading ? '...' : `${stats.conversionRate}%`}</p>
+          <p className="text-xl sm:text-2xl font-bold">{loading ? '...' : `${stats.conversionRate}%`}</p>
         </div>
       </div>
 

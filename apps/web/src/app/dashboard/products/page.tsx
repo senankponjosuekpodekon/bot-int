@@ -122,7 +122,7 @@ export default function ProductsPage() {
     <div className="p-4 lg:p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Produits</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Produits</h1>
           <p className="text-sm text-gray-500 mt-1">{total} produit{total > 1 ? 's' : ''} au catalogue</p>
         </div>
         <div className="flex gap-2">
@@ -160,7 +160,7 @@ export default function ProductsPage() {
           <p className="text-gray-500">Aucun produit. Créez-en un ou importez depuis Shopify/WooCommerce.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {products.map((p) => (
             <div key={p.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
               {p.imageUrl && <img src={p.imageUrl} alt={p.name} className="w-full h-40 object-cover" />}
@@ -196,12 +196,12 @@ export default function ProductsPage() {
             <div className="space-y-3">
               <div><label className="text-sm font-medium text-gray-700">Nom *</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
               <div><label className="text-sm font-medium text-gray-700">Description</label><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div><label className="text-sm font-medium text-gray-700">Prix *</label><input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
                 <div><label className="text-sm font-medium text-gray-700">Devise</label><select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"><option value="EUR">EUR</option><option value="USD">USD</option><option value="XOF">XOF</option></select></div>
                 <div><label className="text-sm font-medium text-gray-700">Stock</label><input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: parseInt(e.target.value) || 0 })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><label className="text-sm font-medium text-gray-700">Catégorie</label><input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
                 <div><label className="text-sm font-medium text-gray-700">Image URL</label><input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
               </div>

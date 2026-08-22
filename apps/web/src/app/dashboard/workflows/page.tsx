@@ -72,7 +72,7 @@ export default function WorkflowsPage() {
     <div className="p-4 lg:p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
             <Workflow className="w-6 h-6 text-primary-600" />
             Workflows
           </h1>
@@ -231,7 +231,7 @@ function WorkflowForm({ workflow, onSave, onCancel }: { workflow: any; onSave: (
 
   return (
     <form onSubmit={handleSubmit} className="card p-4 lg:p-6 mb-4 space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="label">Name</label>
           <input value={name} onChange={(e) => setName(e.target.value)} className="input" required />
@@ -251,7 +251,7 @@ function WorkflowForm({ workflow, onSave, onCancel }: { workflow: any; onSave: (
         <input value={description} onChange={(e) => setDescription(e.target.value)} className="input" />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="label">Trigger Type</label>
           <select value={triggerType} onChange={(e) => setTriggerType(e.target.value)} className="input">

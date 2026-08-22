@@ -116,7 +116,7 @@ export default function AgentsPage() {
     <div className="p-4 sm:p-4 lg:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Agents IA</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Agents IA</h1>
           <p className="text-gray-500 text-sm mt-1">Créez et gérez vos agents conversationnels</p>
         </div>
         <button onClick={() => { window.location.href = '/dashboard/agents/create'; }} className="btn-primary flex items-center gap-2">

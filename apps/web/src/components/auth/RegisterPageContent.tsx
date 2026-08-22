@@ -46,7 +46,7 @@ export default function RegisterPageContent() {
         </div>
 
         <div className="card p-4 lg:p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('title')}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{t('title')}</h1>
           <p className="text-gray-500 text-sm mb-6">{t('subtitle')}</p>
 
           {error && (

@@ -9,10 +9,10 @@ export default function PrivacyDEPage() {
   return (
     <div className="min-h-screen bg-white pt-24 pb-20 px-6">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Datenschutzerklärung</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Datenschutzerklärung</h1>
         <p className="text-sm text-gray-500 mb-8">Zuletzt aktualisiert: Januar 2026</p>
 
-        <div className="prose prose-gray max-w-none space-y-6 text-sm leading-relaxed text-gray-700">
+        <div className="prose prose-gray max-w-none space-y-4 lg:space-y-6 text-sm leading-relaxed text-gray-700">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">1. Verantwortlicher</h2>
             <p>Stiamond SAS ist der Verantwortliche für die über den Dienst verarbeiteten personenbezogenen Daten. Daten werden in der Europäischen Union (Frankreich) gehostet. Kontakt: privacy@stiamond.com.</p>
