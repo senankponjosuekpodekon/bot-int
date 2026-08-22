@@ -21,10 +21,10 @@ jobs:
       - name: Install dependencies
         run: npm ci --silent
 
-      - name: Lint
+      - name: Type check
         run: |
-          cd apps/api && npx tsc --noEmit
-          cd ../web && npx tsc --noEmit
+          cd apps/api && npx tsc --noEmit -p tsconfig.json
+          cd ../web && npx tsc --noEmit -p tsconfig.json
 
       - name: Run API tests
         run: |
