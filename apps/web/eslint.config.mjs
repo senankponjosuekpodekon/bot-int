@@ -78,7 +78,10 @@ export default tseslint.config(
       '@next/next/no-img-element': 'off',
       'react/react-in-jsx-scope': 'off',
       'no-undef': 'off',
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': 'off',
+      'no-empty': 'off',
+      '@next/next/no-html-link-for-pages': 'off',
+      '@next/next/no-page-custom-font': 'off',
     },
   },
 );

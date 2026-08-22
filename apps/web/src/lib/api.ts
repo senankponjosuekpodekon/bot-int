@@ -8,7 +8,7 @@ type AuthResponse = {
   tenantId: string;
 };
 
-/* eslint-disable no-unused-vars */
+ 
 declare module 'axios' {
   interface AxiosRequestConfig {
     skipAuthRefresh?: boolean;
@@ -19,7 +19,7 @@ declare module 'axios' {
     _retry?: boolean;
   }
 }
-/* eslint-enable no-unused-vars */
+ 
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
