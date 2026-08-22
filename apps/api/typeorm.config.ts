@@ -10,7 +10,8 @@ const envCandidates = [process.env.API_ENV_PATH, join(__dirname, '.env')].filter
 
 for (const path of envCandidates) {
   if (existsSync(path)) {
-    loadEnv({ path, override: true });
+    // Do not override existing env vars so CI workflow values take precedence
+    loadEnv({ path });
     break;
   }
 }
