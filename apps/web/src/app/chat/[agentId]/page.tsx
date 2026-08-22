@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { Send, Loader2, MessageCircle, ArrowLeft } from 'lucide-react';
+import Markdown from '@/components/Markdown';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -129,7 +130,13 @@ export default function PublicChatPage() {
                 }`}
                 style={msg.role === 'user' ? { background: primaryColor } : {}}
               >
-                <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                {msg.role === 'agent' ? (
+                  <div className="text-sm">
+                    <Markdown content={msg.text} />
+                  </div>
+                ) : (
+                  <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                )}
                 {msg.products && msg.products.length > 0 && (
                   <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
                     {msg.products.map((p: any) => (

@@ -94,6 +94,7 @@ const refreshSession = async (): Promise<AuthResponse | null> => {
     const refreshToken = getStoredToken('refresh_token');
     if (!refreshToken) {
       useAuthStore.getState().logout();
+      if (isBrowser) window.location.href = '/login';
       return null;
     }
 
@@ -140,6 +141,8 @@ api.interceptors.response.use(
           return api(originalRequest);
         }
       } catch (refreshError) {
+        useAuthStore.getState().logout();
+        if (isBrowser) window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }

@@ -77,7 +77,7 @@ export class AuthService {
   private async issueTokens(userId: string, tenantId: string) {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     const payload = { sub: userId, tenantId, role: user?.role };
-    const expiresIn = this.config.get('JWT_EXPIRES_IN', '15m');
+    const expiresIn = this.config.get('JWT_EXPIRES_IN', '1h');
     const refreshTtlMinutes = Number(this.config.get('REFRESH_TOKEN_TTL_MINUTES', 60 * 24 * 7));
     const { tokenId, secret, token: refreshPlain } = this.generateRefreshToken();
     const hashedToken = await bcrypt.hash(secret, 12);
