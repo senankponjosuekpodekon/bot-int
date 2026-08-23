@@ -11,6 +11,7 @@ export default function WidgetEmbed() {
   }
 
   useEffect(() => {
+    if (typeof document === 'undefined') return;
     const selector = `script[data-agent="${agentId}"]`;
     if (document.querySelector(selector)) {
       return;
@@ -26,10 +27,6 @@ export default function WidgetEmbed() {
     script.setAttribute('data-api', apiUrl);
 
     document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
   }, [agentId, apiUrl]);
 
   return null;
