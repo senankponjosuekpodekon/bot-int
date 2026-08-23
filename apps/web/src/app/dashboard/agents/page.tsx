@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { agentsApi } from '@/lib/api';
-import { Bot, Plus, Pencil, Trash2, X, Sparkles, Copy, Check } from 'lucide-react';
+import { Bot, Plus, Pencil, Trash2, X, Sparkles, Copy, Check, Power } from 'lucide-react';
 import { toast } from 'sonner';
 
 const SYSTEM_PROMPT_TEMPLATES: Record<string, Array<{ label: string; prompt: string }>> = {
@@ -112,6 +112,16 @@ export default function AgentsPage() {
     }
   };
 
+  const handleToggle = async (agent: Agent) => {
+    try {
+      await agentsApi.update(agent.id, { isActive: !agent.isActive });
+      toast.success(agent.isActive ? 'Agent désactivé' : 'Agent activé');
+      load();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Impossible de modifier le statut');
+    }
+  };
+
   return (
     <div className="p-4 sm:p-4 lg:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -218,6 +228,13 @@ export default function AgentsPage() {
                   className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                 >
                   {copiedId === agent.id ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => handleToggle(agent)}
+                  title={agent.isActive ? 'Désactiver' : 'Activer'}
+                  className={`p-2 rounded-lg transition-colors ${agent.isActive ? 'text-green-600 hover:bg-green-50' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
+                >
+                  <Power className="w-4 h-4" />
                 </button>
                 <a href={`/dashboard/agents/${agent.id}`} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                   <Pencil className="w-4 h-4" />
