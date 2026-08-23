@@ -34,9 +34,17 @@ async function bootstrap() {
   }));
 
   // Security: CORS restricted to known origins
-  const allowedOrigins = (config.get('CORS_ORIGINS', 'http://localhost:3000') as string)
-    .split(',')
-    .map((s) => s.trim().replace(/\/$/, ''));
+  const origins = new Set<string>(
+    (config.get<string>('CORS_ORIGINS', 'http://localhost:3000') || 'http://localhost:3000')
+      .split(',')
+      .map((s) => s.trim().replace(/\/$/, ''))
+      .filter(Boolean),
+  );
+  const siteUrl = config.get<string>('NEXT_PUBLIC_SITE_URL') || config.get<string>('SITE_URL');
+  if (siteUrl) origins.add(siteUrl.replace(/\/$/, ''));
+  const siteDomain = config.get<string>('NEXT_PUBLIC_SITE_DOMAIN') || config.get<string>('SITE_DOMAIN') || 'agents.stiamond.net';
+  if (siteDomain) origins.add(`https://${siteDomain.replace(/\/$/, '')}`);
+  const allowedOrigins = Array.from(origins);
   app.enableCors({
     origin: (origin, callback) => {
       if (!origin || allowedOrigins.includes(origin)) {
