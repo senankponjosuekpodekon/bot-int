@@ -21,6 +21,11 @@ export class TenantsService {
     return tenant;
   }
 
+  async update(id: string, data: Partial<Tenant>): Promise<Tenant> {
+    await this.tenantRepo.update({ id }, data);
+    return this.findById(id);
+  }
+
   async findByEmail(email: string): Promise<Tenant | null> {
     return this.tenantRepo.findOne({ where: { email } });
   }

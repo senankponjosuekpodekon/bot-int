@@ -27,7 +27,7 @@ const nav = [
   { href: '/dashboard/widget', label: 'Widget & Intégration', icon: Code2 },
   { href: '/dashboard/site', label: 'Site & Landing', icon: Globe },
   { href: '/dashboard/billing', label: 'Facturation', icon: CreditCard },
-  { href: '/dashboard/settings', label: 'Connecteurs', icon: Settings },
+  { href: '/dashboard/settings', label: 'Paramètres', icon: Settings },
 ];
 
 const adminNav = [

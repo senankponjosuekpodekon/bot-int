@@ -375,6 +375,11 @@ export const apiKeyApi = {
   delete: (id: string) => api.delete(`/api-keys/${id}`).then((r) => r.data),
 };
 
+export const tenantApi = {
+  me: () => api.get('/tenants/me').then((r) => r.data),
+  updateMe: (data: any) => api.patch('/tenants/me', data).then((r) => r.data),
+};
+
 export const adminApi = {
   stats: () => api.get('/admin/stats').then((r) => r.data),
   tenants: (page = 1, limit = 20, search?: string) =>

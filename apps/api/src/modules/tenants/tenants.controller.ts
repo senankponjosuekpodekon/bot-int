@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Patch, Request, UseGuards, Body } from '@nestjs/common';
 import { TenantsService } from './tenants.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -10,6 +10,16 @@ export class TenantsController {
   @Get()
   findAll() {
     return this.tenantsService.findAll();
+  }
+
+  @Get('me')
+  findMe(@Request() req) {
+    return this.tenantsService.findById(req.user.tenantId);
+  }
+
+  @Patch('me')
+  updateMe(@Request() req, @Body() data: any) {
+    return this.tenantsService.update(req.user.tenantId, data);
   }
 
   @Get(':id')

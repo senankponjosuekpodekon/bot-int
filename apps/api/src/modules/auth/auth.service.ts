@@ -38,6 +38,9 @@ export class AuthService {
     const tenant = await this.tenantsService.create({
       name: dto.companyName,
       email: dto.email,
+      language: dto.language,
+      timezone: dto.timezone,
+      location: dto.location,
     });
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);

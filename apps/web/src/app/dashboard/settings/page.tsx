@@ -1,7 +1,21 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { CreditCard, Calendar, Mail, Save, Check, X, ExternalLink, MessageCircle, Send, Smartphone } from 'lucide-react';
-import { integrationsApi } from '@/lib/api';
+import { CreditCard, Calendar, Mail, Save, Check, X, ExternalLink, MessageCircle, Send, Smartphone, Globe, Clock, MapPin } from 'lucide-react';
+import { integrationsApi, tenantApi } from '@/lib/api';
+
+const LANGUAGES = [
+  { value: 'fr', label: 'Français' },
+  { value: 'en', label: 'English' },
+  { value: 'de', label: 'Deutsch' },
+  { value: 'ar', label: 'العربية' },
+];
+
+const TIMEZONES = [
+  'UTC', 'Europe/Paris', 'Europe/Berlin', 'Europe/London',
+  'America/New_York', 'America/Los_Angeles', 'America/Toronto',
+  'America/Sao_Paulo', 'Asia/Dubai', 'Asia/Tokyo', 'Asia/Singapore',
+  'Asia/Shanghai', 'Australia/Sydney', 'Africa/Lagos',
+];
 
 interface Integration {
   id: string;
@@ -11,6 +25,8 @@ interface Integration {
 }
 
 export default function SettingsPage() {
+  const [profile, setProfile] = useState({ language: 'fr', timezone: 'UTC', location: '' });
+  const [savingProfile, setSavingProfile] = useState(false);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -28,7 +44,28 @@ export default function SettingsPage() {
 
   useEffect(() => {
     load();
+    loadProfile();
   }, []);
+
+  const loadProfile = async () => {
+    try {
+      const data = await tenantApi.me();
+      setProfile({
+        language: data.language || 'fr',
+        timezone: data.timezone || 'UTC',
+        location: data.location || '',
+      });
+    } catch { showToast('Erreur lors du chargement du profil', 'error'); }
+  };
+
+  const saveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      await tenantApi.updateMe(profile);
+      showToast('Préférences mises à jour');
+    } catch { showToast('Erreur lors de la mise à jour', 'error'); }
+    finally { setSavingProfile(false); }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -115,7 +152,52 @@ export default function SettingsPage() {
 
   return (
     <div className="p-4 lg:p-6 max-w-3xl mx-auto">
-      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Connecteurs</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Paramètres du compte</h1>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+        <h2 className="font-semibold text-gray-900 mb-4">Préférences</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium text-gray-700 flex items-center gap-2"><Globe className="w-4 h-4" /> Langue</label>
+            <select
+              className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"
+              value={profile.language}
+              onChange={(e) => setProfile({ ...profile, language: e.target.value })}
+            >
+              {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 flex items-center gap-2"><Clock className="w-4 h-4" /> Fuseau horaire</label>
+            <select
+              className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"
+              value={profile.timezone}
+              onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
+            >
+              {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="text-sm font-medium text-gray-700 flex items-center gap-2"><MapPin className="w-4 h-4" /> Localité</label>
+            <input
+              type="text"
+              className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"
+              value={profile.location}
+              onChange={(e) => setProfile({ ...profile, location: e.target.value })}
+              placeholder="France, Paris"
+            />
+          </div>
+        </div>
+        <button
+          onClick={saveProfile}
+          disabled={savingProfile}
+          className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
+        >
+          <Save className="w-4 h-4" /> {savingProfile ? 'Sauvegarde...' : 'Sauvegarder'}
+        </button>
+      </div>
+
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Connecteurs</h2>
 
       <div className="space-y-4 lg:space-y-6">
         {/* Stripe */}

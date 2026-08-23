@@ -26,6 +26,15 @@ export class Tenant {
   @Column({ type: 'enum', enum: TenantPlan, default: TenantPlan.BASIC })
   plan: TenantPlan;
 
+  @Column({ nullable: true })
+  language?: string;
+
+  @Column({ nullable: true })
+  timezone?: string;
+
+  @Column({ nullable: true })
+  location?: string;
+
   @Column({ default: true })
   isActive: boolean;
 

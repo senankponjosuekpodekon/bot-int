@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -7,13 +7,35 @@ import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { Bot } from 'lucide-react';
 
+const LANGUAGES = [
+  { value: 'fr', label: 'Français' },
+  { value: 'en', label: 'English' },
+  { value: 'de', label: 'Deutsch' },
+  { value: 'ar', label: 'العربية' },
+];
+
+const TIMEZONES = [
+  'UTC', 'Europe/Paris', 'Europe/Berlin', 'Europe/London',
+  'America/New_York', 'America/Los_Angeles', 'America/Toronto',
+  'America/Sao_Paulo', 'Asia/Dubai', 'Asia/Tokyo', 'Asia/Singapore',
+  'Asia/Shanghai', 'Australia/Sydney', 'Africa/Lagos',
+];
+
 export default function RegisterPageContent() {
   const router = useRouter();
   const t = useTranslations('auth.register');
   const { setAuth } = useAuthStore();
-  const [form, setForm] = useState({ companyName: '', name: '', email: '', password: '' });
+  const [form, setForm] = useState({ companyName: '', name: '', email: '', password: '', language: '', timezone: '', location: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const browserLang = typeof navigator !== 'undefined' ? navigator.language?.split('-')[0] : '';
+    const browserTz = typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : '';
+    const initialLang = LANGUAGES.some((l) => l.value === browserLang) ? browserLang : 'fr';
+    const initialTz = TIMEZONES.includes(browserTz) ? browserTz : 'UTC';
+    setForm((f) => ({ ...f, language: initialLang, timezone: initialTz }));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,6 +127,46 @@ export default function RegisterPageContent() {
                 required
               />
             </div>
+
+            <div className="border-t pt-4 mt-2">
+              <h2 className="text-sm font-medium text-gray-900 mb-3">Préférences</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Langue</label>
+                  <select
+                    className="input"
+                    value={form.language}
+                    onChange={(e) => setForm({ ...form, language: e.target.value })}
+                    required
+                  >
+                    {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Fuseau horaire (GMT)</label>
+                  <select
+                    className="input"
+                    value={form.timezone}
+                    onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+                    required
+                  >
+                    {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="mt-4">
+                <label className="label">Localité</label>
+                <input
+                  type="text"
+                  name="location"
+                  className="input"
+                  value={form.location}
+                  onChange={(e) => setForm({ ...form, location: e.target.value })}
+                  placeholder="France, Paris"
+                />
+              </div>
+            </div>
+
             <button type="submit" className="btn-primary w-full" disabled={loading}>
               {loading ? t('loading') : t('submit')}
             </button>
