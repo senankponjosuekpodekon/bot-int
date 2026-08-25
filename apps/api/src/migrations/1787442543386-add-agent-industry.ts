@@ -4,6 +4,8 @@ export class AddAgentIndustry1787442543386 implements MigrationInterface {
   name = 'AddAgentIndustry1787442543386';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const hasTable = await queryRunner.hasTable('agents');
+    if (!hasTable) return;
     await queryRunner.query(`
       ALTER TABLE "agents"
       ADD COLUMN IF NOT EXISTS "industry" character varying

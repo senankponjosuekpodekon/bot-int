@@ -4,6 +4,8 @@ export class AddTenantOnboarding1787443154914 implements MigrationInterface {
   name = 'AddTenantOnboarding1787443154914';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const hasTable = await queryRunner.hasTable('tenants');
+    if (!hasTable) return;
     await queryRunner.query(`
       ALTER TABLE "tenants"
       ADD COLUMN IF NOT EXISTS "language" character varying,
