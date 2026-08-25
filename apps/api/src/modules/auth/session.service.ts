@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { CacheService } from '../../common/cache.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, LessThan } from 'typeorm';
+import { SessionEntity } from './session.entity';
 
 export interface Session {
   userId: string;
@@ -10,53 +12,48 @@ export interface Session {
 
 @Injectable()
 export class SessionService {
-  private indexKey(userId: string): string {
-    return `sessions-index:${userId}`;
-  }
-
-  private sessionKey(userId: string, tokenId: string): string {
-    return `session:${userId}:${tokenId}`;
-  }
-
-  constructor(private readonly cache: CacheService) {}
+  constructor(
+    @InjectRepository(SessionEntity)
+    private readonly repo: Repository<SessionEntity>,
+  ) {}
 
   async create(userId: string, tenantId: string, tokenId: string, ttlSeconds: number): Promise<void> {
-    const session: Session = {
-      userId,
-      tenantId,
-      tokenId,
-      createdAt: new Date().toISOString(),
-    };
-    await this.cache.set(this.sessionKey(userId, tokenId), session, ttlSeconds);
-
-    const index = await this.cache.get<string[]>(this.indexKey(userId));
-    const next = [...(index || []), tokenId];
-    await this.cache.set(this.indexKey(userId), next, ttlSeconds + 86400);
+    const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+    await this.repo.save(this.repo.create({ userId, tenantId, tokenId, expiresAt }));
   }
 
   async findByUser(userId: string): Promise<Session[]> {
-    const index = await this.cache.get<string[]>(this.indexKey(userId));
-    if (!index || index.length === 0) return [];
-
-    const sessions: Session[] = [];
-    for (const tokenId of index) {
-      const session = await this.cache.get<Session>(this.sessionKey(userId, tokenId));
-      if (session) sessions.push(session);
-    }
-    return sessions;
+    const rows = await this.repo.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+    });
+    const now = new Date();
+    return rows
+      .filter((r) => r.expiresAt > now)
+      .map((r) => ({
+        userId: r.userId,
+        tenantId: r.tenantId,
+        tokenId: r.tokenId,
+        createdAt: r.createdAt.toISOString(),
+      }));
   }
 
   async remove(userId: string, tokenId: string): Promise<void> {
-    await this.cache.del(this.sessionKey(userId, tokenId));
-
-    const index = await this.cache.get<string[]>(this.indexKey(userId));
-    if (index) {
-      const next = index.filter((id) => id !== tokenId);
-      await this.cache.set(this.indexKey(userId), next, 60 * 60 * 24 * 30);
-    }
+    await this.repo.delete({ userId, tokenId });
   }
 
   async get(userId: string, tokenId: string): Promise<Session | null> {
-    return this.cache.get<Session>(this.sessionKey(userId, tokenId));
+    const row = await this.repo.findOne({ where: { userId, tokenId } });
+    if (!row || row.expiresAt <= new Date()) return null;
+    return {
+      userId: row.userId,
+      tenantId: row.tenantId,
+      tokenId: row.tokenId,
+      createdAt: row.createdAt.toISOString(),
+    };
+  }
+
+  async cleanupExpired(): Promise<void> {
+    await this.repo.delete({ expiresAt: LessThan(new Date()) });
   }
 }

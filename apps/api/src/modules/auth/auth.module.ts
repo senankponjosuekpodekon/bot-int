@@ -11,13 +11,13 @@ import { RolesGuard } from './guards/roles.guard';
 import { User } from './user.entity';
 import { RefreshToken } from './refresh-token.entity';
 import { TenantsModule } from '../tenants/tenants.module';
-import { CacheModule } from '../../common/cache.module';
 import { SessionService } from './session.service';
 import { SessionController } from './session.controller';
+import { SessionEntity } from './session.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, RefreshToken]),
+    TypeOrmModule.forFeature([User, RefreshToken, SessionEntity]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -28,7 +28,6 @@ import { SessionController } from './session.controller';
       }),
     }),
     TenantsModule,
-    CacheModule,
   ],
   providers: [AuthService, JwtStrategy, RolesGuard, SessionService],
   controllers: [AuthController, SessionController],
