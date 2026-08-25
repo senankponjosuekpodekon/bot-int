@@ -104,7 +104,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps
-      - run: npm run migration:run --workspace apps/api
       - run: npm run build --workspace apps/web
       - run: npm run dev --workspace apps/api &
       - run: |
