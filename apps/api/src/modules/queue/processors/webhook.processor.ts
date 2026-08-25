@@ -1,20 +1,17 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
-import { Job } from 'bullmq';
-import axios from 'axios';
+import { Injectable, Logger } from '@nestjs/common';
 import { WebhookService } from '../../webhooks/webhook.service';
+import { JobHandler } from '../queue.service';
 
-@Processor('webhooks')
-export class WebhookProcessor extends WorkerHost {
+@Injectable()
+export class WebhookProcessor implements JobHandler {
+  queue = 'webhooks';
   private readonly logger = new Logger(WebhookProcessor.name);
 
-  constructor(private readonly webhookService: WebhookService) {
-    super();
-  }
+  constructor(private readonly webhookService: WebhookService) {}
 
-  async process(job: Job<{ tenantId: string; event: string; payload: Record<string, any> }>): Promise<void> {
-    const { tenantId, event, payload } = job.data;
+  async handle(data: Record<string, any>): Promise<void> {
+    const { tenantId, event, payload } = data;
     this.logger.log(`Delivering webhook ${event} for tenant ${tenantId}`);
-    await this.webhookService.trigger(event as any, tenantId, payload);
+    await this.webhookService.trigger(event, tenantId, payload);
   }
 }

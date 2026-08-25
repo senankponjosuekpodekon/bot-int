@@ -1,12 +1,10 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { BullModule } from '@nestjs/bullmq';
 import { Product } from './product.entity';
 import { ProductsService } from './products.service';
 import { ProductsController } from './products.controller';
 import { ProductsWebhookController } from './products-webhook.controller';
 import { AutoSyncService } from './auto-sync.service';
-import { ShopifyImportProcessor } from '../queue/processors/shopify-import.processor';
 import { QueueModule } from '../queue/queue.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
 import { SurveysModule } from '../surveys/surveys.module';
@@ -17,10 +15,9 @@ import { Integration } from '../integrations/integration.entity';
     TypeOrmModule.forFeature([Product, Integration]),
     IntegrationsModule,
     SurveysModule,
-    QueueModule,
-    BullModule.registerQueue({ name: 'shopify-imports' }),
+    forwardRef(() => QueueModule),
   ],
-  providers: [ProductsService, AutoSyncService, ShopifyImportProcessor],
+  providers: [ProductsService, AutoSyncService],
   controllers: [ProductsController, ProductsWebhookController],
   exports: [ProductsService, AutoSyncService],
 })

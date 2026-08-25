@@ -1,31 +1,38 @@
-import { Module } from '@nestjs/common';
-import { BullModule } from '@nestjs/bullmq';
+import { Module, OnModuleInit, OnModuleDestroy, forwardRef } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { QueueService } from './queue.service';
+import { JobEntity } from './job.entity';
 import { WebhookProcessor } from './processors/webhook.processor';
+import { ShopifyImportProcessor } from './processors/shopify-import.processor';
 import { WebhooksModule } from '../webhooks/webhooks.module';
+import { ProductsModule } from '../products/products.module';
 
 @Module({
   imports: [
-    BullModule.forRootAsync({
-      imports: [],
-      useFactory: (config: ConfigService) => ({
-        connection: {
-          url: config.get<string>('REDIS_URL') || 'redis://localhost:6379',
-        },
-        defaultJobOptions: {
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 2000 },
-          removeOnComplete: { age: 86400, count: 100 },
-          removeOnFail: { age: 604800, count: 500 },
-        },
-      }),
-      inject: [ConfigService],
-    }),
-    BullModule.registerQueue({ name: 'webhooks' }, { name: 'shopify-imports' }),
+    TypeOrmModule.forFeature([JobEntity]),
     WebhooksModule,
+    forwardRef(() => ProductsModule),
   ],
-  providers: [QueueService, WebhookProcessor],
+  providers: [QueueService, WebhookProcessor, ShopifyImportProcessor],
   exports: [QueueService],
 })
-export class QueueModule {}
+export class QueueModule implements OnModuleInit, OnModuleDestroy {
+  constructor(
+    private readonly queueService: QueueService,
+    private readonly webhookProcessor: WebhookProcessor,
+    private readonly shopifyImportProcessor: ShopifyImportProcessor,
+    private readonly configService: ConfigService,
+  ) {}
+
+  onModuleInit(): void {
+    this.queueService.registerHandler(this.webhookProcessor);
+    this.queueService.registerHandler(this.shopifyImportProcessor);
+    const intervalMs = this.configService.get<number>('QUEUE_POLL_INTERVAL_MS', 5000);
+    this.queueService.startWorker(intervalMs);
+  }
+
+  onModuleDestroy(): void {
+    this.queueService.stopWorker();
+  }
+}

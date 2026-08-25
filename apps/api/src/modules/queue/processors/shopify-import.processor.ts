@@ -1,20 +1,16 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
-import { Job } from 'bullmq';
+import { Injectable, Logger } from '@nestjs/common';
 import { ProductsService } from '../../products/products.service';
+import { JobHandler } from '../queue.service';
 
-@Processor('shopify-imports')
-export class ShopifyImportProcessor extends WorkerHost {
+@Injectable()
+export class ShopifyImportProcessor implements JobHandler {
+  queue = 'shopify-imports';
   private readonly logger = new Logger(ShopifyImportProcessor.name);
 
-  constructor(private readonly productsService: ProductsService) {
-    super();
-  }
+  constructor(private readonly productsService: ProductsService) {}
 
-  async process(
-    job: Job<{ tenantId: string; shopDomain: string; accessToken: string; integrationType: 'shopify' | 'public_feed' }>,
-  ): Promise<any> {
-    const { tenantId, shopDomain, accessToken, integrationType } = job.data;
+  async handle(data: Record<string, any>): Promise<any> {
+    const { tenantId, shopDomain, accessToken, integrationType } = data;
     this.logger.log(`Starting ${integrationType} import for tenant ${tenantId}: ${shopDomain}`);
 
     if (integrationType === 'public_feed') {
