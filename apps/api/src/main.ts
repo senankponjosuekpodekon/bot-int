@@ -14,14 +14,14 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 
-  const requiredEnv = [
-    { key: 'DATABASE_URL', label: 'database URL' },
-    { key: 'JWT_SECRET', label: 'JWT secret' },
-  ];
-  for (const { key, label } of requiredEnv) {
-    if (!config.get<string>(key)) {
-      throw new Error(`Missing required environment variable: ${key} (${label})`);
-    }
+  const databaseUrl = config.get<string>('DATABASE_URL');
+  const dbHost = config.get<string>('DB_HOST');
+  if (!databaseUrl && !dbHost) {
+    throw new Error('Missing required database environment variables: DATABASE_URL or DB_HOST');
+  }
+  const jwtSecret = config.get<string>('JWT_SECRET');
+  if (!jwtSecret) {
+    throw new Error('Missing required environment variable: JWT_SECRET');
   }
 
   // Security: Helmet headers with CSP
