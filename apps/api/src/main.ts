@@ -114,7 +114,7 @@ async function bootstrap() {
   app.use('/health', healthHandler);
   app.use('/api/health', healthHandler);
 
-  await app.listen(port);
+  await app.listen(port, '::');
   logger.log(`API running on http://localhost:${port}/api`);
   logger.log(`CORS origins: ${allowedOrigins.join(', ')}`);
 }
