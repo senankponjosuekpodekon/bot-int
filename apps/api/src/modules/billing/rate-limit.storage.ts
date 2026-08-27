@@ -24,7 +24,12 @@ export class RedisRateLimitStorage implements RateLimitStorage {
     try {
       // @ts-ignore
       const Redis = require('ioredis');
-      this.client = new Redis(url);
+      this.client = new Redis(url, {
+        connectTimeout: 1000,
+        maxRetriesPerRequest: 0,
+        enableOfflineQueue: false,
+        retryStrategy: () => null,
+      });
       this.enabled = true;
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -44,8 +49,8 @@ export class RedisRateLimitStorage implements RateLimitStorage {
       const pipeline = this.client.pipeline();
       pipeline.zremrangebyscore(redisKey, 0, windowStart);
       pipeline.zrange(redisKey, 0, -1, 'WITHSCORES');
-      const [, results] = await pipeline.exec();
-      const timestamps: string[] = results[1];
+      const [[,], [, rangeResult]] = (await pipeline.exec()) || [];
+      const timestamps: string[] = rangeResult || [];
       if (timestamps.length / 2 >= limit) return false;
 
       await this.client.zadd(redisKey, now, `${now}:${Math.random()}`);
