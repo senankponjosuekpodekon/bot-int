@@ -10,6 +10,7 @@ COPY apps/web/package.json ./apps/web/
 COPY packages/payment-sdk/package.json ./packages/payment-sdk/
 
 RUN npm ci --silent
+RUN npm run build -w @stiamond/payment-sdk
 
 # Copy API source
 COPY apps/api ./apps/api

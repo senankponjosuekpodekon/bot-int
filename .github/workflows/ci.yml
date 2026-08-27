@@ -55,6 +55,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run build -w @stiamond/payment-sdk
       - run: cd apps/api && npx jest --passWithNoTests --forceExit
 
   build:
@@ -110,6 +111,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps
+      - run: npm run build -w @stiamond/payment-sdk
       - run: npm run build --workspace apps/web
       - run: npm run dev --workspace apps/api &
       - run: |

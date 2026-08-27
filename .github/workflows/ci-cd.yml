@@ -49,6 +49,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --silent
 
+      - name: Build payment-sdk
+        run: npm run build -w @stiamond/payment-sdk
+
       - name: Type check
         run: |
           cd apps/api && npx tsc --noEmit -p tsconfig.json
