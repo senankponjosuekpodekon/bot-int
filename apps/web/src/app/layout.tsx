@@ -4,6 +4,7 @@ import ToasterProvider from '@/components/ToasterProvider';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 import { CurrencyProvider } from '@/components/CurrencyProvider';
 import KeepAlive from '@/components/KeepAlive';
+import { Analytics } from '@vercel/analytics/next';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://stiamond.com';
 
@@ -252,6 +253,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ToasterProvider />
           <ServiceWorkerRegister />
           {children}
+          <Analytics />
         </CurrencyProvider>
       </body>
     </html>
