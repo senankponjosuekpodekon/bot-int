@@ -18,6 +18,7 @@ import {
   RedisRateLimitStorage,
   RATE_LIMIT_STORAGE,
 } from './rate-limit.storage';
+import { PaymentSDK } from '@stiamond/payment-sdk';
 
 @Module({
   imports: [
@@ -30,6 +31,18 @@ import {
     BillingService,
     ApiKeyService,
     ApiKeyGuard,
+    {
+      provide: 'PAYMENT_SDK',
+      useFactory: (config: ConfigService) => {
+        const stripeSecretKey = config.get<string>('STRIPE_SECRET_KEY');
+        if (!stripeSecretKey) return null;
+        return new PaymentSDK({
+          environment: config.get('NODE_ENV') === 'production' ? 'production' : 'development',
+          keys: { stripeSecretKey },
+        });
+      },
+      inject: [ConfigService],
+    },
     {
       provide: RATE_LIMIT_STORAGE,
       useFactory: (config: ConfigService) => {

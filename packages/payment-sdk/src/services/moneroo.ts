@@ -1,8 +1,9 @@
-import { PaymentEnvironment } from '../types';
+import { PaymentEnvironment, ChargePayload } from '../types';
 
 export interface MonerooServiceConfig {
   apiKey: string;
   environment: PaymentEnvironment;
+  baseUrl?: string;
 }
 
 export class MonerooService {
@@ -12,7 +13,33 @@ export class MonerooService {
     this.config = config;
   }
 
-  async createPayment(payload: { amount: number; currency: string }) {
-    throw new Error('Moneroo integration not implemented yet');
+  private get baseUrl() {
+    return this.config.baseUrl || (this.config.environment === 'production'
+      ? 'https://api.moneroo.io'
+      : 'https://api.moneroo.io');
+  }
+
+  async createPayment(payload: ChargePayload) {
+    const res = await fetch(`${this.baseUrl}/v1/payments`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        amount: payload.amount,
+        currency: payload.currency,
+        description: payload.description,
+        customer_email: payload.customerEmail,
+        metadata: payload.metadata,
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Moneroo createPayment failed: ${res.status} ${text}`);
+    }
+
+    return res.json();
   }
 }

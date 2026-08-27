@@ -6,6 +6,12 @@ export interface PaymentSDKConfig {
     stripeSecretKey?: string;
     monerooApiKey?: string;
     wiseApiKey?: string;
+    coinbaseApiKey?: string;
+  };
+  baseUrls?: {
+    moneroo?: string;
+    wise?: string;
+    coinbase?: string;
   };
 }
 

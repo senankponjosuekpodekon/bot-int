@@ -1,10 +1,10 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Subscription, SubscriptionStatus, PlanType, PLAN_LIMITS } from './subscription.entity';
 import { Conversation } from '../chat/conversation.entity';
-import axios from 'axios';
+import { PaymentSDK } from '@stiamond/payment-sdk';
 
 @Injectable()
 export class BillingService {
@@ -16,6 +16,8 @@ export class BillingService {
     @InjectRepository(Conversation)
     private readonly convRepo: Repository<Conversation>,
     private readonly config: ConfigService,
+    @Inject('PAYMENT_SDK')
+    private readonly paymentSdk: PaymentSDK | null,
   ) {}
 
   async getSubscription(tenantId: string): Promise<Subscription> {
@@ -79,15 +81,9 @@ export class BillingService {
     sub.status = SubscriptionStatus.CANCELED;
     sub.canceledAt = new Date();
 
-    if (sub.stripeSubscriptionId) {
+    if (sub.stripeSubscriptionId && this.paymentSdk) {
       try {
-        const secretKey = this.config.get('STRIPE_SECRET_KEY');
-        if (secretKey) {
-          await axios.delete(
-            `https://api.stripe.com/v1/subscriptions/${sub.stripeSubscriptionId}`,
-            { headers: { Authorization: `Bearer ${secretKey}` } },
-          );
-        }
+        await this.paymentSdk.stripe.cancelSubscription(sub.stripeSubscriptionId);
       } catch (err: any) {
         this.logger.error(`Stripe cancel failed: ${err?.message}`);
       }
@@ -98,8 +94,7 @@ export class BillingService {
 
   async createCheckoutSession(tenantId: string, plan: PlanType): Promise<{ url: string }> {
     const sub = await this.getSubscription(tenantId);
-    const secretKey = this.config.get('STRIPE_SECRET_KEY');
-    if (!secretKey) throw new BadRequestException('Stripe not configured');
+    if (!this.paymentSdk) throw new BadRequestException('Stripe not configured');
 
     const priceMap: Record<PlanType, string> = {
       [PlanType.FREE]: '',
@@ -117,30 +112,22 @@ export class BillingService {
 
     let customerId = sub.stripeCustomerId;
     if (!customerId) {
-      const customerRes = await axios.post(
-        'https://api.stripe.com/v1/customers',
-        new URLSearchParams({ email: tenantId, name: tenantId }),
-        { headers: { Authorization: `Bearer ${secretKey}` } },
-      );
-      customerId = customerRes.data.id;
+      const customer = await this.paymentSdk.stripe.createCustomer(tenantId, tenantId);
+      customerId = customer.id;
       sub.stripeCustomerId = customerId;
       await this.subRepo.save(sub);
     }
 
-    const sessionRes = await axios.post(
-      'https://api.stripe.com/v1/checkout/sessions',
-      new URLSearchParams({
-        customer: customerId,
-        'line_items[0][price]': priceId,
-        'line_items[0][quantity]': '1',
-        mode: 'subscription',
-        success_url: `${this.config.get('APP_URL', 'http://localhost:3000')}/dashboard/billing?success=1`,
-        cancel_url: `${this.config.get('APP_URL', 'http://localhost:3000')}/dashboard/billing?canceled=1`,
-      }),
-      { headers: { Authorization: `Bearer ${secretKey}` } },
-    );
+    const appUrl = this.config.get('APP_URL', 'http://localhost:3000');
+    const session = await this.paymentSdk.stripe.createCheckoutSession({
+      priceId,
+      customerId,
+      successUrl: `${appUrl}/dashboard/billing?success=1`,
+      cancelUrl: `${appUrl}/dashboard/billing?canceled=1`,
+      mode: 'subscription',
+    });
 
-    return { url: sessionRes.data.url };
+    return { url: session.url };
   }
 
   async handleStripeWebhook(event: any): Promise<void> {
