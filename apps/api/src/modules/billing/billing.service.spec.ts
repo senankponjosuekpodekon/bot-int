@@ -32,6 +32,7 @@ describe('BillingService', () => {
         { provide: getRepositoryToken(Subscription), useValue: mockSubRepo },
         { provide: getRepositoryToken(Conversation), useValue: mockConvRepo },
         { provide: ConfigService, useValue: mockConfig },
+        { provide: 'PAYMENT_SDK', useValue: null },
       ],
     }).compile();
 
