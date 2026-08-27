@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AgentMemory, MemoryScope } from './agent-memory.entity';
+import { LLMService } from '../chat/llm.service';
+import { LLMMessage } from '../chat/llm-provider.interface';
 
 const MEMORY_TTL_DAYS = 90;
 const LOW_IMPORTANCE_THRESHOLD = 0.5;
@@ -14,6 +16,7 @@ export class AgentMemoryService {
   constructor(
     @InjectRepository(AgentMemory)
     private readonly memoryRepo: Repository<AgentMemory>,
+    private readonly llmService: LLMService,
   ) {}
 
   async remember(
@@ -86,8 +89,8 @@ export class AgentMemoryService {
     userMessage: string,
     agentReply: string,
     agentId?: string,
-  ): Promise<void> {
-    const lowerMsg = userMessage.toLowerCase();
+  ): Promise<Record<string, string>> {
+    const facts: Record<string, string> = {};
 
     const patterns: { key: string; regex: RegExp; extract: (m: RegExpMatchArray) => string }[] = [
       { key: 'name', regex: /(?:je suis|mon nom est|je m'appelle|m'appelle|my name is|i am|i'm)\s+([a-zA-ZÀ-ÿ'-]+)/i, extract: (m) => m[1].trim() },
@@ -102,13 +105,81 @@ export class AgentMemoryService {
     for (const pattern of patterns) {
       const match = userMessage.match(pattern.regex);
       if (match && pattern.extract(match)) {
+        const value = pattern.extract(match);
+        facts[pattern.key] = value;
         try {
-          await this.remember(tenantId, scope, scopeId, pattern.key, pattern.extract(match), agentId);
+          await this.remember(tenantId, scope, scopeId, pattern.key, value, agentId);
         } catch (err: any) {
           this.logger.warn(`Failed to store memory ${pattern.key}: ${err?.message}`);
         }
       }
     }
+
+    try {
+      const llmFacts = await this.extractWithLLM(userMessage, agentReply);
+      for (const [key, value] of Object.entries(llmFacts)) {
+        const normalized = String(value).trim();
+        if (!normalized) continue;
+        if (!this.isAllowedProfileKey(key)) continue;
+        const existing = facts[key];
+        if (!existing || normalized.length > existing.length || !normalized.includes(existing)) {
+          facts[key] = normalized;
+        }
+        await this.remember(tenantId, scope, scopeId, key, normalized, agentId);
+      }
+    } catch (err: any) {
+      this.logger.warn(`LLM profile extraction failed: ${err?.message}`);
+    }
+
+    return facts;
+  }
+
+  private async extractWithLLM(userMessage: string, agentReply: string): Promise<Record<string, string>> {
+    const prompt = `You are a customer profiling assistant. Extract concrete facts about the customer from this conversation turn. Return strictly JSON.
+
+Customer message: """${userMessage}"""
+Assistant reply: """${agentReply}"""
+
+Return only a JSON object where each key is a fact type and each value is the extracted information as a short string. Do not include keys for information that is not present.
+
+Example:
+{
+  "name": "Sophie Martin",
+  "email": "sophie@example.com",
+  "phone": "+33 6 12 34 56 78",
+  "company": "Boulangerie Martin",
+  "budget": "2000€",
+  "need": "un site vitrine avec commande en ligne",
+  "location": "Lyon",
+  "deadline": "dans 2 mois",
+  "language": "fr",
+  "role": "propriétaire",
+  "industry": "restauration"
+}
+
+Allowed keys: name, email, phone, company, budget, need, location, deadline, language, role, industry, preferences, decision_maker, competitors, interests, notes.`;
+
+    const messages: LLMMessage[] = [
+      { role: 'system', content: prompt },
+      { role: 'user', content: 'Extract the customer facts.' },
+    ];
+    const raw = await this.llmService.chat(messages);
+    const json = this.extractJson(raw);
+    return JSON.parse(json);
+  }
+
+  private isAllowedProfileKey(key: string): boolean {
+    const allowed = new Set([
+      'name', 'email', 'phone', 'company', 'budget', 'need', 'location',
+      'deadline', 'language', 'role', 'industry', 'preferences',
+      'decision_maker', 'competitors', 'interests', 'notes',
+    ]);
+    return allowed.has(key);
+  }
+
+  private extractJson(raw: string): string {
+    const match = raw.match(/\{[\s\S]*?\}/);
+    return match ? match[0] : raw;
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_5AM)

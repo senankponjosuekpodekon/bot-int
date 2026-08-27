@@ -9,6 +9,8 @@ const user = {
 };
 const leadEmail = `lead-${uniqueSuffix}@example.com`;
 
+test.setTimeout(120_000);
+
 test.describe('Agent → Chat → Lead flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/register');
@@ -17,7 +19,7 @@ test.describe('Agent → Chat → Lead flow', () => {
     await page.fill('input[name="email"]', user.email);
     await page.fill('input[name="password"]', user.password);
     await page.click('button[type="submit"]');
-    await page.waitForURL('/dashboard');
+    await page.waitForURL('/dashboard', { waitUntil: 'domcontentloaded' });
   });
 
   test('creates an agent, chats, and produces a lead', async ({ page }) => {

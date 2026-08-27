@@ -261,6 +261,7 @@ export const analyticsApi = {
   timeline: (days?: number) => api.get('/analytics/timeline', { params: { days } }).then((r) => r.data),
   funnel: () => api.get('/analytics/funnel').then((r) => r.data),
   acquisition: () => api.get('/analytics/acquisition').then((r) => r.data),
+  channels: (days?: number) => api.get('/analytics/channels', { params: { days } }).then((r) => r.data),
 };
 
 export const integrationsApi = {
@@ -378,6 +379,18 @@ export const apiKeyApi = {
 export const tenantApi = {
   me: () => api.get('/tenants/me').then((r) => r.data),
   updateMe: (data: any) => api.patch('/tenants/me', data).then((r) => r.data),
+};
+
+export const channelsApi = {
+  agents: () => api.get('/channels/agents').then((r) => r.data),
+  send: (data: { agentId: string; message: string; channel?: string; conversationId?: string; visitorId?: string }) =>
+    api.post('/channels/message', data).then((r) => r.data),
+  conversations: (params?: { channel?: string; status?: string; page?: number; limit?: number }) =>
+    api.get('/channels/conversations', { params }).then((r) => r.data),
+  history: (id: string) => api.get(`/channels/conversations/${id}/history`).then((r) => r.data),
+  registerWebhook: (url: string, events?: string) => api.post('/channels/webhooks', { url, events }).then((r) => r.data),
+  removeWebhook: (id?: string) =>
+    api.delete('/channels/webhooks', { params: id ? { id } : undefined }).then((r) => r.data),
 };
 
 export const adminApi = {

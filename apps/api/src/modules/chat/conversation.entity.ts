@@ -17,6 +17,14 @@ export enum ConversationStatus {
   CLOSED = 'closed',
 }
 
+export enum ConversationState {
+  GREETING = 'greeting',
+  COLLECTING = 'collecting',
+  ANSWERING = 'answering',
+  HANDED_OFF = 'handed_off',
+  CLOSED = 'closed',
+}
+
 export enum ConversationChannel {
   WEB = 'web',
   WHATSAPP = 'whatsapp',
@@ -112,6 +120,33 @@ export class Conversation {
 
   @Column({ type: 'int', default: 0 })
   intentScore: number;
+
+  @Column({ type: 'varchar', length: 5, nullable: true })
+  language?: string;
+
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  lastDetectedIntent?: string;
+
+  @Column({ type: 'float', nullable: true })
+  lastConfidence?: number;
+
+  @Column({
+    type: 'enum',
+    enum: ConversationState,
+    default: ConversationState.ANSWERING,
+  })
+  state: ConversationState;
+
+  @Column({ type: 'jsonb', nullable: true })
+  formState: {
+    flowId?: string;
+    currentStep?: number;
+    collectedFields?: Record<string, string>;
+    missingFields?: string[];
+  };
+
+  @Column({ type: 'text', nullable: true })
+  contextSummary?: string;
 
   @Column({ type: 'jsonb', nullable: true, default: '{}' })
   utmParams: {

@@ -87,6 +87,7 @@ export default function OperatorPage() {
   const handleTakeOver = async () => {
     if (!selected) return;
     try {
+      await chatApi.take(selected.id);
       await chatApi.updateStatus(selected.id, 'open');
       showToast('Conversation prise en charge');
       load();

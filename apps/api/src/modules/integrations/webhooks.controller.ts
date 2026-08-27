@@ -2,6 +2,8 @@ import { Body, Controller, Get, Post, Query, Param, Req, Logger } from '@nestjs/
 import { Request } from 'express';
 import axios from 'axios';
 import { IntegrationsService } from './integrations.service';
+import { WhatsAppAdapter } from './whatsapp.adapter';
+import { TelegramAdapter } from './telegram.adapter';
 import { ChatService } from '../chat/chat.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,6 +17,8 @@ export class WebhooksController {
   constructor(
     private readonly integrationsService: IntegrationsService,
     private readonly chatService: ChatService,
+    private readonly whatsappAdapter: WhatsAppAdapter,
+    private readonly telegramAdapter: TelegramAdapter,
     @InjectRepository(Agent)
     private readonly agentRepo: Repository<Agent>,
     @InjectRepository(Integration)
@@ -40,21 +44,9 @@ export class WebhooksController {
   @Post('whatsapp/:tenantId')
   async receiveWhatsApp(@Param('tenantId') tenantId: string, @Body() body: any) {
     try {
-      if (body.object) {
-        const entries = body.entry || [];
-        for (const entry of entries) {
-          const changes = entry.changes || [];
-          for (const change of changes) {
-            const messages = change.value?.messages || [];
-            for (const msg of messages) {
-              const from = msg.from;
-              const text = msg.text?.body || '';
-              if (text) {
-                await this.processIncomingMessage(tenantId, 'whatsapp', from, text);
-              }
-            }
-          }
-        }
+      const normalized = await this.whatsappAdapter.normalize(tenantId, body);
+      if (normalized) {
+        await this.processIncomingMessage(tenantId, normalized);
       }
       return { status: 'ok' };
     } catch (err: any) {
@@ -88,11 +80,9 @@ export class WebhooksController {
   @Post('telegram/:tenantId')
   async receiveTelegram(@Param('tenantId') tenantId: string, @Body() body: any) {
     try {
-      const message = body.message;
-      if (message?.text) {
-        const from = message.from?.id?.toString() || 'unknown';
-        const text = message.text;
-        await this.processIncomingMessage(tenantId, 'telegram', from, text);
+      const normalized = await this.telegramAdapter.normalize(tenantId, body);
+      if (normalized) {
+        await this.processIncomingMessage(tenantId, normalized);
       }
       return { status: 'ok' };
     } catch (err: any) {
@@ -111,7 +101,12 @@ export class WebhooksController {
 
       if (emailBody && from) {
         const fromEmail = from.match(/[\w.+-]+@[\w-]+\.[\w.-]+/)?.[0] || from;
-        await this.processIncomingMessage(tenantId, 'email', fromEmail, emailBody);
+        await this.processIncomingMessage(tenantId, {
+          visitorId: `email_${fromEmail}`,
+          text: emailBody,
+          channel: 'email',
+          metadata: { from: fromEmail, subject },
+        });
       }
       return { status: 'ok' };
     } catch (err: any) {
@@ -122,34 +117,31 @@ export class WebhooksController {
 
   private async processIncomingMessage(
     tenantId: string,
-    channel: string,
-    from: string,
-    text: string,
+    normalized: { visitorId: string; text: string; channel: string; metadata?: Record<string, any> },
   ): Promise<void> {
     const agents = await this.agentRepo.find({ where: { tenantId, isActive: true } });
     if (agents.length === 0) return;
 
     const agent = agents[0];
-    const visitorId = `${channel}_${from}`;
 
     const result = await this.chatService.sendMessage(
       tenantId,
       agent.id,
-      text,
+      normalized.text,
       undefined,
-      visitorId,
+      normalized.visitorId,
       true,
     );
 
     // Send reply back through the channel
     try {
-      if (channel === 'whatsapp') {
-        await this.integrationsService.sendWhatsApp(tenantId, from, result.reply);
-      } else if (channel === 'telegram') {
-        await this.integrationsService.sendTelegram(tenantId, from, result.reply);
+      if (normalized.channel === 'whatsapp') {
+        await this.integrationsService.sendWhatsApp(tenantId, normalized.metadata?.from, result.reply);
+      } else if (normalized.channel === 'telegram') {
+        await this.integrationsService.sendTelegram(tenantId, normalized.metadata?.from, result.reply);
       }
     } catch (err: any) {
-      this.logger.error(`Failed to send reply via ${channel}: ${err?.message}`);
+      this.logger.error(`Failed to send reply via ${normalized.channel}: ${err?.message}`);
     }
   }
 }

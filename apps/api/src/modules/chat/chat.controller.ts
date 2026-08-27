@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, Res, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
@@ -45,6 +46,30 @@ export class ChatController {
       undefined,
       dto.regionContext as any,
     );
+  }
+
+  @Get('operator/inbox')
+  @ApiOperation({ summary: 'List conversations handed off to human operators' })
+  @ApiResponse({ status: 200, description: 'Paginated list of conversations needing attention' })
+  getOperatorInbox(@Request() req, @Query() query: ListConversationsDto) {
+    return this.chatService.getConversations(req.user.tenantId, {
+      ...query,
+      status: 'handed_off' as any,
+    });
+  }
+
+  @Post('operator/:conversationId/take')
+  @ApiOperation({ summary: 'Operator takes over a conversation' })
+  @ApiResponse({ status: 200, description: 'Conversation status set to open' })
+  takeConversation(@Request() req, @Param('conversationId') id: string) {
+    return this.chatService.takeConversation(id, req.user.tenantId);
+  }
+
+  @Get('analytics')
+  @ApiOperation({ summary: 'Get dashboard KPIs and analytics' })
+  @ApiResponse({ status: 200, description: 'Dashboard metrics' })
+  getAnalytics(@Request() req, @Query('from') from?: string, @Query('to') to?: string) {
+    return this.chatService.getDashboardMetrics(req.user.tenantId, from, to);
   }
 
   @Get('conversations')
@@ -137,6 +162,13 @@ export class ChatController {
     return this.chatService.deleteFeedback(id, req.user.tenantId);
   }
 
+  @Post(':id/take')
+  @ApiOperation({ summary: 'Operator takes over a conversation' })
+  @ApiResponse({ status: 200, description: 'Conversation status set to open' })
+  take(@Request() req, @Param('id') id: string) {
+    return this.chatService.takeConversation(id, req.user.tenantId);
+  }
+
   @Post(':id/operator')
   @ApiOperation({ summary: 'Post a human operator reply to a conversation' })
   @ApiResponse({ status: 201, description: 'Operator reply saved' })
@@ -146,5 +178,39 @@ export class ChatController {
     @Body() dto: OperatorReplyDto,
   ) {
     return this.chatService.operatorReply(id, req.user.tenantId, dto.message);
+  }
+
+  @Post('stream')
+  @ApiOperation({ summary: 'Send a message and stream the reply as SSE' })
+  @ApiResponse({ status: 200, description: 'Server-sent events with reply chunks' })
+  async stream(
+    @Request() req,
+    @Body() dto: SendMessageDto,
+    @Res() res: Response,
+  ) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const result = await this.chatService.sendMessage(
+      req.user.tenantId,
+      dto.agentId,
+      dto.message,
+      dto.conversationId,
+      dto.visitorId,
+      dto.captureLead,
+      undefined,
+      dto.regionContext as any,
+    );
+
+    res.write(`data: ${JSON.stringify({ meta: { conversationId: result.conversationId, leadId: result.leadId, flow: result.flow, funnelStage: result.funnelStage, intentScore: result.intentScore, region: result.region } })}\n\n`);
+
+    const words = result.reply.split(/\s+/).filter(Boolean);
+    for (const chunk of words) {
+      res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+    }
+
+    res.write(`data: ${JSON.stringify({ done: true, reply: result.reply })}\n\n`);
+    res.end();
   }
 }

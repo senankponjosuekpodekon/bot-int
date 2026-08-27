@@ -125,6 +125,35 @@ describe('BillingService', () => {
     });
   });
 
+  describe('handleStripeWebhook', () => {
+    it('should activate subscription on invoice.payment_succeeded', async () => {
+      const sub = {
+        id: 'sub-1',
+        stripeSubscriptionId: 'sub_stripe_1',
+        status: SubscriptionStatus.PAST_DUE,
+        currentPeriodEnd: null,
+      } as any;
+      mockSubRepo.findOne.mockResolvedValue(sub);
+      mockSubRepo.save.mockResolvedValue(sub);
+
+      const event = {
+        type: 'invoice.payment_succeeded',
+        data: {
+          object: {
+            subscription: 'sub_stripe_1',
+            period_end: 1893456000,
+          },
+        },
+      };
+
+      await service.handleStripeWebhook(event);
+      expect(mockSubRepo.findOne).toHaveBeenCalledWith({ where: { stripeSubscriptionId: 'sub_stripe_1' } });
+      expect(sub.status).toBe(SubscriptionStatus.ACTIVE);
+      expect(sub.currentPeriodEnd).toEqual(new Date(1893456000 * 1000));
+      expect(mockSubRepo.save).toHaveBeenCalledWith(sub);
+    });
+  });
+
   describe('incrementUsage', () => {
     it('should increment and track overage', async () => {
       const sub = {

@@ -6,7 +6,7 @@ import axios from 'axios';
 import { CryptoService } from '../../common/crypto.service';
 import { IntegrationsService } from '../integrations/integrations.service';
 
-export type WebhookEvent = 'lead.created' | 'lead.updated' | 'conversation.created' | 'conversation.closed';
+export type WebhookEvent = 'lead.created' | 'lead.updated' | 'conversation.created' | 'conversation.closed' | 'message.replied';
 
 @Entity('webhook_endpoints')
 @Index(['tenantId', 'isActive'])

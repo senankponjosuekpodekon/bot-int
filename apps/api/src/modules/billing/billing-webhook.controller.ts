@@ -23,13 +23,24 @@ export class BillingWebhookController {
     if (!secret) throw new BadRequestException('Stripe webhook secret not configured');
 
     try {
-      const payload = Buffer.from(JSON.stringify(req.body));
+      const rawBody = (req as any).rawBody as Buffer | undefined;
+      const payload = rawBody || Buffer.from(JSON.stringify(req.body));
       const event = this.verifyWebhookSignature(payload, signature, secret);
       await this.billingService.handleStripeWebhook(event);
       res.json({ received: true });
     } catch (err: any) {
       res.status(400).json({ error: `Webhook Error: ${err.message}` });
     }
+  }
+
+  // Stripe allows /webhooks as well as /webhook
+  @Post('webhooks')
+  async handleWebhooks(
+    @Req() req: Request,
+    @Res() res: Response,
+    @Headers('stripe-signature') signature: string,
+  ) {
+    return this.handleWebhook(req, res, signature);
   }
 
   private verifyWebhookSignature(payload: Buffer, header: string, secret: string): any {

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { BarChart3, MessageSquare, Users, TrendingUp, Activity } from 'lucide-react';
-import api from '@/lib/api';
+import { analyticsApi } from '@/lib/api';
 
 const CHANNEL_LABELS: Record<string, string> = {
   web: 'Web Chat',
@@ -30,8 +30,8 @@ export default function ChannelAnalyticsPage() {
 
   useEffect(() => {
     setLoading(true);
-    api.get(`/intelligence/channels?days=${days}`)
-      .then(({ data }) => setData(data))
+    analyticsApi.channels(days)
+      .then((data) => setData(data))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [days]);

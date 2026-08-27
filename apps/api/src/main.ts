@@ -10,9 +10,19 @@ import { initSentry } from './common/sentry';
 async function bootstrap() {
   initSentry();
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
+
+  const requiredEnv = [
+    { key: 'DATABASE_URL', label: 'database URL' },
+    { key: 'JWT_SECRET', label: 'JWT secret' },
+  ];
+  for (const { key, label } of requiredEnv) {
+    if (!config.get<string>(key)) {
+      throw new Error(`Missing required environment variable: ${key} (${label})`);
+    }
+  }
 
   // Security: Helmet headers with CSP
   app.use(helmet({
@@ -20,7 +30,7 @@ async function bootstrap() {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", 'data:', 'https:'],
         connectSrc: ["'self'"],
@@ -45,17 +55,30 @@ async function bootstrap() {
   const siteDomain = config.get<string>('NEXT_PUBLIC_SITE_DOMAIN') || config.get<string>('SITE_DOMAIN') || 'agents.stiamond.net';
   if (siteDomain) origins.add(`https://${siteDomain.replace(/\/$/, '')}`);
   const allowedOrigins = Array.from(origins);
-  app.enableCors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`Origin ${origin} not allowed by CORS`));
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  });
+
+  // Per-request CORS: widget endpoints are public, everything else uses allowed origins
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const cors = require('cors');
+  app.use(cors((req: any, callback: any) => {
+    const isWidget = req.path?.startsWith('/api/widget') || req.path?.startsWith('/widget');
+    if (isWidget) {
+      callback(null, {
+        origin: true,
+        credentials: false,
+        methods: ['GET', 'POST', 'OPTIONS'],
+        allowedHeaders: ['Content-Type'],
+      });
+    } else {
+      callback(null, {
+        origin: (origin: string | undefined, cb: any) => {
+          if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+          cb(new Error(`Origin ${origin} not allowed by CORS`));
+        },
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      });
+    }
+  }));
 
   // Security: Global validation pipe
   app.useGlobalPipes(new ValidationPipe({

@@ -86,7 +86,7 @@ export default function WidgetConfigPage() {
         <div className="bg-gray-100 rounded-lg p-4 lg:p-8 relative h-48 flex items-center justify-center">
           <p className="text-gray-400 text-sm">Aperçu de votre site</p>
           <div className="absolute bottom-4 right-4 flex items-center gap-2">
-            <div className="bg-white rounded-lg shadow-lg p-3 max-w-[200px]" style={{ display: 'none' }}>
+            <div className="bg-white rounded-lg shadow-lg p-3 max-w-[200px]">
               <p className="text-xs text-gray-700">{customTitle}</p>
             </div>
             <div className="w-12 h-12 rounded-full flex items-center justify-center cursor-pointer shadow-lg" style={{ background: customColor }}>
@@ -141,7 +141,7 @@ export default function WidgetConfigPage() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-blue-100 text-blue-700">GET</span>
-            <code className="text-xs text-gray-700">{apiUrl}/widget/history/:agentId</code>
+            <code className="text-xs text-gray-700">{apiUrl}/widget/history/:conversationId</code>
             <span className="text-xs text-gray-400">— Historique visiteur</span>
           </div>
         </div>

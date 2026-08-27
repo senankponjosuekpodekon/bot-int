@@ -57,6 +57,9 @@ export class Lead {
   @Column({ type: 'simple-array', nullable: true })
   tags: string[];
 
+  @Column({ type: 'jsonb', nullable: true })
+  profile: Record<string, any>;
+
   @Column({ nullable: true })
   company: string;
 

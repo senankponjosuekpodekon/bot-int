@@ -34,6 +34,7 @@ describe('ChannelsController', () => {
       create: jest.fn().mockResolvedValue({ id: 'we-1', url: 'https://example.com/hook' }),
       findByTenant: jest.fn().mockResolvedValue([]),
       delete: jest.fn().mockResolvedValue(undefined),
+      trigger: jest.fn().mockResolvedValue(undefined),
     };
 
     const module = await Test.createTestingModule({

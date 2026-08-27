@@ -160,6 +160,20 @@ export class BillingService {
         }
         break;
       }
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object;
+        const sub = await this.subRepo.findOne({
+          where: { stripeSubscriptionId: invoice.subscription },
+        });
+        if (sub) {
+          sub.status = SubscriptionStatus.ACTIVE;
+          if (invoice.period_end) {
+            sub.currentPeriodEnd = new Date(invoice.period_end * 1000);
+          }
+          await this.subRepo.save(sub);
+        }
+        break;
+      }
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
         const sub = await this.subRepo.findOne({

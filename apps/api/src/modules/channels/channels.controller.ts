@@ -17,7 +17,6 @@ import { ApiKeyGuard } from '../billing/api-key.guard';
 import { WebhookService } from '../webhooks/webhook.service';
 import { ChannelMessageDto, ChannelWebhookDto } from './channel.dto';
 import { ConversationChannel } from '../chat/conversation.entity';
-import axios from 'axios';
 
 @ApiTags('channels')
 @ApiBearerAuth()
@@ -63,16 +62,15 @@ export class ChannelsController {
       undefined,
     );
 
-    if (dto.metadata?.webhookUrl) {
-      this.fireWebhook(dto.metadata.webhookUrl, {
-        event: 'message.replied',
-        tenantId: req.user.tenantId,
+    this.webhookService
+      .trigger('message.replied', req.user.tenantId, {
         conversationId: result.conversationId,
         reply: result.reply,
         leadId: result.leadId,
         channel,
-      }).catch(() => {});
-    }
+        visitorId,
+      })
+      .catch(() => {});
 
     return {
       reply: result.reply,
@@ -81,6 +79,7 @@ export class ChannelsController {
       funnelStage: result.funnelStage,
       intentScore: result.intentScore,
       channel,
+      visitorId,
     };
   }
 
@@ -132,11 +131,4 @@ export class ChannelsController {
     return (valid as string[]).includes(channel) ? (channel as ConversationChannel) : ConversationChannel.API;
   }
 
-  private async fireWebhook(url: string, payload: any): Promise<void> {
-    try {
-      await axios.post(url, payload, { timeout: 5000 });
-    } catch (err: any) {
-      this.logger.warn(`Webhook delivery to ${url} failed: ${err?.message}`);
-    }
-  }
 }

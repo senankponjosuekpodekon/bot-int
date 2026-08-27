@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, MoreThan } from 'typeorm';
-import { Conversation, ConversationStatus, FunnelStage, AcquisitionChannel } from './conversation.entity';
+import { Repository, In, MoreThan, Between } from 'typeorm';
+import { Conversation, ConversationStatus, ConversationState, FunnelStage, AcquisitionChannel } from './conversation.entity';
 import { Message, MessageRole } from './message.entity';
 import { AgentFeedback } from './agent-feedback.entity';
 import { AgentsService } from '../agents/agents.service';
@@ -11,6 +11,9 @@ import { AgentWorkflowService } from '../agents/agent-workflow.service';
 import { MemoryScope } from '../agents/agent-memory.entity';
 import { OllamaMessage } from './ollama.service';
 import { LLMService } from './llm.service';
+import { IntentService } from './intent.service';
+import { FormService, FlowData } from './form.service';
+import { SummarizationService } from './summarization.service';
 import { LeadsService } from '../leads/leads.service';
 import { LeadTagService } from '../leads/lead-tag.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
@@ -67,6 +70,9 @@ export class ChatService {
     private readonly feedbackRepo: Repository<AgentFeedback>,
     private readonly agentsService: AgentsService,
     private readonly llmService: LLMService,
+    private readonly intentService: IntentService,
+    private readonly formService: FormService,
+    private readonly summarizationService: SummarizationService,
     private readonly leadsService: LeadsService,
     private readonly leadTagService: LeadTagService,
     @Inject(forwardRef(() => KnowledgeService))
@@ -103,7 +109,7 @@ export class ChatService {
       timezone?: string;
       userSelectedRegion?: RegionCode;
     },
-  ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: { id: string; title: string; fields: any[] } | null; products?: any[]; funnelStage?: FunnelStage; intentScore?: number; region?: RegionCode }> {
+  ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: FlowData | null; products?: any[]; funnelStage?: FunnelStage; intentScore?: number; region?: RegionCode }> {
     const agent = await this.agentsService.findById(agentId, tenantId);
     const personalityConfig = agent.personalityConfig || {};
 
@@ -121,7 +127,7 @@ export class ChatService {
       // Region detection is optional — fallback to international
     }
 
-    // Billing quota check
+    // Billing quota and usage check
     try {
       const quota = await this.billingService.checkQuota(tenantId);
       if (!quota.allowed) {
@@ -133,6 +139,7 @@ export class ChatService {
         await this.msgRepo.save(this.msgRepo.create({ conversationId: tempConv.id, role: MessageRole.ASSISTANT, content: limitReply }));
         return { reply: limitReply, conversationId: tempConv.id, leadId: undefined };
       }
+      await this.billingService.incrementUsage(tenantId);
     } catch (err: any) {
       this.logger.warn(`Billing check skipped: ${err?.message}`);
     }
@@ -155,6 +162,7 @@ export class ChatService {
     let conversation: Conversation;
     let createdLeadId: string | undefined;
     let isReturningVisitor = false;
+    let formSummary: string | null = null;
 
     if (conversationId) {
       conversation = await this.convRepo.findOne({
@@ -226,7 +234,7 @@ export class ChatService {
       }
     }
 
-    await this.msgRepo.save(
+    const savedUserMessage = await this.msgRepo.save(
       this.msgRepo.create({
         conversationId: conversation.id,
         role: MessageRole.USER,
@@ -281,11 +289,174 @@ export class ChatService {
       return { reply: cmdReply, conversationId: conversation.id, leadId: conversation.leadId };
     }
 
-    const history = await this.msgRepo.find({
+    // LLM-based intent, language and confidence detection
+    const intentResult = await this.intentService.detect(userMessage, conversation.lastDetectedIntent);
+
+    // Persist detected metadata on the user message
+    savedUserMessage.metadata = {
+      intent: intentResult.intent,
+      confidence: intentResult.confidence,
+      detectedLanguage: intentResult.language,
+      sentiment: intentResult.sentiment,
+      ...(intentResult.entities && Object.keys(intentResult.entities).length > 0 ? { entities: intentResult.entities } : {}),
+    };
+    await this.msgRepo.save(savedUserMessage);
+
+    // Update conversation with detected language and intent
+    conversation.language = intentResult.language;
+    conversation.lastDetectedIntent = intentResult.intent;
+    conversation.lastConfidence = intentResult.confidence;
+    const newIntentScore = Math.round(intentResult.confidence * 100);
+    if (newIntentScore !== conversation.intentScore) {
+      conversation.intentScore = newIntentScore;
+      await this.convRepo.update(conversation.id, {
+        intentScore: newIntentScore,
+        language: conversation.language,
+        lastDetectedIntent: conversation.lastDetectedIntent,
+        lastConfidence: conversation.lastConfidence,
+      });
+    } else {
+      await this.convRepo.update(conversation.id, {
+        language: conversation.language,
+        lastDetectedIntent: conversation.lastDetectedIntent,
+        lastConfidence: conversation.lastConfidence,
+      });
+    }
+
+    // Confidence and sentiment-based human handoff
+    if (
+      intentResult.intent === 'handoff' ||
+      intentResult.confidence < 0.35 ||
+      intentResult.sentiment === 'frustrated' ||
+      intentResult.sentiment === 'angry'
+    ) {
+      const handoffMessage =
+        conversation.language === 'en'
+          ? "I'm connecting you with a human agent now. Please hold on."
+          : 'Je vous mets en relation avec un conseiller humain. Un instant...';
+      conversation.status = ConversationStatus.HANDED_OFF;
+      conversation.state = ConversationState.HANDED_OFF;
+      await this.convRepo.save(conversation);
+      await this.msgRepo.save(
+        this.msgRepo.create({
+          conversationId: conversation.id,
+          role: MessageRole.ASSISTANT,
+          content: handoffMessage,
+        }),
+      );
+      return {
+        reply: handoffMessage,
+        conversationId: conversation.id,
+        leadId: conversation.leadId,
+        flow: null,
+        products: undefined,
+        funnelStage: conversation.funnelStage,
+        intentScore: newIntentScore,
+        region: detectedRegion,
+      };
+    }
+
+    // If the user is ambiguous, ask a clarifying question
+    if (intentResult.needsClarification && intentResult.clarificationQuestion) {
+      const clarification = intentResult.clarificationQuestion;
+      await this.msgRepo.save(
+        this.msgRepo.create({
+          conversationId: conversation.id,
+          role: MessageRole.ASSISTANT,
+          content: clarification,
+        }),
+      );
+      return {
+        reply: clarification,
+        conversationId: conversation.id,
+        leadId: conversation.leadId,
+        flow: null,
+        products: undefined,
+        funnelStage: conversation.funnelStage,
+        intentScore: newIntentScore,
+        region: detectedRegion,
+      };
+    }
+
+    // Resolve the active flow for this intent
+    let flowData: FlowData | null = null;
+    try {
+      const flow = await this.flowsService.getFlowForIntent(tenantId, agentId, intentResult.intent);
+      if (flow) {
+        flowData = { id: flow.id, title: flow.title, fields: flow.fields };
+      }
+    } catch {
+      // Flow lookup is optional
+    }
+
+    // Slot-filling form state machine
+    if (flowData) {
+      if (conversation.state === ConversationState.COLLECTING && conversation.formState?.flowId === flowData.id) {
+        const formResult = await this.formService.processAnswer(tenantId, conversation, userMessage, flowData, conversation.language);
+        conversation.formState = formResult.formState;
+        if (formResult.completed) {
+          conversation.state = ConversationState.ANSWERING;
+          conversation.formState = null;
+          formSummary = formResult.summary || null;
+          await this.convRepo.save(conversation);
+        } else {
+          await this.convRepo.save(conversation);
+          await this.msgRepo.save(
+            this.msgRepo.create({
+              conversationId: conversation.id,
+              role: MessageRole.ASSISTANT,
+              content: formResult.reply,
+            }),
+          );
+          return {
+            reply: formResult.reply,
+            conversationId: conversation.id,
+            leadId: conversation.leadId,
+            flow: flowData,
+            funnelStage: conversation.funnelStage,
+            intentScore: conversation.intentScore,
+            region: detectedRegion,
+          };
+        }
+      } else if (conversation.state !== ConversationState.COLLECTING) {
+        const formResult = this.formService.startFlow(flowData, conversation.language);
+        conversation.state = ConversationState.COLLECTING;
+        conversation.formState = formResult.formState;
+        await this.convRepo.save(conversation);
+        await this.msgRepo.save(
+          this.msgRepo.create({
+            conversationId: conversation.id,
+            role: MessageRole.ASSISTANT,
+            content: formResult.reply,
+          }),
+        );
+        return {
+          reply: formResult.reply,
+          conversationId: conversation.id,
+          leadId: conversation.leadId,
+          flow: flowData,
+          funnelStage: conversation.funnelStage,
+          intentScore: conversation.intentScore,
+          region: detectedRegion,
+        };
+      }
+    }
+
+    let history = await this.msgRepo.find({
       where: { conversationId: conversation.id },
       order: { createdAt: 'ASC' },
       take: 20,
     });
+
+    if (history.length >= 20) {
+      const olderSlice = history.slice(0, -10);
+      const summary = await this.summarizationService.summarize(olderSlice, conversation.language);
+      conversation.contextSummary = conversation.contextSummary
+        ? `${conversation.contextSummary}\n---\n${summary}`
+        : summary;
+      await this.convRepo.save(conversation);
+      history = history.slice(-10);
+    }
 
     const messages: OllamaMessage[] = [
       { role: 'system', content: this.regionsService.buildSystemPrompt(agent.systemPrompt, detectedRegion) },
@@ -295,6 +466,13 @@ export class ChatService {
         content: m.content,
       })),
     ];
+
+    if (conversation.contextSummary) {
+      messages.splice(messages.length - history.length, 0, {
+        role: 'system',
+        content: `Résumé des échanges précédents:\n${conversation.contextSummary}`,
+      });
+    }
 
     // Returning visitor memory: inject summary of past conversations
     if (isReturningVisitor && visitorId) {
@@ -396,6 +574,15 @@ export class ChatService {
         if (lead.score > 0) profileParts.push(`Score d'engagement: ${lead.score}/100`);
         if (lead.metadata?.autoCaptured) profileParts.push(`Visiteur auto-capturé`);
 
+        if (lead.profile && Object.keys(lead.profile).length > 0) {
+          const relevant = Object.entries(lead.profile)
+            .filter(([k]) => !['name', 'email', 'phone', 'company'].includes(k))
+            .map(([k, v]) => `- ${k}: ${String(v).slice(0, 200)}`);
+          if (relevant.length > 0) {
+            profileParts.push(`Profil du client:\n${relevant.join('\n')}`);
+          }
+        }
+
         if (profileParts.length > 0) {
           messages.splice(1, 0, {
             role: 'system',
@@ -459,12 +646,7 @@ export class ChatService {
       conversation.funnelStage = detectedStage;
     }
 
-    // Intent score calculation
-    const newIntentScore = this.calculateIntentScore(userMessage, conversation.intentScore);
-    if (newIntentScore !== conversation.intentScore) {
-      await this.convRepo.update(conversation.id, { intentScore: newIntentScore });
-      conversation.intentScore = newIntentScore;
-    }
+    // Intent score already calculated by IntentService at the start of the pipeline
 
     if (conversation.leadId) {
       const messageTags = this.leadTagService.autoTag({
@@ -490,6 +672,22 @@ export class ChatService {
       messages.splice(1, 0, {
         role: 'system',
         content: stageGuidance,
+      });
+    }
+
+    // Inject completed form summary as context for the final answer
+    if (formSummary) {
+      messages.splice(messages.length - history.length, 0, {
+        role: 'system',
+        content: `Récapitulatif des informations collectées:\n${formSummary}\n\nUtilise ce récapitulatif pour formuler ta réponse.`,
+      });
+    }
+
+    // Respond in the user's detected language unless they switch explicitly
+    if (conversation.language) {
+      messages.splice(messages.length - history.length, 0, {
+        role: 'system',
+        content: `The user is writing in ${conversation.language.toUpperCase()}. Respond in the same language unless the user explicitly switches language. Match the user's tone and level of formality.`,
       });
     }
 
@@ -605,40 +803,40 @@ export class ChatService {
     );
 
     // Extract and store persistent memories from this exchange (only if memory is enabled)
+    const extractedFacts: Record<string, string> = {};
     if (personalityConfig.memoryEnabled !== false) {
       if (visitorId) {
         try {
-          await this.agentMemoryService.extractAndStore(
+          const res = await this.agentMemoryService.extractAndStore(
             tenantId, MemoryScope.VISITOR, visitorId, userMessage, finalReply, agentId,
           );
+          if (res) Object.assign(extractedFacts, res);
         } catch {
           // Memory extraction is optional
         }
       } else if (conversation.leadId) {
         try {
-          await this.agentMemoryService.extractAndStore(
+          const res = await this.agentMemoryService.extractAndStore(
             tenantId, MemoryScope.LEAD, conversation.leadId, userMessage, finalReply, agentId,
           );
+          if (res) Object.assign(extractedFacts, res);
         } catch {
           // Memory extraction is optional
         }
       }
     }
 
+    if (conversation.leadId && Object.keys(extractedFacts).length > 0) {
+      try {
+        await this.updateLeadProfile(conversation.leadId, tenantId, extractedFacts);
+      } catch {
+        // Profile update is optional
+      }
+    }
+
     const responseLeadId = conversation.leadId ?? createdLeadId;
 
-    let flowData: { id: string; title: string; fields: any[] } | null = null;
-    try {
-      const intent = await this.flowsService.detectFlowIntent(userMessage);
-      if (intent) {
-        const flow = await this.flowsService.getFlowForIntent(tenantId, agentId, intent);
-        if (flow) {
-          flowData = { id: flow.id, title: flow.title, fields: flow.fields };
-        }
-      }
-    } catch {
-      // Flow detection is optional
-    }
+    // Flow data resolved earlier by intent detection
 
     try {
       this.intelligenceService.recordConversation(
@@ -812,6 +1010,21 @@ export class ChatService {
       }
       await this.leadsService.update(leadId, tenantId, updates);
     }
+  }
+
+  // ─── Build a structured user profile from extracted conversation facts ───
+  private async updateLeadProfile(leadId: string, tenantId: string, facts: Record<string, string>): Promise<void> {
+    const lead = await this.leadsService.findById(leadId, tenantId);
+    const updates: Partial<typeof lead> = {};
+    const profile = { ...(lead.profile || {}), ...facts };
+
+    if (facts.name && !lead.name) updates.name = facts.name;
+    if (facts.email && !lead.email) updates.email = facts.email;
+    if (facts.phone && !lead.phone) updates.phone = facts.phone;
+    if (facts.company && !lead.company) updates.company = facts.company;
+
+    updates.profile = profile;
+    await this.leadsService.update(leadId, tenantId, updates);
   }
 
   // ─── Visitor memory: summarize past conversations for returning visitors ───
@@ -1012,5 +1225,85 @@ export class ChatService {
     });
 
     return this.msgRepo.save(message);
+  }
+
+  // ─── Operator takes over a handed-off conversation ───
+  async takeConversation(conversationId: string, tenantId: string): Promise<Conversation> {
+    const conversation = await this.convRepo.findOne({
+      where: { id: conversationId, tenantId },
+    });
+    if (!conversation) throw new NotFoundException('Conversation not found');
+
+    conversation.status = ConversationStatus.OPEN;
+    conversation.state = ConversationState.ANSWERING;
+    return this.convRepo.save(conversation);
+  }
+
+  // ─── Admin dashboard KPIs ───
+  async getDashboardMetrics(
+    tenantId: string,
+    from?: string,
+    to?: string,
+  ): Promise<Record<string, any>> {
+    const end = to ? new Date(to) : new Date();
+    const start = from ? new Date(from) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const [, totalConversations] = await this.convRepo.findAndCount({
+      where: { tenantId, createdAt: Between(start, end) },
+    });
+
+    const [, totalMessages] = await this.msgRepo
+      .createQueryBuilder('msg')
+      .innerJoin('msg.conversation', 'conv')
+      .where('conv.tenantId = :tenantId', { tenantId })
+      .andWhere('msg.createdAt BETWEEN :start AND :end', { start, end })
+      .getManyAndCount();
+
+    const [, handoffs] = await this.convRepo.findAndCount({
+      where: {
+        tenantId,
+        status: ConversationStatus.HANDED_OFF,
+        createdAt: Between(start, end),
+      },
+    });
+
+    const avgScore = await this.convRepo
+      .createQueryBuilder('conv')
+      .where('conv.tenantId = :tenantId', { tenantId })
+      .andWhere('conv.createdAt BETWEEN :start AND :end', { start, end })
+      .select('COALESCE(AVG(conv.intentScore), 0)', 'avg')
+      .getRawOne();
+
+    const topIntents = await this.convRepo
+      .createQueryBuilder('conv')
+      .where('conv.tenantId = :tenantId', { tenantId })
+      .andWhere('conv.createdAt BETWEEN :start AND :end', { start, end })
+      .andWhere('conv.lastDetectedIntent IS NOT NULL')
+      .select('conv.lastDetectedIntent', 'intent')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('conv.lastDetectedIntent')
+      .orderBy('count', 'DESC')
+      .limit(5)
+      .getRawMany();
+
+    const [, conversationsWithLead] = await this.convRepo
+      .createQueryBuilder('conv')
+      .where('conv.tenantId = :tenantId', { tenantId })
+      .andWhere('conv.createdAt BETWEEN :start AND :end', { start, end })
+      .andWhere('conv.leadId IS NOT NULL')
+      .getManyAndCount();
+
+    const conversionRate = totalConversations > 0 ? Math.round((conversationsWithLead / totalConversations) * 100) : 0;
+
+    return {
+      period: { start, end },
+      totalConversations,
+      totalMessages: totalMessages,
+      handoffs,
+      averageIntentScore: Math.round(Number(avgScore?.avg || 0) * 100) / 100,
+      topIntents: topIntents.map((i) => ({ intent: i.intent, count: Number(i.count) })),
+      conversationsWithLead,
+      conversionRate,
+    };
   }
 }

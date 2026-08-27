@@ -45,12 +45,15 @@ describe('ChatService', () => {
       { create: jest.fn(), find: jest.fn() } as any, // feedbackRepo
       agentsService as unknown as AgentsService,
       llmService as unknown as LLMService,
+      { detect: jest.fn().mockResolvedValue({ intent: 'greeting', confidence: 0.9, language: 'fr', sentiment: 'neutral' }) } as any, // intentService
+      { startFlow: jest.fn().mockResolvedValue(null), processAnswer: jest.fn().mockResolvedValue({ completed: false }) } as any, // formService
+      { summarize: jest.fn().mockResolvedValue('') } as any, // summarizationService
       leadsService as unknown as LeadsService,
       new LeadTagService(),
       noopService() as any, // knowledgeService
       noopService() as any, // productsService
       noopService() as any, // integrationsService
-      noopService() as any, // flowsService
+      { getFlowForIntent: jest.fn().mockResolvedValue(null) } as any, // flowsService
       noopService() as any, // intelligenceService
       { checkQuota: jest.fn().mockResolvedValue({ allowed: true }), incrementUsage: jest.fn().mockResolvedValue(undefined) } as any, // billingService
       { detectRegion: jest.fn().mockResolvedValue('international'), buildSystemPrompt: jest.fn().mockImplementation((base: string) => base), getProfile: jest.fn() } as any, // regionsService
@@ -59,8 +62,6 @@ describe('ChatService', () => {
       { detectAndExecuteTools: jest.fn().mockResolvedValue([]) } as any, // agentToolsService
       { findByTrigger: jest.fn().mockResolvedValue(null), execute: jest.fn().mockResolvedValue({ completed: true, output: '', handoff: false }) } as any, // agentWorkflowService
     );
-
-    jest.clearAllMocks();
   });
 
   describe('sendMessage', () => {
