@@ -208,6 +208,12 @@ export const chatApi = {
     api.post(`/chat/${conversationId}/handoff`, { agentId }).then((r) => r.data),
   take: (conversationId: string) =>
     api.post(`/chat/${conversationId}/take`).then((r) => r.data),
+  release: (conversationId: string) =>
+    api.post(`/chat/${conversationId}/release`).then((r) => r.data),
+  suggest: (conversationId: string) =>
+    api.post(`/chat/${conversationId}/suggest`).then((r) => r.data),
+  typing: (conversationId: string, who = 'operator') =>
+    api.post(`/chat/${conversationId}/typing`, { who }).then((r) => r.data),
   operatorReply: (conversationId: string, message: string) =>
     api.post(`/chat/${conversationId}/operator`, { message }).then((r) => r.data),
   feedback: (data: { agentId: string; userMessage: string; originalReply: string; correctedReply: string; reason?: string }) =>

@@ -1,14 +1,27 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
-import { Headphones, MessageSquare, User, Clock, Send, ArrowLeft, Phone, Mail, FileText, Zap } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  Headphones, MessageSquare, ArrowLeft, Phone, Mail, Send, Zap,
+  RotateCcw, Sparkles, Info, Globe, Target, BarChart3, Tag,
+} from 'lucide-react';
 import { chatApi, leadsApi } from '@/lib/api';
+import { useAuthStore } from '@/store/auth.store';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Conversation {
   id: string;
   status: string;
+  state?: string;
   visitorId: string;
   agentId: string;
   leadId: string | null;
+  language?: string;
+  funnelStage?: string;
+  intentScore?: number;
+  acquisitionChannel?: string;
+  utmParams?: Record<string, any>;
+  clientInfo?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +40,20 @@ const STATUS_LABELS: Record<string, string> = {
   closed: 'Fermée',
 };
 
+const renderPairs = (obj?: Record<string, any> | null) => {
+  if (!obj || Object.keys(obj).length === 0) return <span className="text-gray-400 italic">Aucune donnée</span>;
+  return (
+    <div className="grid grid-cols-2 gap-1 text-xs">
+      {Object.entries(obj).map(([k, v]) => (
+        <div key={k} className="contents">
+          <span className="text-gray-500 truncate" title={k}>{k}</span>
+          <span className="text-gray-800 truncate" title={String(v)}>{String(v)}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function OperatorPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selected, setSelected] = useState<Conversation | null>(null);
@@ -36,6 +63,10 @@ export default function OperatorPage() {
   const [filter, setFilter] = useState<string>('handed_off');
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [lead, setLead] = useState<any>(null);
+  const [visitorTyping, setVisitorTyping] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const typingDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
@@ -59,19 +90,48 @@ export default function OperatorPage() {
   const selectConversation = async (conv: Conversation) => {
     setSelected(conv);
     try {
-      const history = await chatApi.history(conv.id);
+      const [history, leads] = await Promise.all([
+        chatApi.history(conv.id),
+        conv.leadId ? leadsApi.list() : Promise.resolve([]),
+      ]);
       setMessages(history);
-      if (conv.leadId) {
-        const leads = await leadsApi.list();
-        const found = leads.find((l: any) => l.id === conv.leadId);
-        setLead(found || null);
-      } else {
-        setLead(null);
-      }
+      const found = leads.find((l: any) => l.id === conv.leadId);
+      setLead(found || null);
     } catch {
       showToast('Erreur lors du chargement de l\'historique', 'error');
     }
   };
+
+  useEffect(() => {
+    if (!selected) return;
+    const token = useAuthStore.getState().accessToken;
+    if (!token) return;
+    const es = new EventSource(`${API_BASE}/chat/${selected.id}/events?token=${token}`);
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.event === 'new-message') {
+          setMessages((prev) => {
+            if (prev.some((m) => m.role === data.role && m.content === data.content)) return prev;
+            return [...prev, {
+              id: data.id || `sse-${Date.now()}`,
+              role: data.role,
+              content: data.content,
+              metadata: data.metadata,
+              createdAt: data.createdAt || new Date().toISOString(),
+            } as Message];
+          });
+        }
+        if (data.event === 'typing' && data.who === 'visitor') {
+          setVisitorTyping(true);
+          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = setTimeout(() => setVisitorTyping(false), 3000);
+        }
+      } catch {}
+    };
+    es.onerror = () => { es.close(); };
+    return () => { es.close(); };
+  }, [selected]);
 
   const handleSend = async () => {
     if (!reply.trim() || !selected) return;
@@ -88,11 +148,37 @@ export default function OperatorPage() {
     if (!selected) return;
     try {
       await chatApi.take(selected.id);
-      await chatApi.updateStatus(selected.id, 'open');
       showToast('Conversation prise en charge');
       load();
+      selectConversation(selected);
     } catch {
       showToast('Erreur', 'error');
+    }
+  };
+
+  const handleRelease = async () => {
+    if (!selected) return;
+    try {
+      await chatApi.release(selected.id);
+      showToast('Conversation rendue à l\'IA');
+      load();
+      selectConversation(selected);
+    } catch {
+      showToast('Erreur', 'error');
+    }
+  };
+
+  const handleSuggest = async () => {
+    if (!selected) return;
+    try {
+      setSuggesting(true);
+      const { suggestion } = await chatApi.suggest(selected.id);
+      setReply(suggestion || '');
+      showToast('Suggestion IA insérée');
+    } catch {
+      showToast('Erreur suggestion', 'error');
+    } finally {
+      setSuggesting(false);
     }
   };
 
@@ -106,6 +192,15 @@ export default function OperatorPage() {
     } catch {
       showToast('Erreur', 'error');
     }
+  };
+
+  const handleReplyChange = (value: string) => {
+    setReply(value);
+    if (!selected) return;
+    if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
+    typingDebounceRef.current = setTimeout(() => {
+      chatApi.typing(selected.id, 'operator').catch(() => {});
+    }, 300);
   };
 
   return (
@@ -145,7 +240,7 @@ export default function OperatorPage() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-900">{conv.visitorId?.slice(0, 20) || 'Anonyme'}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${conv.status === 'handed_off' ? 'bg-orange-100 text-orange-700' : conv.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${conv.status === 'handed_off' ? 'bg-orange-100 text-orange-700' : conv.status === 'open' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                     {STATUS_LABELS[conv.status] || conv.status}
                   </span>
                 </div>
@@ -158,7 +253,7 @@ export default function OperatorPage() {
 
       {/* Main: chat area */}
       {selected ? (
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           {/* Header */}
           <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -170,9 +265,15 @@ export default function OperatorPage() {
                 <p className="text-xs text-gray-400">ID: {selected.id.slice(0, 8)}</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button onClick={handleTakeOver} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-orange-50 text-orange-700 hover:bg-orange-100">
                 <Zap className="w-3 h-3" /> Prendre en charge
+              </button>
+              <button onClick={handleRelease} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100">
+                <RotateCcw className="w-3 h-3" /> Rendre à l'IA
+              </button>
+              <button onClick={handleSuggest} disabled={suggesting} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 disabled:opacity-50">
+                <Sparkles className="w-3 h-3" /> Suggérer
               </button>
               <button onClick={handleClose} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">
                 Fermer
@@ -190,6 +291,41 @@ export default function OperatorPage() {
             </div>
           )}
 
+          {/* Conversation details */}
+          <div className="p-3 border-b border-gray-200 bg-white">
+            <div className="flex items-center gap-1 text-xs font-semibold text-gray-700 mb-2">
+              <Info className="w-3 h-3" /> Détails conversation
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-gray-500 mb-1 flex items-center gap-1"><Tag className="w-3 h-3" /> Statut</div>
+                <div className="font-medium text-gray-900">{selected.status} {selected.state ? `(${selected.state})` : ''}</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-gray-500 mb-1 flex items-center gap-1"><Globe className="w-3 h-3" /> Langue</div>
+                <div className="font-medium text-gray-900">{selected.language || '-'}</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-gray-500 mb-1 flex items-center gap-1"><Target className="w-3 h-3" /> Funnel</div>
+                <div className="font-medium text-gray-900">{selected.funnelStage || '-'}</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-gray-500 mb-1 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> Intent</div>
+                <div className="font-medium text-gray-900">{selected.intentScore ?? '-'}/100</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3 text-xs">
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-gray-500 mb-1">Client info</div>
+                {renderPairs(selected.clientInfo)}
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-gray-500 mb-1">UTM / Acquisition</div>
+                {renderPairs({ ...selected.utmParams, acquisitionChannel: selected.acquisitionChannel })}
+              </div>
+            </div>
+          </div>
+
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
             {messages.length === 0 ? (
@@ -203,7 +339,7 @@ export default function OperatorPage() {
                         <Headphones className="w-3 h-3" /> Opérateur
                       </span>
                     )}
-                    <p>{msg.content}</p>
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
                     <p className={`text-xs mt-1 ${msg.role === 'user' ? 'text-primary-200' : 'text-gray-400'}`}>
                       {new Date(msg.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                     </p>
@@ -211,13 +347,20 @@ export default function OperatorPage() {
                 </div>
               ))
             )}
+            {visitorTyping && (
+              <div className="flex justify-start">
+                <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-2 text-xs text-gray-500">
+                  Le visiteur est en train d'écrire...
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Input */}
           <div className="p-3 border-t border-gray-200 flex gap-2 bg-white">
             <input
               value={reply}
-              onChange={(e) => setReply(e.target.value)}
+              onChange={(e) => handleReplyChange(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Répondre en tant qu'opérateur..."
               className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-sm outline-none focus:border-primary-500"
