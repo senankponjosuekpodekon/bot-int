@@ -14,6 +14,7 @@ import { Repository } from 'typeorm';
 import { Request, Response } from 'express';
 import { Agent } from '../agents/agent.entity';
 import { ChatService } from './chat.service';
+import { ChatEventsService } from './chat-events.service';
 import { Conversation } from './conversation.entity';
 import { WidgetSendDto } from './dto/widget-send.dto';
 
@@ -140,6 +141,7 @@ export class WidgetController {
     @InjectRepository(Agent) private agentRepo: Repository<Agent>,
     @InjectRepository(Conversation) private convRepo: Repository<Conversation>,
     private readonly chatService: ChatService,
+    private readonly chatEvents: ChatEventsService,
   ) {}
 
   @Get('widget.js')
@@ -257,5 +259,39 @@ export class WidgetController {
     const conversation = await this.convRepo.findOne({ where: { id } });
     if (!conversation) throw new NotFoundException('Conversation not found');
     return this.chatService.getHistory(id, conversation.tenantId);
+  }
+
+  @Get('events/:conversationId')
+  streamEvents(@Param('conversationId') id: string, @Res() res: Response) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const onMessage = (payload: any) => {
+      res.write(`data: ${JSON.stringify({ event: 'new-message', ...payload })}
+\n`);
+    };
+    const onTyping = (payload: any) => {
+      res.write(`data: ${JSON.stringify({ event: 'typing', ...payload })}
+\n`);
+    };
+
+    this.chatEvents.onMessage(id, onMessage);
+    this.chatEvents.onTyping(id, onTyping);
+
+    res.on('close', () => {
+      this.chatEvents.offMessage(id, onMessage);
+      this.chatEvents.offTyping(id, onTyping);
+      res.end();
+    });
+  }
+
+  @Post('typing/:conversationId')
+  visitorTyping(
+    @Param('conversationId') id: string,
+    @Body() body: { who?: string },
+  ) {
+    this.chatEvents.emitTyping(id, { who: body?.who || 'visitor' });
+    return { ok: true };
   }
 }

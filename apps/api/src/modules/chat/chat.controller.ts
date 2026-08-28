@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, Res,
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { ChatService } from './chat.service';
+import { ChatEventsService } from './chat-events.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -30,7 +31,10 @@ class SendMessageDto {
 @UseGuards(JwtAuthGuard)
 @Controller('chat')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly chatEvents: ChatEventsService,
+  ) {}
 
   @Post('send')
   @ApiOperation({ summary: 'Send a message to an agent' })
@@ -192,6 +196,45 @@ export class ChatController {
   @ApiResponse({ status: 200, description: 'AI suggestion' })
   suggestReply(@Request() req, @Param('id') id: string) {
     return this.chatService.suggestReply(id, req.user.tenantId);
+  }
+
+  @Get(':id/events')
+  @ApiOperation({ summary: 'Server-sent events for a conversation' })
+  @ApiResponse({ status: 200, description: 'SSE stream of messages and typing events' })
+  streamEvents(@Param('id') id: string, @Res() res: Response) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const onMessage = (payload: any) => {
+      res.write(`data: ${JSON.stringify({ event: 'new-message', ...payload })}
+\n`);
+    };
+    const onTyping = (payload: any) => {
+      res.write(`data: ${JSON.stringify({ event: 'typing', ...payload })}
+\n`);
+    };
+
+    this.chatEvents.onMessage(id, onMessage);
+    this.chatEvents.onTyping(id, onTyping);
+
+    res.on('close', () => {
+      this.chatEvents.offMessage(id, onMessage);
+      this.chatEvents.offTyping(id, onTyping);
+      res.end();
+    });
+  }
+
+  @Post(':id/typing')
+  @ApiOperation({ summary: 'Emit operator typing event' })
+  @ApiResponse({ status: 200, description: 'Typing event emitted' })
+  operatorTyping(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() body: { who?: string },
+  ) {
+    this.chatEvents.emitTyping(id, { who: body?.who || 'operator' });
+    return { ok: true };
   }
 
   @Post('stream')

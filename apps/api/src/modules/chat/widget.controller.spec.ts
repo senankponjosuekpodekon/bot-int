@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WidgetController } from './widget.controller';
 import { ChatService } from './chat.service';
+import { ChatEventsService } from './chat-events.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Agent } from '../agents/agent.entity';
 import { Conversation } from './conversation.entity';
@@ -21,11 +22,21 @@ describe('WidgetController', () => {
     getHistory: jest.fn().mockResolvedValue({ conversation: { id: 'conv-1' }, messages: [] }),
   };
 
+  const mockChatEvents = {
+    onMessage: jest.fn(),
+    offMessage: jest.fn(),
+    onTyping: jest.fn(),
+    offTyping: jest.fn(),
+    emitMessage: jest.fn(),
+    emitTyping: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [WidgetController],
       providers: [
         { provide: ChatService, useValue: mockChatService },
+        { provide: ChatEventsService, useValue: mockChatEvents },
         { provide: getRepositoryToken(Agent), useValue: mockAgentRepo },
         { provide: getRepositoryToken(Conversation), useValue: mockConvRepo },
       ],

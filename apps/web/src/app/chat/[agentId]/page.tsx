@@ -47,6 +47,9 @@ export default function PublicChatPage() {
   const [sending, setSending] = useState(false);
   const [config, setConfig] = useState<any>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const [visitorId] = useState(() => {
     if (typeof window !== 'undefined') {
       let id = localStorage.getItem('stiamond_visitor_id');
@@ -95,7 +98,29 @@ export default function PublicChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
+  useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom, isTyping]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    const es = new EventSource(`${API_BASE}/widget/events/${conversationId}`);
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.event === 'new-message' && data.role === 'assistant' && data.metadata?.isOperator) {
+          setMessages((prev) => [...prev, { role: 'agent', text: data.content }]);
+        }
+        if (data.event === 'typing' && data.who === 'operator') {
+          setIsTyping(true);
+          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 3000);
+        }
+      } catch {}
+    };
+
+    return () => {
+      es.close();
+    };
+  }, [conversationId]);
 
   useEffect(() => {
     if (!conversationId || sending) return;
@@ -224,6 +249,13 @@ export default function PublicChatPage() {
               </div>
             </div>
           )}
+          {isTyping && (
+            <div className="flex justify-start">
+              <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-2 text-xs text-gray-500">
+                Un conseiller est en train d'écrire...
+              </div>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
       </div>
@@ -234,7 +266,18 @@ export default function PublicChatPage() {
           <input
             type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              if (!conversationId) return;
+              if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
+              typingDebounceRef.current = setTimeout(() => {
+                fetch(`${API_BASE}/widget/typing/${conversationId}`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ who: 'visitor' }),
+                }).catch(() => {});
+              }, 300);
+            }}
             onKeyDown={(e) => e.key === 'Enter' && send()}
             placeholder="Écrivez votre message..."
             className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 text-sm focus:border-primary-500 outline-none"

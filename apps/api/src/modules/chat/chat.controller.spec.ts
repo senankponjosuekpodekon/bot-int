@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
+import { ChatEventsService } from './chat-events.service';
 
 describe('ChatController', () => {
   let controller: ChatController;
@@ -20,11 +21,24 @@ describe('ChatController', () => {
       }),
       takeConversation: jest.fn().mockResolvedValue({ id: 'conv-1', status: 'open' }),
       operatorReply: jest.fn().mockResolvedValue({ id: 'msg-1', role: 'assistant', content: 'Hello' }),
+      releaseConversation: jest.fn().mockResolvedValue({ id: 'conv-1', status: 'open' }),
+    };
+
+    const chatEvents = {
+      onMessage: jest.fn(),
+      offMessage: jest.fn(),
+      onTyping: jest.fn(),
+      offTyping: jest.fn(),
+      emitMessage: jest.fn(),
+      emitTyping: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ChatController],
-      providers: [{ provide: ChatService, useValue: chatService }],
+      providers: [
+        { provide: ChatService, useValue: chatService },
+        { provide: ChatEventsService, useValue: chatEvents },
+      ],
     }).compile();
 
     controller = module.get<ChatController>(ChatController);

@@ -31,6 +31,7 @@ describe('ChatService', () => {
   let agentsService: { findById: jest.Mock };
   let llmService: { chat: jest.Mock };
   let leadsService: { create: jest.Mock; findById: jest.Mock };
+  let chatEvents: { emitMessage: jest.Mock; emitTyping: jest.Mock };
 
   beforeEach(() => {
     convRepo = createRepositoryMock<Conversation>();
@@ -38,6 +39,7 @@ describe('ChatService', () => {
     agentsService = { findById: jest.fn() };
     llmService = { chat: jest.fn() };
     leadsService = { create: jest.fn(), findById: jest.fn() };
+    chatEvents = { emitMessage: jest.fn(), emitTyping: jest.fn() };
 
     service = new ChatService(
       convRepo as unknown as Repository<Conversation>,
@@ -61,6 +63,7 @@ describe('ChatService', () => {
       { recallAsContext: jest.fn().mockResolvedValue(null), extractAndStore: jest.fn().mockResolvedValue(undefined), remember: jest.fn().mockResolvedValue(undefined) } as any, // agentMemoryService
       { detectAndExecuteTools: jest.fn().mockResolvedValue([]) } as any, // agentToolsService
       { findByTrigger: jest.fn().mockResolvedValue(null), execute: jest.fn().mockResolvedValue({ completed: true, output: '', handoff: false }) } as any, // agentWorkflowService
+      chatEvents as any,
     );
   });
 

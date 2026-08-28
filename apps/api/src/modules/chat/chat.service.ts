@@ -4,6 +4,7 @@ import { Repository, In, MoreThan, Between } from 'typeorm';
 import { Conversation, ConversationStatus, ConversationState, FunnelStage, AcquisitionChannel } from './conversation.entity';
 import { Message, MessageRole } from './message.entity';
 import { AgentFeedback } from './agent-feedback.entity';
+import { ChatEventsService } from './chat-events.service';
 import { AgentsService } from '../agents/agents.service';
 import { AgentMemoryService } from '../agents/agent-memory.service';
 import { AgentToolsService } from '../agents/agent-tools.service';
@@ -87,6 +88,7 @@ export class ChatService {
     private readonly agentMemoryService: AgentMemoryService,
     private readonly agentToolsService: AgentToolsService,
     private readonly agentWorkflowService: AgentWorkflowService,
+    private readonly chatEvents: ChatEventsService,
   ) {}
 
   async sendMessage(
@@ -249,6 +251,12 @@ export class ChatService {
         content: userMessage,
       }),
     );
+
+    this.chatEvents.emitMessage(conversation.id, {
+      role: MessageRole.USER,
+      content: userMessage,
+      createdAt: savedUserMessage.createdAt,
+    });
 
     if (conversation.leadId) {
       const extracted = this.extractData(userMessage);
@@ -812,13 +820,19 @@ export class ChatService {
       }
     }
 
-    await this.msgRepo.save(
+    const assistantMessage = await this.msgRepo.save(
       this.msgRepo.create({
         conversationId: conversation.id,
         role: MessageRole.ASSISTANT,
         content: finalReply,
       }),
     );
+
+    this.chatEvents.emitMessage(conversation.id, {
+      role: MessageRole.ASSISTANT,
+      content: finalReply,
+      createdAt: assistantMessage.createdAt,
+    });
 
     // Extract and store persistent memories from this exchange (only if memory is enabled)
     const extractedFacts: Record<string, string> = {};
@@ -1246,7 +1260,14 @@ export class ChatService {
     conversation.state = ConversationState.HANDED_OFF;
     await this.convRepo.save(conversation);
 
-    return this.msgRepo.save(message);
+    const saved = await this.msgRepo.save(message);
+    this.chatEvents.emitMessage(conversationId, {
+      role: MessageRole.ASSISTANT,
+      content,
+      metadata: { isOperator: true },
+      createdAt: saved.createdAt,
+    });
+    return saved;
   }
 
   // ─── Operator takes over a handed-off conversation ───

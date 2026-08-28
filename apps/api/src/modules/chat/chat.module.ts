@@ -10,6 +10,7 @@ import { ChatController } from './chat.controller';
 import { WidgetController } from './widget.controller';
 import { PublicController } from './public.controller';
 import { AnalyticsController } from './analytics.controller';
+import { ChatEventsService } from './chat-events.service';
 import { ChatGateway } from './chat.gateway';
 import { OllamaService } from './ollama.service';
 import { OllamaProvider } from './providers/ollama.provider';
@@ -51,9 +52,10 @@ import { WebhooksModule } from '../webhooks/webhooks.module';
     OllamaService,
     OllamaProvider,
     ChatService,
+    ChatEventsService,
     ChatGateway,
   ],
   controllers: [ChatController, WidgetController, PublicController, AnalyticsController],
-  exports: [ChatService, OllamaService, LLMService, IntentService],
+  exports: [ChatService, ChatEventsService, OllamaService, LLMService, IntentService],
 })
 export class ChatModule {}
