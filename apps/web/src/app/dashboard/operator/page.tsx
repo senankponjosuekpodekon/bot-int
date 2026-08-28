@@ -20,6 +20,9 @@ interface Conversation {
   language?: string;
   funnelStage?: string;
   intentScore?: number;
+  fitScore?: number;
+  purchaseProbability?: number;
+  isHotLead?: boolean;
   acquisitionChannel?: string;
   utmParams?: Record<string, any>;
   clientInfo?: Record<string, any>;
@@ -318,7 +321,10 @@ export default function OperatorPage() {
                 className={`w-full text-left p-3 border-b border-gray-100 hover:bg-gray-50 ${selected?.id === conv.id ? 'bg-primary-50' : ''}`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-900">{conv.visitorId?.slice(0, 20) || 'Anonyme'}</span>
+                  <span className="text-sm font-medium text-gray-900 flex items-center gap-1">
+                    {conv.isHotLead && <span title="Lead chaud">🔥</span>}
+                    {conv.visitorId?.slice(0, 20) || 'Anonyme'}
+                  </span>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${conv.status === 'handed_off' ? 'bg-orange-100 text-orange-700' : conv.status === 'open' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                     {STATUS_LABELS[conv.status] || conv.status}
                   </span>
@@ -374,8 +380,11 @@ export default function OperatorPage() {
           <div className="p-3 border-b border-gray-200 bg-white">
             <div className="flex items-center gap-1 text-xs font-semibold text-gray-700 mb-2">
               <Info className="w-3 h-3" /> Détails conversation
+              {selected.isHotLead && (
+                <span className="ml-2 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold uppercase">🔥 Lead chaud</span>
+              )}
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 text-xs">
               <div className="bg-gray-50 rounded-lg p-2">
                 <div className="text-gray-500 mb-1 flex items-center gap-1"><Tag className="w-3 h-3" /> Statut</div>
                 <div className="font-medium text-gray-900">{selected.status} {selected.state ? `(${selected.state})` : ''}</div>
@@ -391,6 +400,14 @@ export default function OperatorPage() {
               <div className="bg-gray-50 rounded-lg p-2">
                 <div className="text-gray-500 mb-1 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> Intent</div>
                 <div className="font-medium text-gray-900">{selected.intentScore ?? '-'}/100</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-gray-500 mb-1 flex items-center gap-1"><Target className="w-3 h-3" /> Fit</div>
+                <div className="font-medium text-gray-900">{selected.fitScore ?? '-'}/100</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="text-gray-500 mb-1 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> Achat</div>
+                <div className="font-medium text-gray-900">{selected.purchaseProbability != null ? `${Math.round(selected.purchaseProbability * 100)}%` : '-'}</div>
               </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3 text-xs">

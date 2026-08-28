@@ -121,6 +121,20 @@ export class Conversation {
   @Column({ type: 'int', default: 0 })
   intentScore: number;
 
+  // Fit score: how well this conversation matches the ideal customer profile
+  // (data completeness: budget, timeline, decision-maker, contact info) — 0-100.
+  @Column({ type: 'int', default: 0 })
+  fitScore: number;
+
+  // Purchase probability: derived from intent score + funnel stage — 0-1.
+  @Column({ type: 'float', default: 0 })
+  purchaseProbability: number;
+
+  // Internal flag: fitScore >= 80 AND purchaseProbability >= 0.7 — used to trigger
+  // a 'lead.updated' webhook/CRM notification exactly once when the lead becomes hot.
+  @Column({ default: false })
+  isHotLead: boolean;
+
   @Column({ type: 'varchar', length: 5, nullable: true })
   language?: string;
 

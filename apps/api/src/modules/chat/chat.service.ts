@@ -699,6 +699,39 @@ export class ChatService {
 
     // Intent score already calculated by IntentService at the start of the pipeline
 
+    // Multi-dimensional lead scoring: fit (ICP match) and purchase probability.
+    // These are internal signals for the sales team, never shown to the visitor.
+    const newFitScore = this.calculateFitScore(conversation, history.length);
+    const newPurchaseProbability = this.calculatePurchaseProbability(conversation.intentScore, conversation.funnelStage);
+    const wasHotLead = conversation.isHotLead;
+    const isHotLeadNow = newFitScore >= 80 && newPurchaseProbability >= 0.7;
+    if (
+      newFitScore !== conversation.fitScore ||
+      newPurchaseProbability !== conversation.purchaseProbability ||
+      isHotLeadNow !== wasHotLead
+    ) {
+      await this.convRepo.update(conversation.id, {
+        fitScore: newFitScore,
+        purchaseProbability: newPurchaseProbability,
+        isHotLead: isHotLeadNow,
+      });
+      conversation.fitScore = newFitScore;
+      conversation.purchaseProbability = newPurchaseProbability;
+      conversation.isHotLead = isHotLeadNow;
+
+      if (isHotLeadNow && !wasHotLead) {
+        this.webhookService.trigger('lead.updated', tenantId, {
+          conversationId: conversation.id,
+          leadId: conversation.leadId,
+          agentId,
+          fitScore: newFitScore,
+          purchaseProbability: newPurchaseProbability,
+          funnelStage: conversation.funnelStage,
+          hot: true,
+        });
+      }
+    }
+
     if (conversation.leadId) {
       const messageTags = this.leadTagService.autoTag({
         message: userMessage,
@@ -1049,6 +1082,18 @@ export class ChatService {
     if (!conversation) throw new NotFoundException('Conversation not found');
     conversation.status = status;
     await this.convRepo.save(conversation);
+
+    if (status === ConversationStatus.CLOSED) {
+      this.webhookService.trigger('conversation.closed', tenantId, {
+        conversationId: conversation.id,
+        agentId: conversation.agentId,
+        leadId: conversation.leadId,
+        fitScore: conversation.fitScore,
+        purchaseProbability: conversation.purchaseProbability,
+        funnelStage: conversation.funnelStage,
+      });
+    }
+
     return conversation;
   }
 
@@ -1271,6 +1316,41 @@ export class ChatService {
     }
 
     return AcquisitionChannel.UNKNOWN;
+  }
+
+  // ─── Multi-dimensional lead scoring ───
+  // Fit score (0-100): how well this conversation matches an ideal, sales-ready lead,
+  // based on data completeness rather than message content alone.
+  private calculateFitScore(conversation: Conversation, historyLength: number): number {
+    let score = 0;
+    if (conversation.leadId) score += 30;
+    const stageOrder = [
+      FunnelStage.AWARENESS,
+      FunnelStage.INTEREST,
+      FunnelStage.QUALIFICATION,
+      FunnelStage.CONSIDERATION,
+      FunnelStage.DECISION,
+    ];
+    const stageIndex = stageOrder.indexOf(conversation.funnelStage);
+    if (stageIndex >= 2) score += 25; // reached QUALIFICATION or beyond
+    if (conversation.intentScore >= 50) score += 25;
+    if (historyLength >= 3) score += 20; // sustained engagement, not a one-off message
+    return Math.max(0, Math.min(100, score));
+  }
+
+  // Purchase probability (0-1): blends real-time intent signals with funnel progression.
+  private calculatePurchaseProbability(intentScore: number, funnelStage: FunnelStage): number {
+    const stageWeight: Record<FunnelStage, number> = {
+      [FunnelStage.AWARENESS]: 0.05,
+      [FunnelStage.INTEREST]: 0.15,
+      [FunnelStage.QUALIFICATION]: 0.35,
+      [FunnelStage.CONSIDERATION]: 0.55,
+      [FunnelStage.DECISION]: 0.85,
+      [FunnelStage.CLOSED_WON]: 1,
+      [FunnelStage.CLOSED_LOST]: 0,
+    };
+    const probability = (intentScore / 100) * 0.5 + (stageWeight[funnelStage] ?? 0) * 0.5;
+    return Math.round(Math.max(0, Math.min(1, probability)) * 100) / 100;
   }
 
   // ─── Stage-specific guidance for the agent ───
