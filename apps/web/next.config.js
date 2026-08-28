@@ -6,12 +6,6 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/i18n.config.ts');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.resolve.alias = { ...config.resolve.alias, 'next/og': false };
-    }
-    return config;
-  },
   env: {
     NEXT_PUBLIC_API_URL:
       process.env.NEXT_PUBLIC_API_URL ||
