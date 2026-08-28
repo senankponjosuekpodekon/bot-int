@@ -164,9 +164,16 @@ export class ChatController {
 
   @Post(':id/take')
   @ApiOperation({ summary: 'Operator takes over a conversation' })
-  @ApiResponse({ status: 200, description: 'Conversation status set to open' })
+  @ApiResponse({ status: 200, description: 'Conversation status set to handed off' })
   take(@Request() req, @Param('id') id: string) {
     return this.chatService.takeConversation(id, req.user.tenantId);
+  }
+
+  @Post(':id/release')
+  @ApiOperation({ summary: 'Operator hands the conversation back to the AI' })
+  @ApiResponse({ status: 200, description: 'Conversation status set to open' })
+  release(@Request() req, @Param('id') id: string) {
+    return this.chatService.releaseConversation(id, req.user.tenantId);
   }
 
   @Post(':id/operator')

@@ -257,7 +257,7 @@ export class ChatService {
       }
     }
 
-    if (conversation.status === ConversationStatus.HANDED_OFF) {
+    if (conversation.state === ConversationState.HANDED_OFF) {
       const waitingReply =
         conversation.language === 'en'
           ? "You are connected with a human agent. Please wait for the operator's response."
@@ -283,16 +283,8 @@ export class ChatService {
 
     const cmd = userMessage.trim().toLowerCase();
     if (cmd === '/human') {
-      await this.convRepo.update(conversation.id, { status: ConversationStatus.HANDED_OFF });
-      const handoffReply = `Votre conversation a été transférée à un agent humain. Quelqu'un vous répondra prochainement. Vos coordonnées ont été enregistrées pour faciliter le suivi.`;
-      await this.msgRepo.save(
-        this.msgRepo.create({
-          conversationId: conversation.id,
-          role: MessageRole.ASSISTANT,
-          content: handoffReply,
-        }),
-      );
-      return { reply: handoffReply, conversationId: conversation.id, leadId: conversation.leadId };
+      await this.convRepo.update(conversation.id, { status: ConversationStatus.HANDED_OFF, state: ConversationState.ANSWERING });
+      // continue to LLM; a system note about the pending handoff will be injected below
     }
 
     if (SLASH_COMMANDS[cmd]) {
@@ -355,37 +347,18 @@ export class ChatService {
       });
     }
 
-    // Confidence and sentiment-based human handoff
+    // Confidence and sentiment-based human handoff request
     if (
-      intentResult.intent === 'handoff' ||
-      intentResult.confidence < 0.35 ||
-      intentResult.sentiment === 'frustrated' ||
-      intentResult.sentiment === 'angry'
+      conversation.status !== ConversationStatus.HANDED_OFF &&
+      (intentResult.intent === 'handoff' ||
+        intentResult.confidence < 0.35 ||
+        intentResult.sentiment === 'frustrated' ||
+        intentResult.sentiment === 'angry')
     ) {
-      const handoffMessage =
-        conversation.language === 'en'
-          ? "I'm connecting you with a human agent now. Please hold on."
-          : 'Je vous mets en relation avec un conseiller humain. Un instant...';
       conversation.status = ConversationStatus.HANDED_OFF;
-      conversation.state = ConversationState.HANDED_OFF;
+      conversation.state = ConversationState.ANSWERING;
       await this.convRepo.save(conversation);
-      await this.msgRepo.save(
-        this.msgRepo.create({
-          conversationId: conversation.id,
-          role: MessageRole.ASSISTANT,
-          content: handoffMessage,
-        }),
-      );
-      return {
-        reply: handoffMessage,
-        conversationId: conversation.id,
-        leadId: conversation.leadId,
-        flow: null,
-        products: undefined,
-        funnelStage: conversation.funnelStage,
-        intentScore: newIntentScore,
-        region: detectedRegion,
-      };
+      // continue to LLM; a system note about the pending handoff will be injected below
     }
 
     // If the user is ambiguous, ask a clarifying question
@@ -720,6 +693,19 @@ export class ChatService {
       messages.splice(messages.length - history.length, 0, {
         role: 'system',
         content: `The user is writing in ${conversation.language.toUpperCase()}. Respond in the same language unless the user explicitly switches language. Match the user's tone and level of formality.`,
+      });
+    }
+
+    if (
+      conversation.status === ConversationStatus.HANDED_OFF &&
+      conversation.state === ConversationState.ANSWERING
+    ) {
+      messages.push({
+        role: 'system',
+        content:
+          conversation.language === 'en'
+            ? 'A human agent has been requested. Keep answering the user normally while waiting for the operator.'
+            : "Un conseiller humain a été sollicité. Continue à répondre normalement à l'utilisateur en attendant l'opérateur.",
       });
     }
 
@@ -1256,11 +1242,27 @@ export class ChatService {
       metadata: { isOperator: true },
     });
 
+    conversation.status = ConversationStatus.HANDED_OFF;
+    conversation.state = ConversationState.HANDED_OFF;
+    await this.convRepo.save(conversation);
+
     return this.msgRepo.save(message);
   }
 
   // ─── Operator takes over a handed-off conversation ───
   async takeConversation(conversationId: string, tenantId: string): Promise<Conversation> {
+    const conversation = await this.convRepo.findOne({
+      where: { id: conversationId, tenantId },
+    });
+    if (!conversation) throw new NotFoundException('Conversation not found');
+
+    conversation.status = ConversationStatus.HANDED_OFF;
+    conversation.state = ConversationState.HANDED_OFF;
+    return this.convRepo.save(conversation);
+  }
+
+  // ─── Operator hands the conversation back to the AI ───
+  async releaseConversation(conversationId: string, tenantId: string): Promise<Conversation> {
     const conversation = await this.convRepo.findOne({
       where: { id: conversationId, tenantId },
     });
