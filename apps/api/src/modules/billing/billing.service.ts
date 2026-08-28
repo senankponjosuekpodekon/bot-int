@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Subscription, SubscriptionStatus, PlanType, PLAN_LIMITS } from './subscription.entity';
 import { Conversation } from '../chat/conversation.entity';
-import { PaymentSDK } from '@stiamond/payment-sdk';
+import { PaymentSDK, ManualPaymentRecord } from '@stiamond/payment-sdk';
 
 @Injectable()
 export class BillingService {
@@ -81,7 +81,7 @@ export class BillingService {
     sub.status = SubscriptionStatus.CANCELED;
     sub.canceledAt = new Date();
 
-    if (sub.stripeSubscriptionId && this.paymentSdk) {
+    if (sub.stripeSubscriptionId && this.paymentSdk?.stripe) {
       try {
         await this.paymentSdk.stripe.cancelSubscription(sub.stripeSubscriptionId);
       } catch (err: any) {
@@ -94,7 +94,7 @@ export class BillingService {
 
   async createCheckoutSession(tenantId: string, plan: PlanType): Promise<{ url: string }> {
     const sub = await this.getSubscription(tenantId);
-    if (!this.paymentSdk) throw new BadRequestException('Stripe not configured');
+    if (!this.paymentSdk?.stripe) throw new BadRequestException('Stripe not configured');
 
     const priceMap: Record<PlanType, string> = {
       [PlanType.FREE]: '',
@@ -128,6 +128,24 @@ export class BillingService {
     });
 
     return { url: session.url };
+  }
+
+  async createManualPayment(tenantId: string, plan: PlanType, payload: { amount: number; currency: string; reference?: string; description?: string }) {
+    const sub = await this.getSubscription(tenantId);
+    if (!this.paymentSdk) throw new BadRequestException('Payment SDK not configured');
+
+    const payment = await this.paymentSdk.manual.createPayment({
+      amount: payload.amount,
+      currency: payload.currency,
+      description: payload.description,
+      reference: payload.reference,
+    });
+
+    sub.plan = plan;
+    sub.status = SubscriptionStatus.ACTIVE;
+    await this.subRepo.save(sub);
+
+    return payment;
   }
 
   async handleStripeWebhook(event: any): Promise<void> {

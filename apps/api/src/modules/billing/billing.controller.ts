@@ -16,7 +16,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard, Roles } from '../auth/guards/roles.guard';
 import { UserRole } from '../auth/user.entity';
 import { PlanType } from './subscription.entity';
-import { IsEnum, IsNotEmpty } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsString, IsOptional } from 'class-validator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CacheService } from '../../common/cache.service';
 
@@ -24,6 +24,28 @@ class ChangePlanDto {
   @IsEnum(PlanType)
   @IsNotEmpty()
   plan: PlanType;
+}
+
+class ManualPaymentDto {
+  @IsEnum(PlanType)
+  @IsNotEmpty()
+  plan: PlanType;
+
+  @IsNumber()
+  @IsNotEmpty()
+  amount: number;
+
+  @IsString()
+  @IsNotEmpty()
+  currency: string;
+
+  @IsString()
+  @IsOptional()
+  reference?: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
 }
 
 @ApiTags('billing')
@@ -85,5 +107,19 @@ export class BillingController {
   async cancel(@Request() req) {
     await this.cacheService.delPattern(`billing:${req.user.tenantId}:*`);
     return this.billingService.cancel(req.user.tenantId);
+  }
+
+  @Post('manual')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Record a manual payment and activate plan' })
+  @ApiResponse({ status: 200, description: 'Manual payment recorded' })
+  async manual(@Request() req, @Body() dto: ManualPaymentDto) {
+    await this.cacheService.delPattern(`billing:${req.user.tenantId}:*`);
+    return this.billingService.createManualPayment(req.user.tenantId, dto.plan, {
+      amount: dto.amount,
+      currency: dto.currency,
+      reference: dto.reference,
+      description: dto.description,
+    });
   }
 }

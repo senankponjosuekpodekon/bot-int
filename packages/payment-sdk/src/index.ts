@@ -3,44 +3,31 @@ import { StripeService, StripeServiceConfig } from './services/stripe';
 import { MonerooService, MonerooServiceConfig } from './services/moneroo';
 import { WiseService, WiseServiceConfig } from './services/wise';
 import { CoinbaseService, CoinbaseServiceConfig } from './services/coinbase';
+import { ManualPaymentService, ManualPaymentConfig } from './services/manual';
 
 export * from './types';
-export { StripeService, MonerooService, WiseService, CoinbaseService };
-export type { StripeServiceConfig, MonerooServiceConfig, WiseServiceConfig, CoinbaseServiceConfig };
+export { StripeService, MonerooService, WiseService, CoinbaseService, ManualPaymentService };
+export type { StripeServiceConfig, MonerooServiceConfig, WiseServiceConfig, CoinbaseServiceConfig, ManualPaymentConfig };
+export { ManualPaymentRecord, ManualPaymentPayload } from './services/manual';
+export type { ManualPaymentPayload as ManualPaymentPayloadType } from './services/manual';
 
 export class PaymentSDK {
-  public stripe: StripeService;
+  public stripe: StripeService | null;
   public moneroo: MonerooService;
   public wise: WiseService;
   public coinbase: CoinbaseService;
+  public manual: ManualPaymentService;
   public environment: string;
 
   constructor(config: PaymentSDKConfig) {
     this.environment = config.environment;
 
-    const hasAnyKey =
-      config.keys.stripeSecretKey ||
-      config.keys.monerooApiKey ||
-      config.keys.wiseApiKey ||
-      config.keys.coinbaseApiKey;
-
-    if (!hasAnyKey) {
-      throw new Error('At least one payment provider key is required');
-    }
-
-    const stripeSecretKey = config.keys.stripeSecretKey;
-    if (!stripeSecretKey) {
-      // Provide a stub if no key, but this will fail on actual usage
-      this.stripe = new StripeService({
-        secretKey: '',
-        environment: config.environment,
-      });
-    } else {
-      this.stripe = new StripeService({
-        secretKey: stripeSecretKey,
-        environment: config.environment,
-      });
-    }
+    this.stripe = config.keys.stripeSecretKey
+      ? new StripeService({
+          secretKey: config.keys.stripeSecretKey,
+          environment: config.environment,
+        })
+      : null;
 
     this.moneroo = new MonerooService({
       apiKey: config.keys.monerooApiKey ?? '',
@@ -59,5 +46,7 @@ export class PaymentSDK {
       environment: config.environment,
       baseUrl: config.baseUrls?.coinbase,
     });
+
+    this.manual = new ManualPaymentService({ environment: config.environment });
   }
 }

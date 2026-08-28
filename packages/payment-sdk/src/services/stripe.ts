@@ -47,4 +47,8 @@ export class StripeService {
   async getCustomer(customerId: string) {
     return this.client.customers.retrieve(customerId);
   }
+
+  constructEvent(payload: string | Buffer, signature: string, webhookSecret: string) {
+    return this.client.webhooks.constructEvent(payload, signature, webhookSecret);
+  }
 }

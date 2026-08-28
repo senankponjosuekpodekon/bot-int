@@ -33,14 +33,16 @@ import { PaymentSDK } from '@stiamond/payment-sdk';
     ApiKeyGuard,
     {
       provide: 'PAYMENT_SDK',
-      useFactory: (config: ConfigService) => {
-        const stripeSecretKey = config.get<string>('STRIPE_SECRET_KEY');
-        if (!stripeSecretKey) return null;
-        return new PaymentSDK({
+      useFactory: (config: ConfigService) =>
+        new PaymentSDK({
           environment: config.get('NODE_ENV') === 'production' ? 'production' : 'development',
-          keys: { stripeSecretKey },
-        });
-      },
+          keys: {
+            stripeSecretKey: config.get<string>('STRIPE_SECRET_KEY'),
+            monerooApiKey: config.get<string>('MONEROO_API_KEY'),
+            wiseApiKey: config.get<string>('WISE_API_KEY'),
+            coinbaseApiKey: config.get<string>('COINBASE_API_KEY'),
+          },
+        }),
       inject: [ConfigService],
     },
     {
