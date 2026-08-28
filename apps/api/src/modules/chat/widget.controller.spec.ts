@@ -61,6 +61,7 @@ describe('WidgetController', () => {
       true,
       { utmParams: undefined, referrerUrl: undefined, landingPageUrl: undefined },
       expect.any(Object),
+      undefined,
     );
     expect(result).toEqual({ reply: 'Hello', conversationId: 'conv-1' });
   });
