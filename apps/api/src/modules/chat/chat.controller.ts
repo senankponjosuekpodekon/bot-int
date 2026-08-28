@@ -180,6 +180,13 @@ export class ChatController {
     return this.chatService.operatorReply(id, req.user.tenantId, dto.message);
   }
 
+  @Post(':id/suggest')
+  @ApiOperation({ summary: 'Suggest an AI reply for the operator' })
+  @ApiResponse({ status: 200, description: 'AI suggestion' })
+  suggestReply(@Request() req, @Param('id') id: string) {
+    return this.chatService.suggestReply(id, req.user.tenantId);
+  }
+
   @Post('stream')
   @ApiOperation({ summary: 'Send a message and stream the reply as SSE' })
   @ApiResponse({ status: 200, description: 'Server-sent events with reply chunks' })

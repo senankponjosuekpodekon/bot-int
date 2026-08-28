@@ -97,6 +97,24 @@ export default function PublicChatPage() {
 
   useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
 
+  useEffect(() => {
+    if (!conversationId || sending) return;
+    const load = () => {
+      fetch(`${API_BASE}/widget/history/${conversationId}`)
+        .then((r) => r.json())
+        .then((history: any[]) => {
+          const newMessages = (history || [])
+            .filter((m) => m.role === 'user' || m.role === 'assistant')
+            .map((m) => ({ role: m.role === 'user' ? 'user' : 'agent' as 'user' | 'agent', text: m.content }));
+          setMessages(newMessages);
+        })
+        .catch(() => {});
+    };
+    load();
+    const interval = setInterval(load, 5000);
+    return () => clearInterval(interval);
+  }, [conversationId, sending]);
+
   const send = async () => {
     if (!input.trim() || sending) return;
     const text = input.trim();
