@@ -52,7 +52,16 @@ describe('WidgetController', () => {
       agentId: 'agent-1',
       message: 'Hi',
     } as any);
-    expect(mockChatService.sendMessage).toHaveBeenCalledWith('t-1', 'agent-1', 'Hi', undefined, undefined, true, undefined, expect.any(Object));
+    expect(mockChatService.sendMessage).toHaveBeenCalledWith(
+      't-1',
+      'agent-1',
+      'Hi',
+      undefined,
+      undefined,
+      true,
+      { utmParams: undefined, referrerUrl: undefined, landingPageUrl: undefined },
+      expect.any(Object),
+    );
     expect(result).toEqual({ reply: 'Hello', conversationId: 'conv-1' });
   });
 

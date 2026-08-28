@@ -20,17 +20,19 @@ import { WidgetSendDto } from './dto/widget-send.dto';
 const EMBED_JS = `
 (function () {
   const script = document.currentScript;
-  const agentId = script?.getAttribute('data-agent') || script?.getAttribute('data-agent-id') || window.BOTINT_AGENT_ID;
+  const rawAgentId = script?.getAttribute('data-agent') || script?.getAttribute('data-agent-id') || window.BOTINT_AGENT_ID;
+  const agentId = (rawAgentId || '').toString().trim();
+
+  if (!agentId || agentId === 'undefined' || agentId === 'null') {
+    console.error('BotInt widget: data-agent is required');
+    return;
+  }
+
   const baseUrl = (script?.getAttribute('data-api') || script?.getAttribute('data-api-url') || window.BOTINT_API_URL || '').replace(/\\/$/, '') || '';
   const language = script?.getAttribute('data-language') || 'fr';
   const position = script?.getAttribute('data-position') || 'right';
   const color = script?.getAttribute('data-color') || '#111';
   const title = script?.getAttribute('data-title') || 'Assistant';
-
-  if (!agentId) {
-    console.error('BotInt widget: data-agent is required');
-    return;
-  }
 
   const storageKey = 'botint_' + agentId.replace(/[^a-zA-Z0-9]/g, '_');
   const state = JSON.parse(localStorage.getItem(storageKey) || '{}');
@@ -240,7 +242,11 @@ export class WidgetController {
       dto.conversationId,
       dto.visitorId,
       true,
-      undefined,
+      {
+        utmParams: dto.utmParams,
+        referrerUrl: dto.referrerUrl,
+        landingPageUrl: dto.landingPageUrl,
+      },
       { ip },
     );
   }

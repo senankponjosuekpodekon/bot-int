@@ -88,6 +88,7 @@ function renderBlock(block: string): string {
 }
 
 function renderMarkdown(text: string): string {
+  if (!text) return '';
   const codeBlocks: string[] = [];
   const withoutCode = text.replace(/```([\s\S]*?)```/g, (match, code) => {
     codeBlocks.push(code);

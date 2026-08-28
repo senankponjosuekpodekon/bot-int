@@ -20,4 +20,16 @@ export class WidgetSendDto {
   @IsObject()
   @IsOptional()
   metadata?: Record<string, any>;
+
+  @IsObject()
+  @IsOptional()
+  utmParams?: { source?: string; medium?: string; campaign?: string; term?: string; content?: string };
+
+  @IsString()
+  @IsOptional()
+  referrerUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  landingPageUrl?: string;
 }
