@@ -249,6 +249,30 @@ export class ChatService {
       }
     }
 
+    if (conversation.status === ConversationStatus.HANDED_OFF) {
+      const waitingReply =
+        conversation.language === 'en'
+          ? "You are connected with a human agent. Please wait for the operator's response."
+          : "Vous êtes en relation avec un conseiller humain. Veuillez attendre sa réponse.";
+      await this.msgRepo.save(
+        this.msgRepo.create({
+          conversationId: conversation.id,
+          role: MessageRole.ASSISTANT,
+          content: waitingReply,
+        }),
+      );
+      return {
+        reply: waitingReply,
+        conversationId: conversation.id,
+        leadId: conversation.leadId,
+        flow: null,
+        products: undefined,
+        funnelStage: conversation.funnelStage,
+        intentScore: conversation.intentScore,
+        region: detectedRegion,
+      };
+    }
+
     const cmd = userMessage.trim().toLowerCase();
     if (cmd === '/human') {
       await this.convRepo.update(conversation.id, { status: ConversationStatus.HANDED_OFF });
