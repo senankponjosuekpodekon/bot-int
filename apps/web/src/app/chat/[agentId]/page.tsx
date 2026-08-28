@@ -50,8 +50,12 @@ export default function PublicChatPage() {
       .then((r) => r.json())
       .then((data) => {
         setConfig(data);
-        const saved = typeof window !== 'undefined' ? localStorage.getItem(`stiamond_conversation_${agentId}`) : null;
+        const fromQuery = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('conversationId') : null;
+        const saved = fromQuery || (typeof window !== 'undefined' ? localStorage.getItem(`stiamond_conversation_${agentId}`) : null);
         if (saved) {
+          if (fromQuery && typeof window !== 'undefined') {
+            localStorage.setItem(`stiamond_conversation_${agentId}`, saved);
+          }
           setConversationId(saved);
           fetch(`${API_BASE}/widget/history/${saved}`)
             .then((r) => r.json())
