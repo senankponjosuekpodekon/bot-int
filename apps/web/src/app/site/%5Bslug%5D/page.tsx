@@ -42,16 +42,31 @@ export default function PublicSitePage() {
     siteApi.public.getBySlug(slug)
       .then((data) => {
         setSite(data);
+        const saved = typeof window !== 'undefined' ? localStorage.getItem(`stiamond_conversation_${slug}`) : null;
         if (data.agentId) {
-          fetch(`${API_BASE}/widget/config/${data.agentId}`)
-            .then((r) => r.json())
-            .then((cfg) => {
-              if (cfg.iceBreakers?.length > 0) {
-                setMessages([{ role: 'agent', text: cfg.iceBreakers[0] }]);
-              } else {
-                setMessages([{ role: 'agent', text: `Bonjour ! Bienvenue chez ${data.businessName}. Comment puis-je vous aider ?` }]);
-              }
-            });
+          if (saved) {
+            setConversationId(saved);
+            fetch(`${API_BASE}/widget/history/${saved}`)
+              .then((r) => r.json())
+              .then((history: any[]) => {
+                const historyMessages = (history || [])
+                  .filter((m) => m.role === 'user' || m.role === 'assistant')
+                  .map((m) => ({ role: m.role === 'user' ? 'user' : 'agent', text: m.content }));
+                setMessages(historyMessages.length > 0 ? historyMessages : [{ role: 'agent', text: `Bonjour ! Bienvenue chez ${data.businessName}. Comment puis-je vous aider ?` }]);
+              })
+              .catch(() => {});
+          } else {
+            fetch(`${API_BASE}/widget/config/${data.agentId}`)
+              .then((r) => r.json())
+              .then((cfg) => {
+                if (cfg.iceBreakers?.length > 0) {
+                  setMessages([{ role: 'agent', text: cfg.iceBreakers[0] }]);
+                } else {
+                  setMessages([{ role: 'agent', text: `Bonjour ! Bienvenue chez ${data.businessName}. Comment puis-je vous aider ?` }]);
+                }
+              })
+              .catch(() => {});
+          }
         }
         setLoading(false);
       })
@@ -76,7 +91,10 @@ export default function PublicSitePage() {
         body: JSON.stringify({ agentId: site.agentId, message: text, visitorId, conversationId: conversationId || undefined, utmParams: getUtmParams(), referrerUrl: typeof window !== 'undefined' ? document.referrer : '', landingPageUrl: typeof window !== 'undefined' ? window.location.href : '' }),
       });
       const data = await res.json();
-      if (data.conversationId) setConversationId(data.conversationId);
+      if (data.conversationId) {
+        setConversationId(data.conversationId);
+        if (typeof window !== 'undefined') localStorage.setItem(`stiamond_conversation_${slug}`, data.conversationId);
+      }
       setMessages((m) => [...m, { role: 'agent', text: data.reply, products: data.products }]);
     } catch {
       setMessages((m) => [...m, { role: 'agent', text: 'Désolé, une erreur est survenue.' }]);

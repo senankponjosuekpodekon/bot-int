@@ -50,12 +50,24 @@ export default function PublicChatPage() {
       .then((r) => r.json())
       .then((data) => {
         setConfig(data);
-        if (data.iceBreakers && data.iceBreakers.length > 0) {
-          setMessages([{ role: 'agent', text: data.iceBreakers[0] }]);
+        const saved = typeof window !== 'undefined' ? localStorage.getItem(`stiamond_conversation_${agentId}`) : null;
+        if (saved) {
+          setConversationId(saved);
+          fetch(`${API_BASE}/widget/history/${saved}`)
+            .then((r) => r.json())
+            .then((history: any[]) => {
+              const historyMessages = (history || [])
+                .filter((m) => m.role === 'user' || m.role === 'assistant')
+                .map((m) => ({ role: m.role === 'user' ? 'user' : 'agent' as 'user' | 'agent', text: m.content }));
+              setMessages(historyMessages.length > 0 ? historyMessages : [{ role: 'agent' as const, text: data.iceBreakers?.[0] || `Bonjour ! Je suis ${data.name}. Comment puis-je vous aider ?` }]);
+              setLoading(false);
+            })
+            .catch(() => setLoading(false));
         } else {
-          setMessages([{ role: 'agent', text: `Bonjour ! Je suis ${data.name}. Comment puis-je vous aider ?` }]);
+          const initial = data.iceBreakers?.[0] || `Bonjour ! Je suis ${data.name}. Comment puis-je vous aider ?`;
+          setMessages([{ role: 'agent' as const, text: initial }]);
+          setLoading(false);
         }
-        setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [agentId]);
@@ -80,7 +92,10 @@ export default function PublicChatPage() {
         body: JSON.stringify({ agentId, message: text, visitorId, conversationId: conversationId || undefined, utmParams: getUtmParams(), referrerUrl: typeof window !== 'undefined' ? document.referrer : '', landingPageUrl: typeof window !== 'undefined' ? window.location.href : '' }),
       });
       const data = await res.json();
-      if (data.conversationId) setConversationId(data.conversationId);
+      if (data.conversationId) {
+        setConversationId(data.conversationId);
+        if (typeof window !== 'undefined') localStorage.setItem(`stiamond_conversation_${agentId}`, data.conversationId);
+      }
       setMessages((m) => [...m, { role: 'agent', text: data.reply, products: data.products }]);
     } catch {
       setMessages((m) => [...m, { role: 'agent', text: 'Désolé, une erreur est survenue. Réessayez dans un instant.' }]);
