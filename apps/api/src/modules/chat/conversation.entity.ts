@@ -166,6 +166,9 @@ export class Conversation {
   @Column({ type: 'simple-array', nullable: true })
   stageHistory: string[];
 
+  @Column({ type: 'jsonb', nullable: true })
+  clientInfo?: Record<string, any>;
+
   @CreateDateColumn()
   createdAt: Date;
 

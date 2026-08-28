@@ -32,4 +32,8 @@ export class WidgetSendDto {
   @IsString()
   @IsOptional()
   landingPageUrl?: string;
+
+  @IsObject()
+  @IsOptional()
+  clientInfo?: Record<string, any>;
 }

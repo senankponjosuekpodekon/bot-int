@@ -109,6 +109,7 @@ export class ChatService {
       timezone?: string;
       userSelectedRegion?: RegionCode;
     },
+    clientInfo?: Record<string, any>,
   ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: FlowData | null; products?: any[]; funnelStage?: FunnelStage; intentScore?: number; region?: RegionCode }> {
     const agent = await this.agentsService.findById(agentId, tenantId);
     const personalityConfig = agent.personalityConfig || {};
@@ -192,6 +193,13 @@ export class ChatService {
           funnelStage: FunnelStage.AWARENESS,
           intentScore: 0,
           stageHistory: [FunnelStage.AWARENESS],
+          clientInfo: {
+            ...clientInfo,
+            ip: regionContext?.ip,
+            region: detectedRegion,
+            browserLanguage: regionContext?.browserLanguage,
+            timezone: regionContext?.timezone,
+          },
         }),
       );
 

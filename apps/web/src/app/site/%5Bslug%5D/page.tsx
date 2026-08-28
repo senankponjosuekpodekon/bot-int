@@ -17,6 +17,21 @@ function getUtmParams() {
   return params;
 }
 
+function getClientInfo() {
+  if (typeof window === 'undefined') return {};
+  const nav = navigator as any;
+  return {
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    language: navigator.language,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    screen: `${window.screen.width}x${window.screen.height}`,
+    connection: nav.connection?.effectiveType || nav.connection?.type || 'unknown',
+    online: navigator.onLine,
+    url: window.location.href,
+  };
+}
+
 export default function PublicSitePage() {
   const params = useParams();
   const slug = params.slug as string;
@@ -92,7 +107,7 @@ export default function PublicSitePage() {
       const res = await fetch(`${API_BASE}/widget/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: site.agentId, message: text, visitorId, conversationId: conversationId || undefined, utmParams: getUtmParams(), referrerUrl: typeof window !== 'undefined' ? document.referrer : '', landingPageUrl: typeof window !== 'undefined' ? window.location.href : '' }),
+        body: JSON.stringify({ agentId: site.agentId, message: text, visitorId, conversationId: conversationId || undefined, utmParams: getUtmParams(), referrerUrl: typeof window !== 'undefined' ? document.referrer : '', landingPageUrl: typeof window !== 'undefined' ? window.location.href : '', clientInfo: getClientInfo() }),
       });
       const data = await res.json();
       if (data.conversationId) {

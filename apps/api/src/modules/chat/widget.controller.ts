@@ -248,6 +248,7 @@ export class WidgetController {
         landingPageUrl: dto.landingPageUrl,
       },
       { ip },
+      dto.clientInfo,
     );
   }
 
