@@ -10,6 +10,7 @@ import { AgentMemoryService } from '../agents/agent-memory.service';
 import { AgentToolsService } from '../agents/agent-tools.service';
 import { AgentWorkflowService } from '../agents/agent-workflow.service';
 import { PendingActionService } from '../agents/pending-action.service';
+import { AgentOrchestrationService } from '../agents/agent-orchestration.service';
 import { MemoryScope } from '../agents/agent-memory.entity';
 import { OllamaMessage } from './ollama.service';
 import { LLMService } from './llm.service';
@@ -109,6 +110,7 @@ export class ChatService {
     private readonly agentToolsService: AgentToolsService,
     private readonly agentWorkflowService: AgentWorkflowService,
     private readonly pendingActionService: PendingActionService,
+    private readonly agentOrchestrationService: AgentOrchestrationService,
     private readonly chatEvents: ChatEventsService,
   ) {}
 
@@ -136,6 +138,13 @@ export class ChatService {
   ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: FlowData | null; products?: any[]; funnelStage?: FunnelStage; intentScore?: number; region?: RegionCode }> {
     const agent = await this.agentsService.findById(agentId, tenantId);
     const personalityConfig = agent.personalityConfig || {};
+
+    let activeAgent = agent;
+    try {
+      activeAgent = await this.agentOrchestrationService.resolveActiveAgent(tenantId, agent, userMessage);
+    } catch (err: any) {
+      this.logger.warn(`Orchestration resolution failed: ${err?.message}`);
+    }
 
     // Detect region for regional adaptation
     let detectedRegion: RegionCode = 'international';
@@ -493,7 +502,7 @@ export class ChatService {
     }
 
     const messages: OllamaMessage[] = [
-      { role: 'system', content: this.regionsService.buildSystemPrompt(agent.systemPrompt, detectedRegion) },
+      { role: 'system', content: this.regionsService.buildSystemPrompt(activeAgent.systemPrompt, detectedRegion) },
       { role: 'system', content: MARKDOWN_STYLE },
       { role: 'system', content: KNOWLEDGE_GROUNDING },
       { role: 'system', content: AGENT_SAFETY_RULES },

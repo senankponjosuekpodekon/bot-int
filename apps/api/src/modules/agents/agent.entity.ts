@@ -64,6 +64,7 @@ export class Agent {
     forbiddenTopics?: string[];
     toolsEnabled?: boolean;
     memoryEnabled?: boolean;
+    subAgents?: { agentId: string; name: string; keywords: string[] }[];
   };
 
   @CreateDateColumn()

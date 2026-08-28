@@ -64,6 +64,7 @@ describe('ChatService', () => {
       { detectAndExecuteTools: jest.fn().mockResolvedValue([]) } as any, // agentToolsService
       { findByTrigger: jest.fn().mockResolvedValue(null), execute: jest.fn().mockResolvedValue({ completed: true, output: '', handoff: false }) } as any, // agentWorkflowService
       { create: jest.fn().mockResolvedValue(undefined) } as any, // pendingActionService
+      { resolveActiveAgent: jest.fn().mockImplementation((_t, a) => Promise.resolve(a)) } as any, // agentOrchestrationService
       chatEvents as any,
     );
   });
