@@ -87,6 +87,8 @@ export const viewport: Viewport = {
   ],
 };
 
+export const dynamic = 'force-static';
+
 const jsonLdSoftware = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
