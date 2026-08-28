@@ -3,8 +3,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Headphones, MessageSquare, ArrowLeft, Phone, Mail, Send, Zap,
   RotateCcw, Sparkles, Info, Globe, Target, BarChart3, Tag,
+  ShieldAlert, Check, X,
 } from 'lucide-react';
-import { chatApi, leadsApi } from '@/lib/api';
+import { chatApi, leadsApi, agentsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -32,6 +33,16 @@ interface Message {
   content: string;
   createdAt: string;
   metadata?: any;
+}
+
+interface PendingAction {
+  id: string;
+  conversationId?: string;
+  toolName: string;
+  riskLevel: string;
+  reason?: string;
+  status: string;
+  createdAt: string;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -65,12 +76,48 @@ export default function OperatorPage() {
   const [lead, setLead] = useState<any>(null);
   const [visitorTyping, setVisitorTyping] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
+  const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const typingDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const loadPendingActions = useCallback(async () => {
+    try {
+      const data = await agentsApi.listPendingActions('pending');
+      setPendingActions(data || []);
+    } catch {
+      // Silent — non-critical panel
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPendingActions();
+    const interval = setInterval(loadPendingActions, 20000);
+    return () => clearInterval(interval);
+  }, [loadPendingActions]);
+
+  const handleApproveAction = async (id: string) => {
+    try {
+      await agentsApi.approvePendingAction(id);
+      showToast('Action approuvée');
+      loadPendingActions();
+    } catch {
+      showToast('Erreur', 'error');
+    }
+  };
+
+  const handleRejectAction = async (id: string) => {
+    try {
+      await agentsApi.rejectPendingAction(id);
+      showToast('Action rejetée');
+      loadPendingActions();
+    } catch {
+      showToast('Erreur', 'error');
+    }
   };
 
   const load = useCallback(async () => {
@@ -223,6 +270,38 @@ export default function OperatorPage() {
             ))}
           </div>
         </div>
+
+        {pendingActions.length > 0 && (
+          <div className="border-b border-orange-200 bg-orange-50 p-3 space-y-2">
+            <div className="flex items-center gap-1 text-xs font-semibold text-orange-800">
+              <ShieldAlert className="w-3.5 h-3.5" /> Actions en attente de validation ({pendingActions.length})
+            </div>
+            {pendingActions.map((pa) => (
+              <div key={pa.id} className="bg-white rounded-lg border border-orange-200 p-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-gray-900">{pa.toolName}</span>
+                  <span className="px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] uppercase">{pa.riskLevel}</span>
+                </div>
+                {pa.reason && <p className="text-gray-500 mt-1 line-clamp-2">{pa.reason}</p>}
+                <div className="flex gap-1.5 mt-2">
+                  <button
+                    onClick={() => handleApproveAction(pa.id)}
+                    className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-600 text-white text-[11px] font-medium hover:bg-green-700"
+                  >
+                    <Check className="w-3 h-3" /> Approuver
+                  </button>
+                  <button
+                    onClick={() => handleRejectAction(pa.id)}
+                    className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-200 text-gray-700 text-[11px] font-medium hover:bg-gray-300"
+                  >
+                    <X className="w-3 h-3" /> Rejeter
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="text-center py-8 text-gray-500 text-sm">Chargement...</div>

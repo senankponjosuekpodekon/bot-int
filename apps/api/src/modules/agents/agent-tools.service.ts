@@ -1,9 +1,22 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { LLMService } from '../chat/llm.service';
 
+// Action risk classification — enforced before any tool executes:
+// READ: read-only lookup, safe to auto-execute (e.g. search, calculator).
+// SUGGEST: proposes something to the user, doesn't mutate any system, safe to auto-execute.
+// WRITE: mutates a business record (order, customer data) — never auto-executed, always requires human approval.
+// EXECUTE: financial or destructive action (refund, payment, deletion) — never auto-executed, always requires human approval.
+export enum ToolRiskLevel {
+  READ = 'read',
+  SUGGEST = 'suggest',
+  WRITE = 'write',
+  EXECUTE = 'execute',
+}
+
 export interface AgentTool {
   name: string;
   description: string;
+  riskLevel: ToolRiskLevel;
   parameters: { name: string; type: string; description: string; required: boolean }[];
   execute: (args: Record<string, string>, tenantId: string) => Promise<string>;
 }
@@ -11,7 +24,11 @@ export interface AgentTool {
 export interface ToolCallResult {
   toolName: string;
   result: string;
+  riskLevel: ToolRiskLevel;
+  requiresApproval: boolean;
 }
+
+const ACTIONS_REQUIRING_APPROVAL = new Set([ToolRiskLevel.WRITE, ToolRiskLevel.EXECUTE]);
 
 @Injectable()
 export class AgentToolsService {
@@ -75,12 +92,24 @@ If no tool is needed, respond: {"calls": []}`;
         const tool = this.tools.get(call.tool);
         if (!tool) continue;
 
+        // WRITE/EXECUTE tools are never auto-executed: the agent can only request them,
+        // a human operator must approve and trigger the actual execution.
+        if (ACTIONS_REQUIRING_APPROVAL.has(tool.riskLevel)) {
+          results.push({
+            toolName: call.tool,
+            result: `Action "${call.tool}" en attente de validation humaine (risque: ${tool.riskLevel}). L'agent ne doit pas prétendre avoir déjà exécuté cette action.`,
+            riskLevel: tool.riskLevel,
+            requiresApproval: true,
+          });
+          continue;
+        }
+
         try {
           const result = await tool.execute(call.args || {}, tenantId);
-          results.push({ toolName: call.tool, result });
+          results.push({ toolName: call.tool, result, riskLevel: tool.riskLevel, requiresApproval: false });
         } catch (err: any) {
           this.logger.warn(`Tool ${call.tool} failed: ${err?.message}`);
-          results.push({ toolName: call.tool, result: `Error: ${err?.message}` });
+          results.push({ toolName: call.tool, result: `Error: ${err?.message}`, riskLevel: tool.riskLevel, requiresApproval: false });
         }
       }
       return results;
@@ -94,6 +123,7 @@ If no tool is needed, respond: {"calls": []}`;
     return {
       name: 'web_search',
       description: 'Search the web for current information using DuckDuckGo',
+      riskLevel: ToolRiskLevel.READ,
       parameters: [
         { name: 'query', type: 'string', description: 'Search query', required: true },
       ],
@@ -126,6 +156,7 @@ If no tool is needed, respond: {"calls": []}`;
     return {
       name: 'calculator',
       description: 'Evaluate a mathematical expression',
+      riskLevel: ToolRiskLevel.READ,
       parameters: [
         { name: 'expression', type: 'string', description: 'Math expression to evaluate (e.g. "25 * 0.20", "100 + 50")', required: true },
       ],
@@ -148,6 +179,7 @@ If no tool is needed, respond: {"calls": []}`;
     return {
       name: 'calendar',
       description: 'Get current date and time or check day of week',
+      riskLevel: ToolRiskLevel.READ,
       parameters: [
         { name: 'action', type: 'string', description: 'Action: "now" for current datetime, "day" for day of week', required: true },
       ],
@@ -169,6 +201,7 @@ If no tool is needed, respond: {"calls": []}`;
     return {
       name: 'memory_recall',
       description: 'Placeholder for memory recall — handled by ChatService directly',
+      riskLevel: ToolRiskLevel.READ,
       parameters: [
         { name: 'key', type: 'string', description: 'Memory key to recall', required: false },
       ],

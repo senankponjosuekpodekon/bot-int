@@ -16,6 +16,8 @@ import { AgentsService } from './agents.service';
 import { AgentMemoryService } from './agent-memory.service';
 import { AgentToolsService } from './agent-tools.service';
 import { AgentWorkflowService } from './agent-workflow.service';
+import { PendingActionService } from './pending-action.service';
+import { PendingActionStatus } from './pending-action.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard, Roles } from '../auth/guards/roles.guard';
 import { UserRole } from '../auth/user.entity';
@@ -104,6 +106,7 @@ export class AgentsController {
     private readonly memoryService: AgentMemoryService,
     private readonly toolsService: AgentToolsService,
     private readonly workflowService: AgentWorkflowService,
+    private readonly pendingActionService: PendingActionService,
   ) {}
 
   @Post()
@@ -119,6 +122,15 @@ export class AgentsController {
   @ApiResponse({ status: 200, description: 'Paginated list of agents' })
   findAll(@Request() req, @Query() query: PaginationDto) {
     return this.agentsService.findByTenant(req.user.tenantId, query.page, query.limit);
+  }
+
+  // ─── Pending actions (WRITE/EXECUTE tool calls awaiting human approval) ───
+  // Declared before the ':id' route below to avoid being shadowed by it.
+
+  @Get('pending-actions')
+  @ApiOperation({ summary: 'List pending actions awaiting human approval' })
+  listPendingActions(@Request() req, @Query('status') status?: PendingActionStatus) {
+    return this.pendingActionService.findByTenant(req.user.tenantId, status);
   }
 
   @Get(':id')
@@ -180,6 +192,20 @@ export class AgentsController {
   @ApiOperation({ summary: 'List available agent tools' })
   listTools() {
     return this.toolsService.getAvailableTools();
+  }
+
+  // ─── Pending actions approve/reject ───
+
+  @Post('pending-actions/:id/approve')
+  @ApiOperation({ summary: 'Approve a pending action' })
+  approvePendingAction(@Request() req, @Param('id') id: string) {
+    return this.pendingActionService.approve(id, req.user.tenantId, req.user.id || req.user.sub);
+  }
+
+  @Post('pending-actions/:id/reject')
+  @ApiOperation({ summary: 'Reject a pending action' })
+  rejectPendingAction(@Request() req, @Param('id') id: string) {
+    return this.pendingActionService.reject(id, req.user.tenantId, req.user.id || req.user.sub);
   }
 
   // ─── Workflow endpoints ───

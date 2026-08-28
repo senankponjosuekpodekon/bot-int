@@ -63,6 +63,7 @@ describe('ChatService', () => {
       { recallAsContext: jest.fn().mockResolvedValue(null), extractAndStore: jest.fn().mockResolvedValue(undefined), remember: jest.fn().mockResolvedValue(undefined) } as any, // agentMemoryService
       { detectAndExecuteTools: jest.fn().mockResolvedValue([]) } as any, // agentToolsService
       { findByTrigger: jest.fn().mockResolvedValue(null), execute: jest.fn().mockResolvedValue({ completed: true, output: '', handoff: false }) } as any, // agentWorkflowService
+      { create: jest.fn().mockResolvedValue(undefined) } as any, // pendingActionService
       chatEvents as any,
     );
   });

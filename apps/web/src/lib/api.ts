@@ -180,6 +180,14 @@ export const agentsApi = {
   deleteWorkflow: (id: string) => api.delete(`/agents/workflows/${id}`).then((r) => r.data),
   executeWorkflow: (id: string, data: { userMessage: string; conversationId?: string; visitorId?: string; leadId?: string }) =>
     api.post(`/agents/workflows/${id}/execute`, data).then((r) => r.data),
+
+  // Pending actions (WRITE/EXECUTE tool calls awaiting human approval)
+  listPendingActions: (status?: string) =>
+    api.get('/agents/pending-actions', { params: { status } }).then((r) => r.data),
+  approvePendingAction: (id: string) =>
+    api.post(`/agents/pending-actions/${id}/approve`).then((r) => r.data),
+  rejectPendingAction: (id: string) =>
+    api.post(`/agents/pending-actions/${id}/reject`).then((r) => r.data),
 };
 
 export const chatApi = {
