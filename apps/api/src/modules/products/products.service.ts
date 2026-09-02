@@ -133,30 +133,37 @@ export class ProductsService {
 
         for (const item of response.data.products) {
           try {
-            const variant = item.variants?.[0];
-            const existing = await this.productRepo.findOne({
-              where: { tenantId, sku: item.id?.toString() },
-            });
+            const variants = item.variants?.length ? item.variants : [null];
+            for (const variant of variants) {
+              try {
+                const variantLabel = variant?.title && variant.title !== 'Default Title' ? variant.title : null;
+                const name = variantLabel ? `${item.title} — ${variantLabel}` : item.title;
+                const sku = variant?.sku?.toString() || variant?.id?.toString() || item.id?.toString();
+                const existing = await this.productRepo.findOne({ where: { tenantId, sku } });
 
-            const productData: Partial<Product> = {
-              name: item.title,
-              description: item.body_html?.replace(/<[^>]+>/g, '').slice(0, 2000) || '',
-              price: parseFloat(variant?.price || '0'),
-              currency: 'EUR',
-              stock: variant?.inventory_quantity ?? 0,
-              sku: item.id?.toString(),
-              category: item.product_type || 'General',
-              imageUrl: item.image?.src || null,
-              productUrl: `https://${shopDomain}/products/${item.handle}`,
-              metadata: { vendor: item.vendor, tags: item.tags, handle: item.handle },
-            };
+                const productData: Partial<Product> = {
+                  name,
+                  description: item.body_html?.replace(/<[^>]+>/g, '').slice(0, 2000) || '',
+                  price: parseFloat(variant?.price || '0'),
+                  currency: 'EUR',
+                  stock: variant?.inventory_quantity ?? 0,
+                  sku,
+                  category: item.product_type || 'General',
+                  imageUrl: variant?.image?.src || item.image?.src || null,
+                  productUrl: variant?.id ? `https://${shopDomain}/products/${item.handle}?variant=${variant.id}` : `https://${shopDomain}/products/${item.handle}`,
+                  metadata: { vendor: item.vendor, tags: item.tags, handle: item.handle, variantId: variant?.id, optionLabel: variantLabel },
+                };
 
-            if (existing) {
-              await this.productRepo.update(existing.id, productData);
-            } else {
-              await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
+                if (existing) {
+                  await this.productRepo.update(existing.id, productData);
+                } else {
+                  await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
+                }
+                imported++;
+              } catch {
+                errors++;
+              }
             }
-            imported++;
           } catch {
             errors++;
           }
@@ -180,10 +187,11 @@ export class ProductsService {
     let errors = 0;
     let page = 1;
     let hasMore = true;
+    const baseUrl = siteUrl.replace(/\/$/, '');
 
     while (hasMore) {
       try {
-        const response = await axios.get(`${siteUrl}/wp-json/wc/v3/products`, {
+        const response = await axios.get(`${baseUrl}/wp-json/wc/v3/products`, {
           params: { per_page: 100, page },
           auth: { username: consumerKey, password: consumerSecret },
           timeout: 30000,
@@ -196,29 +204,61 @@ export class ProductsService {
 
         for (const item of response.data) {
           try {
-            const existing = await this.productRepo.findOne({
-              where: { tenantId, sku: item.id?.toString() },
-            });
-
-            const productData: Partial<Product> = {
-              name: item.name,
-              description: (item.short_description || item.description || '').replace(/<[^>]+>/g, '').slice(0, 2000),
-              price: parseFloat(item.price || item.regular_price || '0'),
-              currency: 'EUR',
-              stock: item.stock_quantity ?? 0,
-              sku: item.id?.toString(),
-              category: item.categories?.[0]?.name || 'General',
-              imageUrl: item.images?.[0]?.src || null,
-              productUrl: item.permalink || null,
-              metadata: { type: item.type, tags: item.tags?.map((t: any) => t.name) },
-            };
-
-            if (existing) {
-              await this.productRepo.update(existing.id, productData);
+            const isVariable = item.type === 'variable' && Array.isArray(item.variations) && item.variations.length > 0;
+            if (isVariable) {
+              try {
+                const vResp = await axios.get(`${baseUrl}/wp-json/wc/v3/products/${item.id}/variations`, {
+                  params: { per_page: 100 },
+                  auth: { username: consumerKey, password: consumerSecret },
+                  timeout: 30000,
+                });
+                const variations = vResp.data || [];
+                for (const v of variations) {
+                  try {
+                    const attrs = v.attributes?.map((a: any) => a.option).filter(Boolean).join(' / ') || 'Variante';
+                    const name = `${item.name} — ${attrs}`;
+                    const sku = v.sku?.toString() || v.id?.toString() || `${item.id}-${v.id}`;
+                    const existing = await this.productRepo.findOne({ where: { tenantId, sku } });
+                    const productData: Partial<Product> = {
+                      name,
+                      description: (v.short_description || v.description || item.short_description || item.description || '').replace(/<[^>]+>/g, '').slice(0, 2000),
+                      price: parseFloat(v.price || v.regular_price || '0'),
+                      currency: 'EUR',
+                      stock: v.stock_quantity ?? 0,
+                      sku,
+                      category: item.categories?.[0]?.name || 'General',
+                      imageUrl: v.image?.src || item.images?.[0]?.src || null,
+                      productUrl: v.permalink || item.permalink || null,
+                      metadata: { type: item.type, tags: item.tags?.map((t: any) => t.name), variantId: v.id, optionLabel: attrs },
+                    };
+                    if (existing) await this.productRepo.update(existing.id, productData);
+                    else await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
+                    imported++;
+                  } catch {
+                    errors++;
+                  }
+                }
+              } catch {
+                errors++;
+              }
             } else {
-              await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
+              const existing = await this.productRepo.findOne({ where: { tenantId, sku: item.id?.toString() } });
+              const productData: Partial<Product> = {
+                name: item.name,
+                description: (item.short_description || item.description || '').replace(/<[^>]+>/g, '').slice(0, 2000),
+                price: parseFloat(item.price || item.regular_price || '0'),
+                currency: 'EUR',
+                stock: item.stock_quantity ?? 0,
+                sku: item.id?.toString(),
+                category: item.categories?.[0]?.name || 'General',
+                imageUrl: item.images?.[0]?.src || null,
+                productUrl: item.permalink || null,
+                metadata: { type: item.type, tags: item.tags?.map((t: any) => t.name) },
+              };
+              if (existing) await this.productRepo.update(existing.id, productData);
+              else await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
+              imported++;
             }
-            imported++;
           } catch {
             errors++;
           }
@@ -247,47 +287,55 @@ export class ProductsService {
   }
 
   async handleShopifyWebhook(tenantId: string, topic: string, data: any): Promise<void> {
-    const sku = data.id?.toString();
-    if (!sku) return;
-
-    const existing = await this.productRepo.findOne({ where: { tenantId, sku } });
+    if (!data.handle && !data.id) return;
 
     if (topic === 'products/delete') {
-      if (existing) {
-        existing.isActive = false;
-        await this.productRepo.save(existing);
+      const all = await this.productRepo.find({ where: { tenantId } });
+      for (const p of all) {
+        if (p.metadata?.handle === data.handle) {
+          p.isActive = false;
+          await this.productRepo.save(p);
+        }
       }
       return;
     }
 
-    const variant = data.variants?.[0];
-    const productData: Partial<Product> = {
-      name: data.title,
-      description: data.body_html?.replace(/<[^>]+>/g, '').slice(0, 2000) || '',
-      price: parseFloat(variant?.price || '0'),
-      currency: 'EUR',
-      stock: variant?.inventory_quantity ?? 0,
-      sku,
-      category: data.product_type || 'General',
-      imageUrl: data.image?.src || null,
-      productUrl: data.handle ? `https://shop/products/${data.handle}` : null,
-      metadata: { vendor: data.vendor, tags: data.tags, handle: data.handle },
-    };
+    const variants = data.variants?.length ? data.variants : [null];
+    for (const variant of variants) {
+      try {
+        const variantLabel = variant?.title && variant.title !== 'Default Title' ? variant.title : null;
+        const name = variantLabel ? `${data.title} — ${variantLabel}` : data.title;
+        const sku = variant?.sku?.toString() || variant?.id?.toString() || data.id?.toString();
+        const existing = await this.productRepo.findOne({ where: { tenantId, sku } });
+        const productData: Partial<Product> = {
+          name,
+          description: data.body_html?.replace(/<[^>]+>/g, '').slice(0, 2000) || '',
+          price: parseFloat(variant?.price || '0'),
+          currency: 'EUR',
+          stock: variant?.inventory_quantity ?? 0,
+          sku,
+          category: data.product_type || 'General',
+          imageUrl: variant?.image?.src || data.image?.src || null,
+          productUrl: data.handle ? `https://shop/products/${data.handle}${variant?.id ? `?variant=${variant.id}` : ''}` : null,
+          metadata: { vendor: data.vendor, tags: data.tags, handle: data.handle, variantId: variant?.id, optionLabel: variantLabel },
+        };
 
-    if (existing) {
-      await this.productRepo.update(existing.id, productData);
-    } else {
-      await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
+        if (existing) {
+          await this.productRepo.update(existing.id, productData);
+        } else {
+          await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
+        }
+      } catch (err: any) {
+        this.logger.error(`Shopify webhook variant ${variant?.id} failed: ${err?.message}`);
+      }
     }
   }
 
   async importFromShopifyPublicFeed(tenantId: string, shopUrl: string): Promise<{ imported: number; errors: number }> {
     let imported = 0;
     let errors = 0;
-
-    const url = shopUrl.includes('myshopify.com')
-      ? `https://${shopUrl.replace(/^https?:\/\//, '')}/products.json?limit=250`
-      : `https://${shopUrl.replace(/^https?:\/\//, '')}/products.json?limit=250`;
+    const cleanDomain = shopUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const url = `https://${cleanDomain}/products.json?limit=250`;
 
     try {
       const response = await axios.get(url, { timeout: 30000, headers: { 'User-Agent': 'Mozilla/5.0' } });
@@ -295,30 +343,37 @@ export class ProductsService {
 
       for (const item of products) {
         try {
-          const variant = item.variants?.[0];
-          const existing = await this.productRepo.findOne({
-            where: { tenantId, sku: item.id?.toString() },
-          });
+          const variants = item.variants?.length ? item.variants : [null];
+          for (const variant of variants) {
+            try {
+              const variantLabel = variant?.title && variant.title !== 'Default Title' ? variant.title : null;
+              const name = variantLabel ? `${item.title} — ${variantLabel}` : item.title;
+              const sku = variant?.sku?.toString() || variant?.id?.toString() || item.id?.toString();
+              const existing = await this.productRepo.findOne({ where: { tenantId, sku } });
 
-          const productData: Partial<Product> = {
-            name: item.title,
-            description: item.body_html?.replace(/<[^>]+>/g, '').slice(0, 2000) || '',
-            price: parseFloat(variant?.price || '0'),
-            currency: variant?.currency_code || 'EUR',
-            stock: variant?.inventory_quantity ?? 0,
-            sku: item.id?.toString(),
-            category: item.product_type || 'General',
-            imageUrl: item.image?.src || null,
-            productUrl: `https://${shopUrl.replace(/^https?:\/\//, '')}/products/${item.handle}`,
-            metadata: { vendor: item.vendor, tags: item.tags, handle: item.handle, source: 'public_feed' },
-          };
+              const productData: Partial<Product> = {
+                name,
+                description: item.body_html?.replace(/<[^>]+>/g, '').slice(0, 2000) || '',
+                price: parseFloat(variant?.price || '0'),
+                currency: variant?.currency_code || 'EUR',
+                stock: variant?.inventory_quantity ?? 0,
+                sku,
+                category: item.product_type || 'General',
+                imageUrl: variant?.image?.src || item.image?.src || null,
+                productUrl: variant?.id ? `https://${cleanDomain}/products/${item.handle}?variant=${variant.id}` : `https://${cleanDomain}/products/${item.handle}`,
+                metadata: { vendor: item.vendor, tags: item.tags, handle: item.handle, variantId: variant?.id, optionLabel: variantLabel, source: 'public_feed' },
+              };
 
-          if (existing) {
-            await this.productRepo.update(existing.id, productData);
-          } else {
-            await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
+              if (existing) {
+                await this.productRepo.update(existing.id, productData);
+              } else {
+                await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
+              }
+              imported++;
+            } catch {
+              errors++;
+            }
           }
-          imported++;
         } catch {
           errors++;
         }
@@ -606,12 +661,15 @@ export class ProductsService {
 
       for (const productUrl of productUrls.slice(0, limit)) {
         try {
-          const product = await this.scrapeProductPage(productUrl);
-          if (product) {
-            const sku = product.sku || `sitemap-${Buffer.from(productUrl).toString('base64').slice(0, 16)}`;
-            const productData: any = { ...product, sku, productUrl, agentId, metadata: { ...product.metadata, source: 'sitemap' } };
-            await this.upsertProduct(tenantId, sku, productData);
-            imported++;
+          const products = await this.scrapeProductPage(productUrl);
+          if (products && products.length) {
+            for (let i = 0; i < products.length; i++) {
+              const p = products[i];
+              const sku = p.sku || `sitemap-${Buffer.from(`${productUrl}-${i}`).toString('base64').slice(0, 16)}`;
+              const productData: any = { ...p, sku, productUrl: p.productUrl || productUrl, agentId, metadata: { ...(p.metadata || {}), source: 'sitemap' } };
+              await this.upsertProduct(tenantId, sku, productData);
+              imported++;
+            }
           } else {
             errors++;
           }
@@ -745,101 +803,152 @@ export class ProductsService {
     throw lastErr;
   }
 
-  private async scrapeProductPage(url: string): Promise<Partial<Product> | null> {
+  private extractOfferPrice(offer: any): number {
+    if (!offer?.price) return 0;
+    const price = String(offer.price).replace(/[^\d.,]/g, '').replace(',', '.');
+    return parseFloat(price) || 0;
+  }
+
+  private extractOfferCurrency(offer: any): string | undefined {
+    return offer?.priceCurrency?.toUpperCase();
+  }
+
+  private extractOfferStock(offer: any, fallback = 99): number {
+    const availability = String(offer?.availability || '').toLowerCase();
+    if (availability.includes('outofstock') || availability.includes('soldout') || availability.includes('discontinued')) return 0;
+    if (availability.includes('instock') || availability.includes('preorder') || availability.includes('backorder')) return 99;
+    if (typeof offer?.inventoryLevel?.value === 'number') return offer.inventoryLevel.value;
+    if (typeof offer?.inventoryLevel?.value === 'string') return parseInt(offer.inventoryLevel.value) || fallback;
+    return fallback;
+  }
+
+  private extractOfferSku(offer: any): string | undefined {
+    const item = offer?.itemOffered || offer;
+    return offer?.sku || item?.sku || item?.mpn || item?.gtin || undefined;
+  }
+
+  private resolveImage(raw: any, baseUrl: string): string | undefined {
+    let image: any = Array.isArray(raw) ? raw[0] : raw;
+    if (image && typeof image === 'object') image = image.url || image.contentUrl || image.src;
+    if (typeof image !== 'string') return undefined;
+    return this.resolveUrl(baseUrl, image) || undefined;
+  }
+
+  private slugify(text: string): string {
+    return String(text || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30);
+  }
+
+  private extractVariantProducts(schema: any, base: Partial<Product>, url: string): Partial<Product>[] {
+    const basePrice = this.extractOfferPrice(schema?.offers);
+    const baseCurrency = this.extractOfferCurrency(schema?.offers) || 'EUR';
+    const baseStock = this.extractOfferStock(schema?.offers);
+    const baseMetadata: Record<string, any> = { ...(base.metadata || {}) };
+    const variants: Partial<Product>[] = [];
+
+    const hasVariants = schema?.hasVariant;
+    if (Array.isArray(hasVariants) && hasVariants.length > 0) {
+      for (const v of hasVariants) {
+        const offer = v.offers || (Array.isArray(schema.offers) ? schema.offers[0] : schema.offers);
+        const variantName = v.name || v.variantName || v.color || v.size || 'Variante';
+        variants.push({
+          ...base,
+          name: `${base.name} — ${variantName}`,
+          description: v.description || base.description,
+          price: this.extractOfferPrice(offer) || basePrice,
+          currency: this.extractOfferCurrency(offer) || baseCurrency,
+          stock: this.extractOfferStock(offer, baseStock),
+          sku: v.sku || v.mpn || v.gtin || this.extractOfferSku(offer) || `${this.slugify(String(base.name))}-${this.slugify(variantName)}`,
+          imageUrl: this.resolveImage(v.image, url) || base.imageUrl,
+          productUrl: v.url || offer?.url || base.productUrl,
+          metadata: { ...baseMetadata, variantName, optionLabel: variantName },
+        });
+      }
+      return variants;
+    }
+
+    const offers = schema?.offers;
+    const offerArray = Array.isArray(offers) ? offers : (offers ? [offers] : []);
+    if (offerArray.length > 1) {
+      const distinctSkus = new Set<string>();
+      for (const offer of offerArray) {
+        const sku = this.extractOfferSku(offer);
+        if (sku) distinctSkus.add(sku);
+      }
+      const hasRealVariants = distinctSkus.size > 1 || offerArray.some((o: any) => o.itemOffered || o.name);
+      if (hasRealVariants) {
+        for (const offer of offerArray) {
+          const item = offer.itemOffered || offer;
+          const variantName = item.name || offer.name || 'Variante';
+          variants.push({
+            ...base,
+            name: `${base.name} — ${variantName}`,
+            description: item.description || base.description,
+            price: this.extractOfferPrice(offer) || basePrice,
+            currency: this.extractOfferCurrency(offer) || baseCurrency,
+            stock: this.extractOfferStock(offer, baseStock),
+            sku: this.extractOfferSku(offer) || `${this.slugify(String(base.name))}-${this.slugify(variantName)}`,
+            imageUrl: this.resolveImage(item.image || offer.image, url) || base.imageUrl,
+            productUrl: item.url || offer.url || base.productUrl,
+            metadata: { ...baseMetadata, variantName, optionLabel: variantName },
+          });
+        }
+        return variants;
+      }
+    }
+
+    return [
+      {
+        ...base,
+        price: basePrice,
+        currency: baseCurrency,
+        stock: baseStock,
+        sku: schema?.sku || schema?.mpn || schema?.gtin || this.extractOfferSku(schema?.offers),
+        metadata: baseMetadata,
+      },
+    ];
+  }
+
+  private async scrapeProductPage(url: string): Promise<Partial<Product>[]> {
     try {
       const response = await this.fetchWithRetry(url, { timeout: 15000 });
       const $ = cheerio.load(response.data);
       const jsonLd = this.parseJsonLdScripts($);
       const schema = this.findSchemaProduct(jsonLd);
 
-      let name = '';
-      let description = '';
-      let price = 0;
-      let currency = 'EUR';
-      let stock = 99;
-      let sku: string | undefined;
-      let imageUrl: string | null = null;
-      let category = 'General';
-      let brand: string | undefined;
+      const base: Partial<Product> = { productUrl: url };
+      const baseMetadata: Record<string, any> = { scrapedFrom: url };
 
       if (schema) {
-        name = schema.name || schema.headline || '';
-        description = schema.description || '';
-        brand = schema.brand?.name || (typeof schema.brand === 'string' ? schema.brand : undefined);
-        sku = schema.sku || schema.mpn || schema.gtin || undefined;
-
-        const offers = schema.offers;
-        if (offers) {
-          const offer = Array.isArray(offers) ? offers[0] : offers;
-          if (offer) {
-            if (offer.price) {
-              price = parseFloat(String(offer.price).replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-            }
-            if (offer.priceCurrency) currency = String(offer.priceCurrency).toUpperCase();
-            const availability = String(offer.availability || '').toLowerCase();
-            if (availability.includes('outofstock') || availability.includes('soldout')) stock = 0;
-            else if (availability.includes('instock') || availability.includes('preorder')) stock = 99;
-            else if (typeof offer.inventoryLevel?.value === 'number') stock = offer.inventoryLevel.value;
-            else if (typeof offer.inventoryLevel?.value === 'string') stock = parseInt(offer.inventoryLevel.value) || stock;
-            if (offer.sku && !sku) sku = String(offer.sku);
-          }
-        }
-
-        let rawImage = Array.isArray(schema.image) ? schema.image[0] : schema.image;
-        if (rawImage && typeof rawImage === 'object') rawImage = rawImage.url || rawImage.contentUrl;
-        if (typeof rawImage === 'string') imageUrl = this.resolveUrl(url, rawImage);
+        base.name = schema.name || schema.headline || '';
+        base.description = schema.description || '';
+        baseMetadata.brand = schema.brand?.name || (typeof schema.brand === 'string' ? schema.brand : undefined);
+        base.imageUrl = this.resolveImage(schema.image, url);
       }
 
-      if (!name) {
-        name = $('h1').first().text().trim() ||
-               $('[itemprop="name"]').text().trim() ||
-               $('title').text().trim() ||
-               $('meta[property="og:title"]').attr('content') || '';
+      if (!base.name) {
+        base.name = $('h1').first().text().trim() ||
+                    $('[itemprop="name"]').text().trim() ||
+                    $('title').text().trim() ||
+                    $('meta[property="og:title"]').attr('content') || '';
       }
-      if (!description) {
-        description = $('[itemprop="description"]').text().trim() ||
-                      $('meta[name="description"]').attr('content') ||
-                      $('meta[property="og:description"]').attr('content') || '';
+      if (!base.description) {
+        base.description = $('[itemprop="description"]').text().trim() ||
+                           $('meta[name="description"]').attr('content') ||
+                           $('meta[property="og:description"]').attr('content') || '';
       }
-      if (!price) {
-        const priceText = $('[itemprop="price"]').attr('content') ||
-                          $('[itemprop="price"]').text().trim() ||
-                          $('.price').first().text().trim() ||
-                          $('[class*="price"]').first().text().trim() || '0';
-        price = parseFloat(priceText.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-      }
-      if (!imageUrl) {
-        imageUrl = this.resolveUrl(url, $('[itemprop="image"]').attr('src') ||
-                       $('meta[property="og:image"]').attr('content') ||
-                       $('img').first().attr('src'));
-      }
-      if (!sku) {
-        sku = $('[itemprop="sku"]').attr('content') ||
-              $('[itemprop="sku"]').text().trim() ||
-              $('[data-sku]').attr('data-sku') || undefined;
+      if (!base.imageUrl) {
+        base.imageUrl = this.resolveUrl(url, $('[itemprop="image"]').attr('src') ||
+                        $('meta[property="og:image"]').attr('content') ||
+                        $('img').first().attr('src')) || undefined;
       }
 
-      const metaCurrency = $('meta[property="og:price:currency"]').attr('content') ||
-                           $('meta[property="product:price:currency"]').attr('content');
-      if (metaCurrency) currency = metaCurrency.toUpperCase();
+      base.category = this.findBreadcrumbCategory($, url);
 
-      if (category === 'General') category = this.findBreadcrumbCategory($, url);
+      if (!base.name) return [];
 
-      if (!name) return null;
-
-      return {
-        name: name.slice(0, 200),
-        description: description.slice(0, 2000),
-        price,
-        currency,
-        stock,
-        sku,
-        category,
-        imageUrl,
-        metadata: { scrapedFrom: url, brand },
-      };
+      return this.extractVariantProducts(schema, base, url);
     } catch {
-      return null;
+      return [];
     }
   }
 
