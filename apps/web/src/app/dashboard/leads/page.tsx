@@ -25,6 +25,7 @@ const STATUS_OPTIONS = [
 ];
 
 const emptyForm = { name: '', email: '', phone: '', source: '', score: 0, status: 'new' };
+const PAGE_SIZE = 15;
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -33,6 +34,7 @@ export default function LeadsPage() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [page, setPage] = useState(1);
   const [highlightedLeadId, setHighlightedLeadId] = useState<string | null>(null);
   const highlightedRowRef = useRef<HTMLTableRowElement | null>(null);
 
@@ -40,6 +42,14 @@ export default function LeadsPage() {
     if (filter === 'all') return leads;
     return leads.filter((lead) => lead.status === filter);
   }, [filter, leads]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
+  const pagedLeads = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredLeads.slice(start, start + PAGE_SIZE);
+  }, [filteredLeads, page]);
+
+  useEffect(() => { setPage(1); }, [filter]);
 
   const stats = useMemo(() => {
     const total = leads.length;
@@ -189,7 +199,7 @@ export default function LeadsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredLeads.map((lead) => {
+                {pagedLeads.map((lead) => {
                   const isHighlighted = lead.id === highlightedLeadId;
                   return (
                     <tr
@@ -244,6 +254,25 @@ export default function LeadsPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-gray-100 flex items-center justify-between">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm disabled:opacity-50"
+            >
+              Précédent
+            </button>
+            <span className="text-sm text-gray-600">Page {page} / {totalPages}</span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm disabled:opacity-50"
+            >
+              Suivant
+            </button>
           </div>
         )}
       </div>
