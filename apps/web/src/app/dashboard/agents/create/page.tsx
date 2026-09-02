@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Bot, ChevronRight, ChevronLeft, SkipForward, Sparkles, Check,
   MessageCircle, Shield, Zap, Clock, AlertCircle, BookOpen, Code2,
-  Copy, Check as CheckIcon, Globe, FileText
+  Copy, Check as CheckIcon, Globe, FileText, Brain
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { agentsApi, knowledgeApi } from '@/lib/api';
@@ -70,6 +70,8 @@ export default function CreateAgentPage() {
     maxDelayMs: 2500,
     businessHours: { start: '09:00', end: '18:00', days: [1, 2, 3, 4, 5] },
     autoReplyMode: 'always',
+    toolsEnabled: true,
+    memoryEnabled: true,
     escalationTopics: [],
     forbiddenTopics: [],
   });
@@ -287,6 +289,19 @@ export default function CreateAgentPage() {
                 <label className="label">Délai max (ms)</label>
                 <input type="number" className="input" value={config.maxDelayMs} onChange={(e) => setConfig({ ...config, maxDelayMs: parseInt(e.target.value) || 0 })} />
               </div>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2"><Zap className="w-4 h-4 text-primary-600" /> Capacités</h3>
+              <label className="flex items-center gap-2 cursor-pointer mb-2">
+                <input type="checkbox" checked={config.toolsEnabled} onChange={(e) => setConfig({ ...config, toolsEnabled: e.target.checked })} className="w-4 h-4 rounded" />
+                <Globe className="w-4 h-4 text-gray-400" />
+                <span className="text-sm text-gray-700">Outils externes (web search, calculatrice, calendrier)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={config.memoryEnabled} onChange={(e) => setConfig({ ...config, memoryEnabled: e.target.checked })} className="w-4 h-4 rounded" />
+                <Brain className="w-4 h-4 text-gray-400" />
+                <span className="text-sm text-gray-700">Mémoire persistante sur le visiteur</span>
+              </label>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <TopicInput label="Sujets à escalader" color="orange" topics={config.escalationTopics} onAdd={addTopic} onRemove={removeTopic} />

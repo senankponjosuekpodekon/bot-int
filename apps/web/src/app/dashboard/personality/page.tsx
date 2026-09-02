@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Clock, MessageCircle, Shield, Zap, Trash2, Plus, Save, AlertCircle } from 'lucide-react';
+import { Sparkles, Clock, MessageCircle, Shield, Zap, Trash2, Plus, Save, AlertCircle, Globe, Brain } from 'lucide-react';
 import { agentsApi, chatApi } from '@/lib/api';
 
 export default function PersonalityPage() {
@@ -16,6 +16,8 @@ export default function PersonalityPage() {
     maxDelayMs: 2500,
     businessHours: { start: '09:00', end: '18:00', days: [1, 2, 3, 4, 5] },
     autoReplyMode: 'always',
+    toolsEnabled: true,
+    memoryEnabled: true,
     escalationTopics: [],
     forbiddenTopics: [],
   });
@@ -52,6 +54,8 @@ export default function PersonalityPage() {
         setConfig({
           ...config,
           ...p,
+          toolsEnabled: p.toolsEnabled ?? true,
+          memoryEnabled: p.memoryEnabled ?? true,
           escalationTopics: Array.isArray(p.escalationTopics) ? p.escalationTopics : [],
           forbiddenTopics: Array.isArray(p.forbiddenTopics) ? p.forbiddenTopics : [],
           businessHours: {
@@ -228,6 +232,22 @@ export default function PersonalityPage() {
             </div>
           </>
         )}
+      </div>
+
+      {/* Capacités : outils et mémoire */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
+        <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Zap className="w-4 h-4 text-gray-400" /> Capacités</h2>
+        <p className="text-xs text-gray-400 mb-3">Choisissez ce que l&apos;agent peut utiliser pour enrichir ses réponses.</p>
+        <label className="flex items-center gap-2 cursor-pointer mb-3">
+          <input type="checkbox" checked={config.toolsEnabled} onChange={(e) => setConfig({ ...config, toolsEnabled: e.target.checked })} className="w-4 h-4 rounded" />
+          <Globe className="w-4 h-4 text-gray-400" />
+          <span className="text-sm text-gray-700">Outils externes (web search, calculatrice, calendrier)</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={config.memoryEnabled} onChange={(e) => setConfig({ ...config, memoryEnabled: e.target.checked })} className="w-4 h-4 rounded" />
+          <Brain className="w-4 h-4 text-gray-400" />
+          <span className="text-sm text-gray-700">Mémoire persistante sur le visiteur</span>
+        </label>
       </div>
 
       {/* Escalade & Sujets interdits */}
