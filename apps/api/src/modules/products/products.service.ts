@@ -820,9 +820,21 @@ export class ProductsService {
   }
 
   private extractOfferPrice(offer: any): number {
-    if (!offer?.price) return 0;
-    const price = String(offer.price).replace(/[^\d.,]/g, '').replace(',', '.');
-    return parseFloat(price) || 0;
+    if (!offer) return 0;
+    const raw = offer.price ?? offer.lowPrice ?? offer.highPrice ?? '';
+    const priceString = String(raw || '').trim();
+    if (!priceString || priceString.toLowerCase() === 'undefined' || priceString.toLowerCase() === 'null') return 0;
+
+    const normalized = priceString.replace(/[^\d.,]/g, '').trim();
+    if (!normalized) return 0;
+
+    const parts = normalized.split(/[,.]/);
+    if (parts.length === 1) return parseFloat(parts[0]) || 0;
+
+    const decimal = parts.pop() || '';
+    const integer = parts.join('');
+    const value = parseFloat(`${integer}.${decimal}`);
+    return Number.isNaN(value) ? 0 : value;
   }
 
   private extractOfferCurrency(offer: any): string | undefined {
