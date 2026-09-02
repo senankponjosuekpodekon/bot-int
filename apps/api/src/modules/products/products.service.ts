@@ -336,17 +336,17 @@ export class ProductsService {
     let imported = 0;
     let errors = 0;
 
-    const lines = csvContent.trim().split(/\r?\n/);
-    if (lines.length < 2) {
+    const rows = this.parseCsv(csvContent);
+    if (rows.length < 2) {
       throw new Error('CSV vide ou invalide');
     }
 
-    const headers = this.parseCsvLine(lines[0]).map((h) => h.toLowerCase().trim());
+    const headers = rows[0].map((h) => h.toLowerCase().trim());
     const detectedFormat = format || this.detectCsvFormat(headers);
 
-    for (let i = 1; i < lines.length; i++) {
+    for (let i = 1; i < rows.length; i++) {
       try {
-        const values = this.parseCsvLine(lines[i]);
+        const values = rows[i];
         if (values.length < 2) continue;
 
         const row: Record<string, string> = {};
@@ -423,14 +423,14 @@ export class ProductsService {
     let imported = 0;
     let errors = 0;
 
-    const lines = csvContent.trim().split(/\r?\n/);
-    if (lines.length < 2) throw new Error('CSV Google Merchant vide ou invalide');
+    const rows = this.parseCsv(csvContent);
+    if (rows.length < 2) throw new Error('CSV Google Merchant vide ou invalide');
 
-    const headers = this.parseCsvLine(lines[0]).map((h) => h.toLowerCase().trim());
+    const headers = rows[0].map((h) => h.toLowerCase().trim());
 
-    for (let i = 1; i < lines.length; i++) {
+    for (let i = 1; i < rows.length; i++) {
       try {
-        const values = this.parseCsvLine(lines[i]);
+        const values = rows[i];
         if (values.length < 3) continue;
 
         const row: Record<string, string> = {};
@@ -604,28 +604,54 @@ export class ProductsService {
     return 'generic';
   }
 
-  private parseCsvLine(line: string): string[] {
-    const result: string[] = [];
+  private parseCsv(content: string): string[][] {
+    const rows: string[][] = [];
+    let row: string[] = [];
     let current = '';
     let inQuotes = false;
+    let i = 0;
+    content = content.replace(/^\uFEFF/, '');
+    const len = content.length;
 
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"';
+    while (i < len) {
+      const char = content[i];
+      if (inQuotes) {
+        if (char === '"') {
+          if (i + 1 < len && content[i + 1] === '"') {
+            current += '"';
+            i += 2;
+            continue;
+          }
+          inQuotes = false;
           i++;
-        } else {
-          inQuotes = !inQuotes;
+          continue;
         }
-      } else if (char === ',' && !inQuotes) {
-        result.push(current.trim());
-        current = '';
-      } else {
         current += char;
+        i++;
+      } else {
+        if (char === '"') {
+          inQuotes = true;
+          i++;
+        } else if (char === ',') {
+          row.push(current.trim());
+          current = '';
+          i++;
+        } else if (char === '\r' || char === '\n') {
+          row.push(current.trim());
+          rows.push(row);
+          row = [];
+          current = '';
+          if (char === '\r' && i + 1 < len && content[i + 1] === '\n') i += 2; else i++;
+        } else {
+          current += char;
+          i++;
+        }
       }
     }
-    result.push(current.trim());
-    return result;
+    if (row.length > 0 || current.length > 0) {
+      row.push(current.trim());
+      rows.push(row);
+    }
+    return rows;
   }
 }
