@@ -35,7 +35,15 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    transformer: {
+      to: (value: number) => value,
+      from: (value: any) => (value == null ? value : Number(value)),
+    },
+  })
   price: number;
 
   @Column({ type: 'varchar', length: 3, default: 'EUR' })

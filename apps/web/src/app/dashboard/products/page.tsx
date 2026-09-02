@@ -192,7 +192,9 @@ export default function ProductsPage() {
                 {p.category && <span className="inline-block text-xs text-primary-600 mt-1">{p.category}</span>}
                 {p.description && <p className="text-xs text-gray-500 mt-2 line-clamp-2">{p.description}</p>}
                 <div className="flex items-center justify-between mt-3">
-                  <span className="text-lg font-bold text-gray-900">{p.price.toFixed(2)}{p.currency === 'EUR' ? '€' : ' ' + p.currency}</span>
+                  <span className="text-lg font-bold text-gray-900">
+                    {isNaN(Number(p.price)) ? '-' : Number(p.price).toFixed(2)}{p.currency === 'EUR' ? '€' : ' ' + p.currency}
+                  </span>
                   <div className="flex gap-1">
                     <button onClick={() => handleEdit(p)} className="p-1.5 rounded-lg hover:bg-gray-100"><Pencil className="w-3.5 h-3.5 text-gray-500" /></button>
                     <button onClick={() => handleDelete(p.id)} className="p-1.5 rounded-lg hover:bg-red-50"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
