@@ -728,7 +728,7 @@ export class ChatService {
     let productsContext = '';
     let carouselProducts: any[] = [];
     try {
-      const products = await this.productsService.searchRelevant(tenantId, userMessage);
+      const products = await this.productsService.searchRelevant(tenantId, userMessage, agent.id);
       if (products.length > 0) {
         carouselProducts = products.slice(0, 5).map((p) => ({
           id: p.id,
@@ -982,7 +982,7 @@ export class ChatService {
 
       if (wantsToBuy) {
         try {
-          const products = await this.productsService.searchRelevant(tenantId, userMessage);
+          const products = await this.productsService.searchRelevant(tenantId, userMessage, agent.id);
           if (products.length > 0) {
             const product = products[0];
             const link = await this.integrationsService.createStripePaymentLink(

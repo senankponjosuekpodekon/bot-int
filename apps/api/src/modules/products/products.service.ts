@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './product.entity';
+import { Agent } from '../agents/agent.entity';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
@@ -12,22 +13,37 @@ export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
+    @InjectRepository(Agent)
+    private readonly agentRepo: Repository<Agent>,
   ) {}
 
+  private async ensureAgentInTenant(tenantId: string, agentId?: string): Promise<void> {
+    if (!agentId) return;
+    const agent = await this.agentRepo.findOne({ where: { id: agentId, tenantId } });
+    if (!agent) throw new NotFoundException('Agent not found');
+  }
+
   async create(tenantId: string, data: Partial<Product>): Promise<Product> {
+    await this.ensureAgentInTenant(tenantId, data.agentId);
     const product = this.productRepo.create({ ...data, tenantId });
     return this.productRepo.save(product);
   }
 
-  async findByTenant(tenantId: string, params?: { category?: string; search?: string; page?: number; limit?: number }): Promise<{ data: Product[]; total: number }> {
+  async findByTenant(tenantId: string, params?: { category?: string; search?: string; page?: number; limit?: number; agentId?: string }): Promise<{ data: Product[]; total: number }> {
     const page = params?.page ?? 1;
     const limit = Math.min(params?.limit ?? 50, 100);
     const skip = (page - 1) * limit;
+
+    if (params?.agentId) await this.ensureAgentInTenant(tenantId, params.agentId);
 
     const qb = this.productRepo
       .createQueryBuilder('product')
       .where('product.tenantId = :tenantId', { tenantId })
       .andWhere('product.isActive = :active', { active: true });
+
+    if (params?.agentId) {
+      qb.andWhere('(product.agentId = :agentId OR product.agentId IS NULL)', { agentId: params.agentId });
+    }
 
     if (params?.category) {
       qb.andWhere('product.category = :category', { category: params.category });
@@ -51,6 +67,7 @@ export class ProductsService {
   }
 
   async update(id: string, tenantId: string, data: Partial<Product>): Promise<Product> {
+    await this.ensureAgentInTenant(tenantId, data.agentId);
     await this.productRepo.update({ id, tenantId }, data);
     return this.findById(id, tenantId);
   }
@@ -59,17 +76,22 @@ export class ProductsService {
     await this.productRepo.delete({ id, tenantId });
   }
 
-  async getCategories(tenantId: string): Promise<string[]> {
-    const result = await this.productRepo
+  async getCategories(tenantId: string, agentId?: string): Promise<string[]> {
+    if (agentId) await this.ensureAgentInTenant(tenantId, agentId);
+    const qb = this.productRepo
       .createQueryBuilder('product')
       .select('DISTINCT product.category', 'category')
       .where('product.tenantId = :tenantId', { tenantId })
-      .andWhere('product.category IS NOT NULL')
-      .getRawMany();
+      .andWhere('product.category IS NOT NULL');
+    if (agentId) {
+      qb.andWhere('(product.agentId = :agentId OR product.agentId IS NULL)', { agentId });
+    }
+    const result = await qb.getRawMany();
     return result.map((r) => r.category).filter(Boolean);
   }
 
-  async searchRelevant(tenantId: string, query: string): Promise<Product[]> {
+  async searchRelevant(tenantId: string, query: string, agentId?: string): Promise<Product[]> {
+    if (agentId) await this.ensureAgentInTenant(tenantId, agentId);
     const keywords = query
       .toLowerCase()
       .replace(/[^\w\sàâäéèêëïîôöùûüç-]/g, ' ')
@@ -82,13 +104,16 @@ export class ProductsService {
     const qb = this.productRepo
       .createQueryBuilder('product')
       .where('product.tenantId = :tenantId', { tenantId })
-      .andWhere('product.isActive = :active', { active: true })
-      .andWhere(
-        keywords
-          .map((_, i) => `(LOWER(product.name) LIKE :kw${i} OR LOWER(product.description) LIKE :kw${i} OR LOWER(product.category) LIKE :kw${i})`)
-          .join(' OR '),
-        Object.fromEntries(keywords.map((kw, i) => [`kw${i}`, `%${kw}%`])),
-      )
+      .andWhere('product.isActive = :active', { active: true });
+    if (agentId) {
+      qb.andWhere('(product.agentId = :agentId OR product.agentId IS NULL)', { agentId });
+    }
+    qb.andWhere(
+      keywords
+        .map((_, i) => `(LOWER(product.name) LIKE :kw${i} OR LOWER(product.description) LIKE :kw${i} OR LOWER(product.category) LIKE :kw${i})`)
+        .join(' OR '),
+      Object.fromEntries(keywords.map((kw, i) => [`kw${i}`, `%${kw}%`])),
+    )
       .orderBy('product.price', 'ASC')
       .take(5);
     return qb.getMany();

@@ -8,6 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Tenant } from '../tenants/tenant.entity';
+import { Agent } from '../agents/agent.entity';
 
 @Entity('products')
 export class Product {
@@ -20,6 +21,13 @@ export class Product {
   @ManyToOne(() => Tenant, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'tenantId' })
   tenant: Tenant;
+
+  @Column({ nullable: true })
+  agentId?: string;
+
+  @ManyToOne(() => Agent, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'agentId' })
+  agent?: Agent;
 
   @Column()
   name: string;

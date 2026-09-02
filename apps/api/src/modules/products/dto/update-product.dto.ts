@@ -12,4 +12,5 @@ export class UpdateProductDto {
   @IsString() @IsOptional() imageUrl?: string;
   @IsString() @IsOptional() productUrl?: string;
   @IsBoolean() @IsOptional() isActive?: boolean;
+  @IsString() @IsOptional() agentId?: string;
 }

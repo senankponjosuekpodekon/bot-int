@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { Package, Plus, Search, Trash2, Pencil, Upload, X, RefreshCw } from 'lucide-react';
-import { productsApi } from '@/lib/api';
+import { productsApi, agentsApi, type Agent } from '@/lib/api';
 
 interface Product {
   id: string;
@@ -15,6 +15,7 @@ interface Product {
   imageUrl: string;
   productUrl: string;
   isActive: boolean;
+  agentId?: string;
 }
 
 export default function ProductsPage() {
@@ -24,12 +25,14 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', price: 0, currency: 'EUR', stock: 0, category: '', imageUrl: '', productUrl: '' });
+  const [form, setForm] = useState({ name: '', description: '', price: 0, currency: 'EUR', stock: 0, category: '', imageUrl: '', productUrl: '', agentId: '' });
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
@@ -63,12 +66,23 @@ export default function ProductsPage() {
     }
   };
 
+  const loadAgents = useCallback(async () => {
+    try {
+      const response = await agentsApi.list({ limit: 100 });
+      setAgents(response?.data || []);
+    } catch {
+      setAgents([]);
+    }
+  }, []);
+
+  useEffect(() => { loadAgents(); }, [loadAgents]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [data, cats] = await Promise.all([
-        productsApi.list({ search, category: category || undefined, limit: 100 }),
-        productsApi.categories(),
+        productsApi.list({ search, category: category || undefined, limit: 100, agentId: selectedAgent || undefined }),
+        productsApi.categories(selectedAgent || undefined),
       ]);
       setProducts(data.data);
       setTotal(data.total);
@@ -78,7 +92,7 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, category]);
+  }, [search, category, selectedAgent]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -94,7 +108,7 @@ export default function ProductsPage() {
       }
       setShowForm(false);
       setEditing(null);
-      setForm({ name: '', description: '', price: 0, currency: 'EUR', stock: 0, category: '', imageUrl: '', productUrl: '' });
+      setForm({ name: '', description: '', price: 0, currency: 'EUR', stock: 0, category: '', imageUrl: '', productUrl: '', agentId: '' });
       load();
     } catch {
       showToast('Erreur lors de la sauvegarde', 'error');
@@ -114,7 +128,7 @@ export default function ProductsPage() {
 
   const handleEdit = (p: Product) => {
     setEditing(p);
-    setForm({ name: p.name, description: p.description || '', price: p.price, currency: p.currency, stock: p.stock, category: p.category || '', imageUrl: p.imageUrl || '', productUrl: p.productUrl || '' });
+    setForm({ name: p.name, description: p.description || '', price: p.price, currency: p.currency, stock: p.stock, category: p.category || '', imageUrl: p.imageUrl || '', productUrl: p.productUrl || '', agentId: p.agentId || '' });
     setShowForm(true);
   };
 
@@ -135,7 +149,7 @@ export default function ProductsPage() {
           <button onClick={() => setShowImport(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <Upload className="w-4 h-4" /> Importer
           </button>
-          <button onClick={() => { setEditing(null); setForm({ name: '', description: '', price: 0, currency: 'EUR', stock: 0, category: '', imageUrl: '', productUrl: '' }); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">
+          <button onClick={() => { setEditing(null); setForm({ name: '', description: '', price: 0, currency: 'EUR', stock: 0, category: '', imageUrl: '', productUrl: '', agentId: '' }); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">
             <Plus className="w-4 h-4" /> Nouveau produit
           </button>
         </div>
@@ -149,6 +163,10 @@ export default function ProductsPage() {
         <select value={category} onChange={(e) => setCategory(e.target.value)} className="px-3 py-2 rounded-lg border border-gray-300 text-sm">
           <option value="">Toutes catégories</option>
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)} className="px-3 py-2 rounded-lg border border-gray-300 text-sm">
+          <option value="">Tous les agents</option>
+          {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
       </div>
 
@@ -206,6 +224,13 @@ export default function ProductsPage() {
                 <div><label className="text-sm font-medium text-gray-700">Image URL</label><input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
               </div>
               <div><label className="text-sm font-medium text-gray-700">URL produit</label><input value={form.productUrl} onChange={(e) => setForm({ ...form, productUrl: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Agent assigné</label>
+                <select value={form.agentId} onChange={(e) => setForm({ ...form, agentId: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                  <option value="">Partagé / tous les agents</option>
+                  {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
               <button onClick={handleSave} className="w-full py-2.5 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">{editing ? 'Mettre à jour' : 'Créer'}</button>
             </div>
           </div>

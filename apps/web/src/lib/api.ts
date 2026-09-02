@@ -8,6 +8,14 @@ type AuthResponse = {
   tenantId: string;
 };
 
+export interface Agent {
+  id: string;
+  name: string;
+  type?: string;
+  industry?: string;
+  isActive?: boolean;
+}
+
  
 declare module 'axios' {
   interface AxiosRequestConfig {
@@ -255,9 +263,9 @@ export const leadsApi = {
 };
 
 export const productsApi = {
-  list: (params?: { category?: string; search?: string; page?: number; limit?: number }) =>
+  list: (params?: { category?: string; search?: string; page?: number; limit?: number; agentId?: string }) =>
     api.get('/products', { params }).then((r) => r.data),
-  categories: () => api.get('/products/categories').then((r) => r.data),
+  categories: (agentId?: string) => api.get('/products/categories', { params: agentId ? { agentId } : undefined }).then((r) => r.data),
   create: (data: any) => api.post('/products', data).then((r) => r.data),
   update: (id: string, data: any) => api.patch(`/products/${id}`, data).then((r) => r.data),
   delete: (id: string) => api.delete(`/products/${id}`).then((r) => r.data),

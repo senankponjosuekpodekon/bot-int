@@ -15,22 +15,26 @@ import { IsNotEmpty, IsNumber, IsOptional, IsString, IsBoolean, Min } from 'clas
 import { Type } from 'class-transformer';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
+import { UserRole } from '../auth/user.entity';
+import { RolesGuard, Roles } from '../auth/guards/roles.guard';
 import { AutoSyncService } from './auto-sync.service';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CacheService } from '../../common/cache.service';
 import { QueueService } from '../queue/queue.service';
 import { UpdateProductDto } from './dto/update-product.dto';
+
 class CreateProductDto {
   @IsString() @IsNotEmpty() name: string;
   @IsString() @IsOptional() description?: string;
   @IsNumber() @Min(0) price: number;
   @IsString() @IsOptional() currency?: string;
-  @Type(() => Number) @IsNumber() stock: number;
+  @Type(() => Number) stock: number;
   @IsString() @IsOptional() sku?: string;
   @IsString() @IsOptional() category?: string;
   @IsString() @IsOptional() imageUrl?: string;
   @IsString() @IsOptional() productUrl?: string;
+  @IsString() @IsOptional() agentId?: string;
 }
 
 class ImportShopifyDto {
@@ -62,11 +66,12 @@ class ListProductsDto {
   @IsString() @IsOptional() search?: string;
   @Type(() => Number) @IsOptional() page?: number;
   @Type(() => Number) @IsOptional() limit?: number;
+  @IsString() @IsOptional() agentId?: string;
 }
 
 @ApiTags('products')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('products')
 export class ProductsController {
   constructor(
@@ -78,6 +83,7 @@ export class ProductsController {
   ) {}
 
   @Post()
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Create a product' })
   @ApiResponse({ status: 201, description: 'Product created' })
   async create(@Request() req, @Body() dto: CreateProductDto) {
@@ -100,11 +106,11 @@ export class ProductsController {
   @Get('categories')
   @ApiOperation({ summary: 'List product categories' })
   @ApiResponse({ status: 200, description: 'List of categories' })
-  async getCategories(@Request() req) {
-    const cacheKey = `products:${req.user.tenantId}:categories`;
+  async getCategories(@Request() req, @Query('agentId') agentId?: string) {
+    const cacheKey = `products:${req.user.tenantId}:${agentId || 'all'}:categories`;
     const cached = await this.cacheService.get(cacheKey);
     if (cached) return cached;
-    const result = await this.productsService.getCategories(req.user.tenantId);
+    const result = await this.productsService.getCategories(req.user.tenantId, agentId);
     await this.cacheService.set(cacheKey, result, 300);
     return result;
   }
@@ -117,6 +123,7 @@ export class ProductsController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Update product by ID' })
   @ApiResponse({ status: 200, description: 'Product updated' })
   async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateProductDto) {
@@ -125,6 +132,7 @@ export class ProductsController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Delete product by ID' })
   @ApiResponse({ status: 200, description: 'Product deleted' })
   async remove(@Request() req, @Param('id') id: string) {
@@ -133,6 +141,7 @@ export class ProductsController {
   }
 
   @Post('import/shopify')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Import products from Shopify' })
   @ApiResponse({ status: 201, description: 'Products import queued' })
   async importShopify(@Request() req, @Body() dto: ImportShopifyDto) {
@@ -142,6 +151,7 @@ export class ProductsController {
   }
 
   @Post('import/woocommerce')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Import products from WooCommerce' })
   @ApiResponse({ status: 201, description: 'Products imported' })
   importWooCommerce(@Request() req, @Body() dto: ImportWooCommerceDto) {
@@ -149,6 +159,7 @@ export class ProductsController {
   }
 
   @Post('import/feed')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Import products from public feed' })
   @ApiResponse({ status: 201, description: 'Products imported' })
   importPublicFeed(@Request() req, @Body() dto: ImportPublicFeedDto) {
@@ -156,6 +167,7 @@ export class ProductsController {
   }
 
   @Post('import/csv')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Import products from CSV' })
   @ApiResponse({ status: 201, description: 'Products imported' })
   importCsv(@Request() req, @Body() dto: ImportCsvDto) {
@@ -163,6 +175,7 @@ export class ProductsController {
   }
 
   @Post('import/google-merchant')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Import products from Google Merchant CSV' })
   @ApiResponse({ status: 201, description: 'Products imported' })
   importGoogleMerchant(@Request() req, @Body() dto: ImportCsvDto) {
@@ -170,6 +183,7 @@ export class ProductsController {
   }
 
   @Post('import/sitemap')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Import products from sitemap' })
   @ApiResponse({ status: 201, description: 'Products imported' })
   importSitemap(@Request() req, @Body() dto: ImportSitemapDto) {
@@ -177,6 +191,7 @@ export class ProductsController {
   }
 
   @Post('sync')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Sync products from all integrations' })
   @ApiResponse({ status: 200, description: 'Sync results' })
   async sync(@Request() req) {
@@ -197,6 +212,7 @@ export class ProductsController {
   }
 
   @Post('auto-sync')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Trigger auto-sync for tenant' })
   @ApiResponse({ status: 200, description: 'Auto-sync results' })
   async triggerAutoSync(@Request() req) {
