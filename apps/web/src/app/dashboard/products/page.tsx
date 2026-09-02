@@ -717,6 +717,17 @@ function HistoryModal({
                         Ré-importer avec les mêmes paramètres
                       </button>
                     )}
+                    {h.source === 'google_merchant' && onReimport && (
+                      <button
+                        onClick={() => onReimport({
+                          tab: 'gmc',
+                          agentId: h.metadata?.agentId,
+                        })}
+                        className="mt-2 w-full py-2 rounded-lg bg-primary-600 text-white text-xs font-medium hover:bg-primary-700"
+                      >
+                        Ré-importer avec les mêmes paramètres
+                      </button>
+                    )}
                     {h.details && h.details.length > 0 && (
                       <div className="bg-gray-50 rounded-lg p-2 max-h-40 overflow-y-auto">
                         <p className="text-xs font-medium text-gray-700 mb-1">Détails</p>
@@ -779,6 +790,7 @@ function SourcesModal({
   const label = (s: any) => {
     if (s.source === 'sitemap') return `Sitemap : ${s.config?.sitemapUrl}`;
     if (s.source === 'csv_url') return `CSV URL : ${s.config?.csvUrl}`;
+    if (s.source === 'google_merchant') return `Google Merchant`;
     return s.source;
   };
 

@@ -9,10 +9,10 @@ import {
 export type ImportSourceType =
   | 'sitemap'
   | 'csv_url'
+  | 'google_merchant'
   | 'shopify'
   | 'woocommerce'
   | 'feed'
-  | 'google_merchant'
   | 'manual';
 
 @Entity('product_import_sources')

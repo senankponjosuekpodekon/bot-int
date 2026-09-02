@@ -676,6 +676,7 @@ export class ProductsService {
     const imported = created + updated;
     this.logger.log(`Google Merchant CSV: ${imported} imported, ${errors} errors`);
     await this.saveImportHistory(tenantId, 'google_merchant', { created, updated, errors }, { metadata: { agentId } });
+    await this.saveImportSource(tenantId, 'google_merchant', { agentId });
     return { imported, errors, created, updated };
   }
 
