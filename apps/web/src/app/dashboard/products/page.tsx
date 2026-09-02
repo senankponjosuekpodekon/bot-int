@@ -238,7 +238,7 @@ export default function ProductsPage() {
       )}
 
       {showImport && (
-        <ImportModal onClose={() => setShowImport(false)} onDone={() => { setShowImport(false); load(); }} showToast={showToast} />
+        <ImportModal onClose={() => setShowImport(false)} onDone={() => { setShowImport(false); load(); }} showToast={showToast} agents={agents} />
       )}
 
       {toast && (
@@ -248,7 +248,7 @@ export default function ProductsPage() {
   );
 }
 
-function ImportModal({ onClose, onDone, showToast }: { onClose: () => void; onDone: () => void; showToast: (msg: string, type?: 'success' | 'error') => void }) {
+function ImportModal({ onClose, onDone, showToast, agents }: { onClose: () => void; onDone: () => void; showToast: (msg: string, type?: 'success' | 'error') => void; agents?: Agent[] }) {
   const [tab, setTab] = useState<'feed' | 'csv' | 'gmc' | 'sitemap' | 'shopify' | 'woocommerce'>('feed');
   const [loading, setLoading] = useState(false);
   const [feedUrl, setFeedUrl] = useState('');
@@ -257,23 +257,26 @@ function ImportModal({ onClose, onDone, showToast }: { onClose: () => void; onDo
   const [sitemapUrl, setSitemapUrl] = useState('');
   const [shopifyForm, setShopifyForm] = useState({ shopDomain: '', accessToken: '' });
   const [wooForm, setWooForm] = useState({ siteUrl: '', consumerKey: '', consumerSecret: '' });
+  const [importAgentId, setImportAgentId] = useState('');
+  const [csvStoreDomain, setCsvStoreDomain] = useState('');
 
   const handleImport = async () => {
     setLoading(true);
     try {
+      const selectedAgentId = importAgentId || undefined;
       let result;
       if (tab === 'feed') {
         if (!feedUrl) { showToast('URL requise', 'error'); setLoading(false); return; }
         result = await productsApi.importFeed(feedUrl);
       } else if (tab === 'csv') {
         if (!csvText.trim()) { showToast('CSV vide', 'error'); setLoading(false); return; }
-        result = await productsApi.importCsv(csvText);
+        result = await productsApi.importCsv(csvText, undefined, csvStoreDomain || undefined, selectedAgentId);
       } else if (tab === 'gmc') {
         if (!gmcText.trim()) { showToast('CSV vide', 'error'); setLoading(false); return; }
-        result = await productsApi.importGoogleMerchant(gmcText);
+        result = await productsApi.importGoogleMerchant(gmcText, selectedAgentId);
       } else if (tab === 'sitemap') {
         if (!sitemapUrl) { showToast('URL sitemap requise', 'error'); setLoading(false); return; }
-        result = await productsApi.importSitemap(sitemapUrl);
+        result = await productsApi.importSitemap(sitemapUrl, selectedAgentId);
       } else if (tab === 'shopify') {
         result = await productsApi.importShopify(shopifyForm.shopDomain, shopifyForm.accessToken);
       } else {
@@ -299,6 +302,16 @@ function ImportModal({ onClose, onDone, showToast }: { onClose: () => void; onDo
     { id: 'shopify' as const, label: 'Shopify API', color: 'bg-green-600' },
     { id: 'woocommerce' as const, label: 'Woo API', color: 'bg-purple-600' },
   ];
+
+  const agentSelect = (
+    <div>
+      <label className="text-sm font-medium text-gray-700">Agent assigné (optionnel)</label>
+      <select value={importAgentId} onChange={(e) => setImportAgentId(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm">
+        <option value="">Partagé / tous les agents</option>
+        {agents?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+      </select>
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -330,6 +343,12 @@ function ImportModal({ onClose, onDone, showToast }: { onClose: () => void; onDo
               <textarea value={csvText} onChange={(e) => setCsvText(e.target.value)} rows={6} placeholder="name,price,stock,category,description&#10;T-shirt,19.99,100,Vêtements,Coton bio" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm font-mono" />
               <p className="text-xs text-gray-400 mt-1">Détection automatique du format (Shopify, WooCommerce, ou générique). Colonnes reconnues: name/title, price/prix, stock, category, description, sku, image.</p>
             </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Domaine Shopify (optionnel)</label>
+              <input value={csvStoreDomain} onChange={(e) => setCsvStoreDomain(e.target.value)} placeholder="maboutique.myshopify.com" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
+              <p className="text-xs text-gray-400 mt-1">Permet de reconstruire l'URL produit complète (/products/handle).</p>
+            </div>
+            {agentSelect}
           </div>
         )}
 
@@ -340,6 +359,7 @@ function ImportModal({ onClose, onDone, showToast }: { onClose: () => void; onDo
               <textarea value={gmcText} onChange={(e) => setGmcText(e.target.value)} rows={6} placeholder="id,title,description,link,image_link,price,availability,brand,gtin,condition&#10;SKU001,T-shirt Bio,Coton bio,https://...,https://...,19.99 EUR,in_stock,MyBrand,123456,new" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm font-mono" />
               <p className="text-xs text-gray-400 mt-1">Format Google Shopping. Colonnes: id, title, description, link, image_link, price, availability, brand, gtin, mpn, condition, product_type, google_product_category.</p>
             </div>
+            {agentSelect}
           </div>
         )}
 
@@ -350,6 +370,7 @@ function ImportModal({ onClose, onDone, showToast }: { onClose: () => void; onDo
               <input value={sitemapUrl} onChange={(e) => setSitemapUrl(e.target.value)} placeholder="https://maboutique.com/sitemap.xml" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
               <p className="text-xs text-gray-400 mt-1">Scraping automatique: lit le sitemap, filtre les URLs produit (/product, /p/, /item/...), scrape chaque page (max 50) pour extraire nom, prix, description, image. Supporte les sitemaps index (nested).</p>
             </div>
+            {agentSelect}
           </div>
         )}
 

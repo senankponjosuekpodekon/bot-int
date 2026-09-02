@@ -332,7 +332,14 @@ export class ProductsService {
     return { imported, errors };
   }
 
-  async importFromCsv(tenantId: string, csvContent: string, format?: 'shopify' | 'woocommerce' | 'generic'): Promise<{ imported: number; errors: number }> {
+  async importFromCsv(
+    tenantId: string,
+    csvContent: string,
+    format?: 'shopify' | 'woocommerce' | 'generic',
+    storeDomain?: string,
+    agentId?: string,
+  ): Promise<{ imported: number; errors: number }> {
+    if (agentId) await this.ensureAgentInTenant(tenantId, agentId);
     let imported = 0;
     let errors = 0;
 
@@ -344,74 +351,170 @@ export class ProductsService {
     const headers = rows[0].map((h) => h.toLowerCase().trim());
     const detectedFormat = format || this.detectCsvFormat(headers);
 
-    for (let i = 1; i < rows.length; i++) {
-      try {
-        const values = rows[i];
-        if (values.length < 2) continue;
+    const rowObjects = rows.slice(1).map((values) => {
+      const row: Record<string, string> = {};
+      headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+      return row;
+    });
 
-        const row: Record<string, string> = {};
-        headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+    if (detectedFormat === 'shopify') {
+      const groups = new Map<string, typeof rowObjects>();
+      for (const row of rowObjects) {
+        const handle = (row['handle'] || '').trim();
+        if (!handle) continue;
+        if (!groups.has(handle)) groups.set(handle, []);
+        groups.get(handle).push(row);
+      }
 
-        let productData: Partial<Product>;
+      for (const [handle, group] of groups.entries()) {
+        try {
+          const primary = group.find((r) => r['title']?.trim()) || group[0];
+          if (!primary?.['title']?.trim()) continue;
 
-        if (detectedFormat === 'shopify') {
-          productData = {
-            name: row['title'] || row['name'] || row['handle'] || `Produit ${i}`,
-            description: (row['body (html)'] || row['body_html'] || row['description'] || '').replace(/<[^>]+>/g, '').slice(0, 2000),
-            price: parseFloat(row['variant price'] || row['price'] || '0'),
-            currency: 'EUR',
-            stock: parseInt(row['variant inventory qty'] || row['inventory_quantity'] || '0') || 0,
-            sku: row['variant sku'] || row['sku'] || `csv-${i}`,
-            category: row['type'] || row['product_type'] || row['category'] || 'General',
-            imageUrl: row['image src'] || row['image'] || null,
-            productUrl: row['handle'] ? `${row['handle']}` : null,
-            metadata: { vendor: row['vendor'], tags: row['tags'], source: 'csv_shopify' },
-          };
-        } else if (detectedFormat === 'woocommerce') {
-          productData = {
-            name: row['name'] || row['post_title'] || `Produit ${i}`,
+          const allImages = new Set<string>();
+          const variants: Array<{
+            sku: string;
+            price: string;
+            stock: string;
+            optionLabel: string;
+            image: string;
+          }> = [];
+
+          for (const r of group) {
+            const image = (r['image src'] || '').trim();
+            if (image) allImages.add(image);
+
+            const title = r['title']?.trim();
+            const variantSku = r['variant sku']?.trim();
+            if (title && variantSku) {
+              const optionParts: string[] = [];
+              for (let opt = 1; opt <= 3; opt++) {
+                const optName = (r[`option${opt} name`] || '').trim();
+                const optValue = (r[`option${opt} value`] || '').trim();
+                if (optValue && optValue.toLowerCase() !== 'default title') {
+                  optionParts.push(
+                    optName && optName.toLowerCase() !== 'title'
+                      ? `${optName}: ${optValue}`
+                      : optValue,
+                  );
+                }
+              }
+              variants.push({
+                sku: variantSku,
+                price: r['variant price'] || '',
+                stock: r['variant inventory qty'] || '',
+                optionLabel: optionParts.join(' / '),
+                image,
+              });
+            }
+          }
+
+          if (variants.length === 0) {
+            const primarySku = (primary['variant sku'] || '').trim() || `csv-${handle}`;
+            variants.push({
+              sku: primarySku,
+              price: primary['variant price'] || '',
+              stock: primary['variant inventory qty'] || '',
+              optionLabel: '',
+              image: (primary['image src'] || '').trim(),
+            });
+          }
+
+          const firstImage = allImages.size > 0 ? Array.from(allImages)[0] : null;
+          const productUrl = storeDomain ? this.buildShopifyUrl(storeDomain, handle) : null;
+
+          for (const variant of variants) {
+            const baseName = primary['title'].trim();
+            const name = variant.optionLabel ? `${baseName} — ${variant.optionLabel}` : baseName;
+            const price = parseFloat((variant.price || primary['variant price'] || '0').replace(/[^\d.]/g, '')) || 0;
+            const stock = parseInt(variant.stock || primary['variant inventory qty'] || '0') || 0;
+            const sku = variant.sku || `csv-${handle}`;
+
+            const productData: Partial<Product> = {
+              name,
+              description: (primary['body (html)'] || primary['body_html'] || '')
+                .replace(/<[^>]+>/g, '')
+                .slice(0, 2000),
+              price,
+              currency: 'EUR',
+              stock,
+              sku,
+              category: primary['type'] || primary['product_type'] || primary['category'] || 'General',
+              imageUrl: variant.image || firstImage,
+              productUrl,
+              agentId,
+              metadata: {
+                vendor: primary['vendor'],
+                tags: primary['tags'],
+                handle,
+                images: Array.from(allImages).slice(0, 10),
+                optionLabel: variant.optionLabel || undefined,
+                source: 'csv_shopify',
+              },
+            };
+            await this.upsertProduct(tenantId, sku, productData);
+            imported++;
+          }
+        } catch {
+          errors++;
+        }
+      }
+    } else if (detectedFormat === 'woocommerce') {
+      for (let i = 0; i < rowObjects.length; i++) {
+        try {
+          const row = rowObjects[i];
+          if (!row['name'] && !row['title'] && !row['post_title']) continue;
+          const productData: Partial<Product> = {
+            name: row['name'] || row['post_title'] || `Produit ${i + 1}`,
             description: (row['short_description'] || row['description'] || '').replace(/<[^>]+>/g, '').slice(0, 2000),
-            price: parseFloat(row['regular_price'] || row['price'] || '0'),
-            currency: 'EUR',
+            price: parseFloat((row['regular_price'] || row['price'] || '0').replace(/[^\d.]/g, '')) || 0,
+            currency: row['currency'] || row['devise'] || 'EUR',
             stock: parseInt(row['stock_quantity'] || row['stock'] || '0') || 0,
-            sku: row['sku'] || row['id'] || `csv-${i}`,
+            sku: row['sku'] || row['id'] || `csv-${i + 1}`,
             category: row['categories'] || row['category'] || 'General',
             imageUrl: row['images'] || row['image'] || null,
             productUrl: row['permalink'] || null,
+            agentId,
             metadata: { type: row['type'], tags: row['tags'], source: 'csv_woo' },
           };
-        } else {
-          productData = {
-            name: row['name'] || row['title'] || row['produit'] || `Produit ${i}`,
+          if (!productData.name || Number.isNaN(productData.price) || productData.price < 0) {
+            errors++;
+            continue;
+          }
+          await this.upsertProduct(tenantId, productData.sku, productData);
+          imported++;
+        } catch {
+          errors++;
+        }
+      }
+    } else {
+      for (let i = 0; i < rowObjects.length; i++) {
+        try {
+          const row = rowObjects[i];
+          if (!row['name'] && !row['title'] && !row['produit']) continue;
+          const priceRaw = row['price'] || row['prix'] || row['montant'] || '0';
+          const productData: Partial<Product> = {
+            name: row['name'] || row['title'] || row['produit'] || `Produit ${i + 1}`,
             description: row['description'] || row['desc'] || '',
-            price: parseFloat(row['price'] || row['prix'] || row['montant'] || '0'),
+            price: parseFloat(priceRaw.replace(/[^\d.]/g, '')) || 0,
             currency: row['currency'] || row['devise'] || 'EUR',
             stock: parseInt(row['stock'] || row['quantite'] || row['quantity'] || '0') || 0,
-            sku: row['sku'] || row['id'] || row['reference'] || `csv-${i}`,
+            sku: row['sku'] || row['id'] || row['reference'] || `csv-${i + 1}`,
             category: row['category'] || row['categorie'] || 'General',
             imageUrl: row['image'] || row['image_url'] || row['imageurl'] || null,
             productUrl: row['url'] || row['product_url'] || row['link'] || null,
+            agentId,
             metadata: { source: 'csv_generic' },
           };
-        }
-
-        if (!productData.name || productData.price < 0) {
+          if (!productData.name || Number.isNaN(productData.price) || productData.price < 0) {
+            errors++;
+            continue;
+          }
+          await this.upsertProduct(tenantId, productData.sku, productData);
+          imported++;
+        } catch {
           errors++;
-          continue;
         }
-
-        const existing = await this.productRepo.findOne({
-          where: { tenantId, sku: productData.sku },
-        });
-
-        if (existing) {
-          await this.productRepo.update(existing.id, productData);
-        } else {
-          await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
-        }
-        imported++;
-      } catch {
-        errors++;
       }
     }
 
@@ -419,7 +522,8 @@ export class ProductsService {
     return { imported, errors };
   }
 
-  async importFromGoogleMerchantCsv(tenantId: string, csvContent: string): Promise<{ imported: number; errors: number }> {
+  async importFromGoogleMerchantCsv(tenantId: string, csvContent: string, agentId?: string): Promise<{ imported: number; errors: number }> {
+    if (agentId) await this.ensureAgentInTenant(tenantId, agentId);
     let imported = 0;
     let errors = 0;
 
@@ -447,6 +551,7 @@ export class ProductsService {
           category: row['product_type'] || row['google_product_category'] || 'General',
           imageUrl: row['image_link'] || row['additional_image_link'] || null,
           productUrl: row['link'] || null,
+          agentId,
           metadata: {
             brand: row['brand'],
             gtin: row['gtin'],
@@ -458,14 +563,9 @@ export class ProductsService {
           },
         };
 
-        if (!productData.name || productData.price < 0) { errors++; continue; }
+        if (!productData.name || Number.isNaN(productData.price) || productData.price < 0) { errors++; continue; }
 
-        const existing = await this.productRepo.findOne({ where: { tenantId, sku: productData.sku } });
-        if (existing) {
-          await this.productRepo.update(existing.id, productData);
-        } else {
-          await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
-        }
+        await this.upsertProduct(tenantId, productData.sku, productData);
         imported++;
       } catch {
         errors++;
@@ -476,7 +576,8 @@ export class ProductsService {
     return { imported, errors };
   }
 
-  async importFromSitemap(tenantId: string, sitemapUrl: string): Promise<{ imported: number; errors: number; scanned: number }> {
+  async importFromSitemap(tenantId: string, sitemapUrl: string, agentId?: string): Promise<{ imported: number; errors: number; scanned: number }> {
+    if (agentId) await this.ensureAgentInTenant(tenantId, agentId);
     let imported = 0;
     let errors = 0;
     let scanned = 0;
@@ -518,14 +619,9 @@ export class ProductsService {
           const product = await this.scrapeProductPage(productUrl);
           if (product) {
             const sku = product.sku || `sitemap-${Buffer.from(productUrl).toString('base64').slice(0, 16)}`;
-            const existing = await this.productRepo.findOne({ where: { tenantId, sku } });
-            const productData: any = { ...product, sku, productUrl, metadata: { ...product.metadata, source: 'sitemap' } };
+            const productData: any = { ...product, sku, productUrl, agentId, metadata: { ...product.metadata, source: 'sitemap' } };
 
-            if (existing) {
-              await this.productRepo.update(existing.id, productData);
-            } else {
-              await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
-            }
+            await this.upsertProduct(tenantId, sku, productData);
             imported++;
           }
         } catch {
@@ -591,6 +687,21 @@ export class ProductsService {
       };
     } catch {
       return null;
+    }
+  }
+
+  private buildShopifyUrl(storeDomain: string, handle: string): string {
+    const domain = storeDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const cleanHandle = handle.replace(/^\//, '').replace(/\/$/, '');
+    return `https://${domain}/products/${cleanHandle}`;
+  }
+
+  private async upsertProduct(tenantId: string, sku: string, productData: Partial<Product>): Promise<void> {
+    const existing = await this.productRepo.findOne({ where: { tenantId, sku } });
+    if (existing) {
+      await this.productRepo.update(existing.id, productData);
+    } else {
+      await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
     }
   }
 

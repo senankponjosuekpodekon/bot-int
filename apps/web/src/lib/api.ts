@@ -275,12 +275,12 @@ export const productsApi = {
     api.post('/products/import/woocommerce', { siteUrl, consumerKey, consumerSecret }).then((r) => r.data),
   importFeed: (shopUrl: string) =>
     api.post('/products/import/feed', { shopUrl }).then((r) => r.data),
-  importCsv: (csvContent: string, format?: string) =>
-    api.post('/products/import/csv', { csvContent, format }).then((r) => r.data),
-  importGoogleMerchant: (csvContent: string) =>
-    api.post('/products/import/google-merchant', { csvContent }).then((r) => r.data),
-  importSitemap: (sitemapUrl: string) =>
-    api.post('/products/import/sitemap', { sitemapUrl }).then((r) => r.data),
+  importCsv: (csvContent: string, format?: string, storeDomain?: string, agentId?: string) =>
+    api.post('/products/import/csv', { csvContent, format, storeDomain, agentId }).then((r) => r.data),
+  importGoogleMerchant: (csvContent: string, agentId?: string) =>
+    api.post('/products/import/google-merchant', { csvContent, agentId }).then((r) => r.data),
+  importSitemap: (sitemapUrl: string, agentId?: string) =>
+    api.post('/products/import/sitemap', { sitemapUrl, agentId }).then((r) => r.data),
   sync: () => api.post('/products/sync').then((r) => r.data),
   autoSync: () => api.post('/products/auto-sync').then((r) => r.data),
 };

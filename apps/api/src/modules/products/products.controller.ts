@@ -55,10 +55,13 @@ class ImportPublicFeedDto {
 class ImportCsvDto {
   @IsString() @IsNotEmpty() csvContent: string;
   @IsString() @IsOptional() format?: string;
+  @IsString() @IsOptional() storeDomain?: string;
+  @IsString() @IsOptional() agentId?: string;
 }
 
 class ImportSitemapDto {
   @IsString() @IsNotEmpty() sitemapUrl: string;
+  @IsString() @IsOptional() agentId?: string;
 }
 
 class ListProductsDto {
@@ -171,7 +174,7 @@ export class ProductsController {
   @ApiOperation({ summary: 'Import products from CSV' })
   @ApiResponse({ status: 201, description: 'Products imported' })
   importCsv(@Request() req, @Body() dto: ImportCsvDto) {
-    return this.productsService.importFromCsv(req.user.tenantId, dto.csvContent, dto.format as any);
+    return this.productsService.importFromCsv(req.user.tenantId, dto.csvContent, dto.format as any, dto.storeDomain, dto.agentId);
   }
 
   @Post('import/google-merchant')
@@ -179,7 +182,7 @@ export class ProductsController {
   @ApiOperation({ summary: 'Import products from Google Merchant CSV' })
   @ApiResponse({ status: 201, description: 'Products imported' })
   importGoogleMerchant(@Request() req, @Body() dto: ImportCsvDto) {
-    return this.productsService.importFromGoogleMerchantCsv(req.user.tenantId, dto.csvContent);
+    return this.productsService.importFromGoogleMerchantCsv(req.user.tenantId, dto.csvContent, dto.agentId);
   }
 
   @Post('import/sitemap')
@@ -187,7 +190,7 @@ export class ProductsController {
   @ApiOperation({ summary: 'Import products from sitemap' })
   @ApiResponse({ status: 201, description: 'Products imported' })
   importSitemap(@Request() req, @Body() dto: ImportSitemapDto) {
-    return this.productsService.importFromSitemap(req.user.tenantId, dto.sitemapUrl);
+    return this.productsService.importFromSitemap(req.user.tenantId, dto.sitemapUrl, dto.agentId);
   }
 
   @Post('sync')
