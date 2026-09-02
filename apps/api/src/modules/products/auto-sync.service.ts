@@ -76,6 +76,30 @@ export class AutoSyncService {
       }
     }
 
+    const csvUrlSources = await this.sourceRepo.find({
+      where: { source: 'csv_url', enabled: true },
+    });
+    for (const source of csvUrlSources) {
+      try {
+        const result = await this.productsService.importFromCsvUrl(
+          source.tenantId,
+          source.config.csvUrl,
+          source.config.format,
+          source.config.storeDomain,
+          source.config.agentId,
+        );
+        totalSynced += result.imported;
+        totalErrors += result.errors;
+        source.lastImportAt = new Date();
+        await this.sourceRepo.save(source);
+        this.logger.log(
+          `Synced CSV URL ${source.config.csvUrl}: ${result.imported} imported, ${result.errors} errors`,
+        );
+      } catch (err: any) {
+        this.logger.error(`CSV URL sync failed for ${source.config.csvUrl}: ${err?.message}`);
+      }
+    }
+
     this.logger.log(`Auto-sync complete: ${totalSynced} products synced, ${totalErrors} errors`);
   }
 
@@ -92,9 +116,12 @@ export class AutoSyncService {
     const sitemapSources = await this.sourceRepo.find({
       where: { tenantId, source: 'sitemap', enabled: true },
     });
+    const csvUrlSources = await this.sourceRepo.find({
+      where: { tenantId, source: 'csv_url', enabled: true },
+    });
 
-    if (allIntegrations.length === 0 && sitemapSources.length === 0) {
-      throw new Error('No enabled e-commerce integration or sitemap source found for this tenant');
+    if (allIntegrations.length === 0 && sitemapSources.length === 0 && csvUrlSources.length === 0) {
+      throw new Error('No enabled e-commerce integration, sitemap or CSV URL source found for this tenant');
     }
 
     let totalImported = 0;
@@ -125,6 +152,25 @@ export class AutoSyncService {
         await this.sourceRepo.save(source);
       } catch (err: any) {
         this.logger.error(`Manual sitemap sync failed: ${err?.message}`);
+        totalErrors++;
+      }
+    }
+
+    for (const source of csvUrlSources) {
+      try {
+        const result = await this.productsService.importFromCsvUrl(
+          tenantId,
+          source.config.csvUrl,
+          source.config.format,
+          source.config.storeDomain,
+          source.config.agentId,
+        );
+        totalImported += result.imported;
+        totalErrors += result.errors;
+        source.lastImportAt = new Date();
+        await this.sourceRepo.save(source);
+      } catch (err: any) {
+        this.logger.error(`Manual CSV URL sync failed: ${err?.message}`);
         totalErrors++;
       }
     }

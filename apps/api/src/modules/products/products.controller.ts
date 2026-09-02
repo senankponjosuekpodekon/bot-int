@@ -59,6 +59,13 @@ class ImportCsvDto {
   @IsString() @IsOptional() agentId?: string;
 }
 
+class ImportCsvUrlDto {
+  @IsString() @IsNotEmpty() csvUrl: string;
+  @IsString() @IsOptional() format?: string;
+  @IsString() @IsOptional() storeDomain?: string;
+  @IsString() @IsOptional() agentId?: string;
+}
+
 class ImportSitemapDto {
   @IsString() @IsNotEmpty() sitemapUrl: string;
   @IsString() @IsOptional() agentId?: string;
@@ -190,6 +197,14 @@ export class ProductsController {
   @ApiResponse({ status: 201, description: 'Products imported' })
   importCsv(@Request() req, @Body() dto: ImportCsvDto) {
     return this.productsService.importFromCsv(req.user.tenantId, dto.csvContent, dto.format as any, dto.storeDomain, dto.agentId);
+  }
+
+  @Post('import/csv-url')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Import products from hosted CSV URL' })
+  @ApiResponse({ status: 201, description: 'Products imported' })
+  importCsvUrl(@Request() req, @Body() dto: ImportCsvUrlDto) {
+    return this.productsService.importFromCsvUrl(req.user.tenantId, dto.csvUrl, dto.format as any, dto.storeDomain, dto.agentId);
   }
 
   @Post('import/google-merchant')

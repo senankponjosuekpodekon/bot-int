@@ -33,6 +33,8 @@ export default function ProductsPage() {
   const [view, setView] = useState<'grid' | 'list'>('list');
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [importInitialTab, setImportInitialTab] = useState<'feed' | 'csv' | 'csv_url' | 'gmc' | 'sitemap' | 'shopify' | 'woocommerce' | undefined>();
+  const [importInitialConfig, setImportInitialConfig] = useState<{ storeDomain?: string; agentId?: string; csvUrl?: string; format?: string } | undefined>();
   const [showHistory, setShowHistory] = useState(false);
   const [importHistory, setImportHistory] = useState<any[]>([]);
   const [importHistoryTotal, setImportHistoryTotal] = useState(0);
@@ -336,7 +338,14 @@ export default function ProductsPage() {
       )}
 
       {showImport && (
-        <ImportModal onClose={() => setShowImport(false)} onDone={() => { setShowImport(false); load(); }} showToast={showToast} agents={agents} />
+        <ImportModal
+          onClose={() => { setShowImport(false); setImportInitialTab(undefined); setImportInitialConfig(undefined); }}
+          onDone={() => { setShowImport(false); setImportInitialTab(undefined); setImportInitialConfig(undefined); load(); }}
+          showToast={showToast}
+          agents={agents}
+          initialTab={importInitialTab}
+          initialConfig={importInitialConfig}
+        />
       )}
 
       {showHistory && (
@@ -349,6 +358,7 @@ export default function ProductsPage() {
           onSelect={setSelectedImport}
           onRefresh={loadHistory}
           showToast={showToast}
+          onReimport={(config) => { setShowHistory(false); setSelectedImport(null); setImportInitialTab(config.tab); setImportInitialConfig(config); setShowImport(true); }}
         />
       )}
 
@@ -359,17 +369,27 @@ export default function ProductsPage() {
   );
 }
 
-function ImportModal({ onClose, onDone, showToast, agents }: { onClose: () => void; onDone: () => void; showToast: (msg: string, type?: 'success' | 'error') => void; agents?: Agent[] }) {
-  const [tab, setTab] = useState<'feed' | 'csv' | 'gmc' | 'sitemap' | 'shopify' | 'woocommerce'>('feed');
+function ImportModal({ onClose, onDone, showToast, agents, initialTab, initialConfig }: {
+  onClose: () => void;
+  onDone: () => void;
+  showToast: (msg: string, type?: 'success' | 'error') => void;
+  agents?: Agent[];
+  initialTab?: 'feed' | 'csv' | 'csv_url' | 'gmc' | 'sitemap' | 'shopify' | 'woocommerce';
+  initialConfig?: { storeDomain?: string; agentId?: string; csvUrl?: string; format?: string };
+}) {
+  const [tab, setTab] = useState<'feed' | 'csv' | 'csv_url' | 'gmc' | 'sitemap' | 'shopify' | 'woocommerce'>(initialTab || 'feed');
   const [loading, setLoading] = useState(false);
   const [feedUrl, setFeedUrl] = useState('');
   const [csvText, setCsvText] = useState('');
+  const [csvUrl, setCsvUrl] = useState(initialConfig?.csvUrl || '');
+  const [csvUrlFormat, setCsvUrlFormat] = useState(initialConfig?.format || '');
+  const [csvUrlStoreDomain, setCsvUrlStoreDomain] = useState(initialConfig?.storeDomain || '');
   const [gmcText, setGmcText] = useState('');
   const [sitemapUrl, setSitemapUrl] = useState('');
   const [shopifyForm, setShopifyForm] = useState({ shopDomain: '', accessToken: '' });
   const [wooForm, setWooForm] = useState({ siteUrl: '', consumerKey: '', consumerSecret: '' });
-  const [importAgentId, setImportAgentId] = useState('');
-  const [csvStoreDomain, setCsvStoreDomain] = useState('');
+  const [importAgentId, setImportAgentId] = useState(initialConfig?.agentId || '');
+  const [csvStoreDomain, setCsvStoreDomain] = useState(initialConfig?.storeDomain || '');
   const [sitemapMaxPages, setSitemapMaxPages] = useState(50);
 
   const handleImport = async () => {
@@ -383,6 +403,9 @@ function ImportModal({ onClose, onDone, showToast, agents }: { onClose: () => vo
       } else if (tab === 'csv') {
         if (!csvText.trim()) { showToast('CSV vide', 'error'); setLoading(false); return; }
         result = await productsApi.importCsv(csvText, undefined, csvStoreDomain || undefined, selectedAgentId);
+      } else if (tab === 'csv_url') {
+        if (!csvUrl.trim()) { showToast('URL CSV requise', 'error'); setLoading(false); return; }
+        result = await productsApi.importCsvUrl(csvUrl, csvUrlFormat || undefined, csvUrlStoreDomain || undefined, selectedAgentId);
       } else if (tab === 'gmc') {
         if (!gmcText.trim()) { showToast('CSV vide', 'error'); setLoading(false); return; }
         result = await productsApi.importGoogleMerchant(gmcText, selectedAgentId);
@@ -412,6 +435,7 @@ function ImportModal({ onClose, onDone, showToast, agents }: { onClose: () => vo
   const tabs = [
     { id: 'feed' as const, label: 'Lien boutique', color: 'bg-green-600' },
     { id: 'csv' as const, label: 'CSV', color: 'bg-blue-600' },
+    { id: 'csv_url' as const, label: 'CSV URL', color: 'bg-cyan-600' },
     { id: 'gmc' as const, label: 'Google Merchant', color: 'bg-orange-600' },
     { id: 'sitemap' as const, label: 'Sitemap XML', color: 'bg-indigo-600' },
     { id: 'shopify' as const, label: 'Shopify API', color: 'bg-green-600' },
@@ -462,6 +486,30 @@ function ImportModal({ onClose, onDone, showToast, agents }: { onClose: () => vo
               <label className="text-sm font-medium text-gray-700">Domaine Shopify (optionnel)</label>
               <input value={csvStoreDomain} onChange={(e) => setCsvStoreDomain(e.target.value)} placeholder="maboutique.myshopify.com" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
               <p className="text-xs text-gray-400 mt-1">Permet de reconstruire l'URL produit complète (/products/handle).</p>
+            </div>
+            {agentSelect}
+          </div>
+        )}
+
+        {tab === 'csv_url' && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-gray-700">URL du fichier CSV</label>
+              <input value={csvUrl} onChange={(e) => setCsvUrl(e.target.value)} placeholder="https://maboutique.com/produits.csv" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
+              <p className="text-xs text-gray-400 mt-1">Le fichier doit être accessible publiquement (hébergé sur un site, Google Sheets publique, etc.).</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Format (optionnel)</label>
+              <select value={csvUrlFormat} onChange={(e) => setCsvUrlFormat(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm">
+                <option value="">Détection automatique</option>
+                <option value="shopify">Shopify</option>
+                <option value="woocommerce">WooCommerce</option>
+                <option value="generic">Générique</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Domaine Shopify (optionnel)</label>
+              <input value={csvUrlStoreDomain} onChange={(e) => setCsvUrlStoreDomain(e.target.value)} placeholder="maboutique.myshopify.com" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
             </div>
             {agentSelect}
           </div>
@@ -525,6 +573,7 @@ function HistoryModal({
   onSelect,
   onRefresh,
   showToast,
+  onReimport,
 }: {
   onClose: () => void;
   history: any[];
@@ -534,6 +583,7 @@ function HistoryModal({
   onSelect: (item: any) => void;
   onRefresh: () => void;
   showToast: (msg: string, type?: 'success' | 'error') => void;
+  onReimport?: (config: { tab: any; storeDomain?: string; agentId?: string; csvUrl?: string; format?: string }) => void;
 }) {
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
@@ -613,6 +663,34 @@ function HistoryModal({
                         className="mt-2 w-full py-2 rounded-lg bg-primary-600 text-white text-xs font-medium hover:bg-primary-700"
                       >
                         Re-lancer cet import
+                      </button>
+                    )}
+                    {h.source === 'csv_url' && h.metadata?.csvUrl && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await productsApi.importCsvUrl(h.metadata.csvUrl, h.metadata.format, h.metadata.storeDomain, h.metadata.agentId);
+                            showToast('Import CSV URL relancé');
+                            onRefresh();
+                          } catch {
+                            showToast('Erreur lors du re-lancement', 'error');
+                          }
+                        }}
+                        className="mt-2 w-full py-2 rounded-lg bg-primary-600 text-white text-xs font-medium hover:bg-primary-700"
+                      >
+                        Re-lancer cet import
+                      </button>
+                    )}
+                    {h.source === 'csv' && onReimport && (
+                      <button
+                        onClick={() => onReimport({
+                          tab: 'csv',
+                          storeDomain: h.metadata?.storeDomain,
+                          agentId: h.metadata?.agentId,
+                        })}
+                        className="mt-2 w-full py-2 rounded-lg bg-primary-600 text-white text-xs font-medium hover:bg-primary-700"
+                      >
+                        Ré-importer avec les mêmes paramètres
                       </button>
                     )}
                     {h.details && h.details.length > 0 && (

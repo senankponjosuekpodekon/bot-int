@@ -399,6 +399,8 @@ export class ProductsService {
     format?: 'shopify' | 'woocommerce' | 'generic',
     storeDomain?: string,
     agentId?: string,
+    source: ImportSource = 'csv',
+    extraMetadata: Record<string, any> = {},
   ): Promise<{ imported: number; errors: number; details: string[]; created: number; updated: number }> {
     if (agentId) await this.ensureAgentInTenant(tenantId, agentId);
     let created = 0;
@@ -601,8 +603,22 @@ export class ProductsService {
 
     const imported = created + updated;
     this.logger.log(`CSV import (${detectedFormat}): ${imported} imported, ${errors} errors`);
-    await this.saveImportHistory(tenantId, 'csv', { created, updated, errors }, { details, metadata: { detectedFormat, storeDomain, agentId } });
+    await this.saveImportHistory(tenantId, source, { created, updated, errors }, { details, metadata: { detectedFormat, storeDomain, agentId, ...extraMetadata } });
     return { imported, errors, details, created, updated };
+  }
+
+  async importFromCsvUrl(
+    tenantId: string,
+    csvUrl: string,
+    format?: 'shopify' | 'woocommerce' | 'generic',
+    storeDomain?: string,
+    agentId?: string,
+  ): Promise<{ imported: number; errors: number; details: string[]; created: number; updated: number }> {
+    const response = await this.fetchWithRetry(csvUrl, { timeout: 30000, responseType: 'text' });
+    const csvContent = typeof response.data === 'string' ? response.data : String(response.data);
+    const result = await this.importFromCsv(tenantId, csvContent, format, storeDomain, agentId, 'csv_url', { csvUrl });
+    await this.saveImportSource(tenantId, 'csv_url', { csvUrl, format, storeDomain, agentId });
+    return result;
   }
 
   async importFromGoogleMerchantCsv(tenantId: string, csvContent: string, agentId?: string): Promise<{ imported: number; errors: number; created: number; updated: number }> {

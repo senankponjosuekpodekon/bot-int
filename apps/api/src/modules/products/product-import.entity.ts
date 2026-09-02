@@ -8,6 +8,7 @@ import {
 
 export type ImportSource =
   | 'csv'
+  | 'csv_url'
   | 'sitemap'
   | 'google_merchant'
   | 'shopify'
