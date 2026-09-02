@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { Package, Plus, Search, Trash2, Pencil, Upload, X, RefreshCw, History, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, Plus, Search, Trash2, Pencil, Upload, X, RefreshCw, History, ChevronDown, ChevronUp, LayoutGrid, List } from 'lucide-react';
 import { productsApi, agentsApi, type Agent } from '@/lib/api';
 
 interface Product {
@@ -27,6 +27,7 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState('');
+  const [view, setView] = useState<'grid' | 'list'>('list');
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -190,6 +191,10 @@ export default function ProductsPage() {
           <option value="">Tous les agents</option>
           {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
+        <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+          <button onClick={() => setView('list')} className={`p-2 ${view === 'list' ? 'bg-primary-100 text-primary-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`}><List className="w-4 h-4" /></button>
+          <button onClick={() => setView('grid')} className={`p-2 ${view === 'grid' ? 'bg-primary-100 text-primary-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`}><LayoutGrid className="w-4 h-4" /></button>
+        </div>
       </div>
 
       {loading ? (
@@ -199,16 +204,59 @@ export default function ProductsPage() {
           <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500">Aucun produit. Créez-en un ou importez depuis Shopify/WooCommerce.</p>
         </div>
+      ) : view === 'list' ? (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-700 font-medium">
+              <tr>
+                <th className="text-left px-4 py-3 w-14">Image</th>
+                <th className="text-left px-4 py-3">Produit</th>
+                <th className="text-left px-4 py-3 hidden md:table-cell">SKU</th>
+                <th className="text-left px-4 py-3 hidden sm:table-cell">Stock</th>
+                <th className="text-left px-4 py-3">Prix</th>
+                <th className="text-right px-4 py-3 w-24">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {products.map((p) => (
+                <tr key={p.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-10 h-10 rounded-lg object-cover" /> : <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><Package className="w-4 h-4" /></div>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-gray-900">{p.name}</div>
+                    {p.category && <div className="text-xs text-primary-600">{p.category}</div>}
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{p.sku || '-'}</td>
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${p.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {p.stock > 0 ? p.stock : 'Rupture'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-bold text-gray-900">
+                    {isNaN(Number(p.price)) ? '-' : Number(p.price).toFixed(2)}{p.currency === 'EUR' ? '€' : ' ' + p.currency}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => handleEdit(p)} className="p-1.5 rounded-lg hover:bg-gray-100"><Pencil className="w-3.5 h-3.5 text-gray-500" /></button>
+                      <button onClick={() => handleDelete(p.id)} className="p-1.5 rounded-lg hover:bg-red-50"><Trash2 className="w-3.5 h-3.5 text-red-500" /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {products.map((p) => (
             <div key={p.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-              {p.imageUrl && <img src={p.imageUrl} alt={p.name} className="w-full h-40 object-cover" />}
+              {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-full h-40 object-cover" /> : <div className="w-full h-40 bg-gray-100 flex items-center justify-center text-gray-400"><Package className="w-8 h-8" /></div>}
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-gray-900 text-sm">{p.name}</h3>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${p.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {p.stock > 0 ? `${p.stock} en stock` : 'Rupture'}
+                  <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">{p.name}</h3>
+                  <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${p.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    {p.stock > 0 ? p.stock : 'Rupture'}
                   </span>
                 </div>
                 {p.category && <span className="inline-block text-xs text-primary-600 mt-1">{p.category}</span>}
