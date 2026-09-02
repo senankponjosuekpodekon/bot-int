@@ -113,6 +113,7 @@ export default function ProductsPage() {
   useEffect(() => { loadAgents(); }, [loadAgents]);
   useEffect(() => { if (showHistory) loadHistory(); }, [showHistory, loadHistory]);
   useEffect(() => { if (showSources) loadSources(); }, [showSources, loadSources]);
+  useEffect(() => { loadSources(); }, [loadSources]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -189,6 +190,9 @@ export default function ProductsPage() {
           </button>
           <button onClick={() => setShowSources(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <Database className="w-4 h-4" /> Sources
+            {importSources.filter((s) => s.enabled).length > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-700 text-xs">{importSources.filter((s) => s.enabled).length}</span>
+            )}
           </button>
           <button onClick={() => setShowImport(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <Upload className="w-4 h-4" /> Importer
@@ -794,6 +798,14 @@ function SourcesModal({
     return s.source;
   };
 
+  const nextImport = (s: any) => {
+    if (!s.enabled) return 'Désactivée';
+    if (!s.lastImportAt) return 'Dès le prochain cycle';
+    const freq = (s.config?.frequencyMinutes || 360) * 60 * 1000;
+    const next = new Date(new Date(s.lastImportAt).getTime() + freq);
+    return `Prochain : ${next.toLocaleString()}`;
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl p-4 lg:p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -810,6 +822,7 @@ function SourcesModal({
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{label(s)}</p>
                   <p className="text-xs text-gray-500">Dernier import : {s.lastImportAt ? new Date(s.lastImportAt).toLocaleString() : 'Jamais'}</p>
+                  <p className="text-xs text-primary-600 font-medium">{nextImport(s)}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <select
