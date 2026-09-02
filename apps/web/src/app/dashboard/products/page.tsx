@@ -154,12 +154,12 @@ export default function ProductsPage() {
 
   return (
     <div className="p-4 lg:p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Produits</h1>
           <p className="text-sm text-gray-500 mt-1">{total} produit{total > 1 ? 's' : ''} au catalogue</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={handleSync} disabled={syncing} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
             <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> {syncing ? 'Sync...' : 'Synchroniser'}
           </button>
@@ -178,20 +178,20 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <div className="flex gap-3 mb-4">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher un produit..." className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-primary-500" />
         </div>
-        <select value={category} onChange={(e) => setCategory(e.target.value)} className="px-3 py-2 rounded-lg border border-gray-300 text-sm">
+        <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-300 text-sm">
           <option value="">Toutes catégories</option>
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <select value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)} className="px-3 py-2 rounded-lg border border-gray-300 text-sm">
+        <select value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)} className="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-300 text-sm">
           <option value="">Tous les agents</option>
           {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
-        <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+        <div className="flex rounded-lg border border-gray-300 overflow-hidden self-start">
           <button onClick={() => setView('list')} className={`p-2 ${view === 'list' ? 'bg-primary-100 text-primary-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`}><List className="w-4 h-4" /></button>
           <button onClick={() => setView('grid')} className={`p-2 ${view === 'grid' ? 'bg-primary-100 text-primary-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`}><LayoutGrid className="w-4 h-4" /></button>
         </div>
@@ -205,8 +205,8 @@ export default function ProductsPage() {
           <p className="text-gray-500">Aucun produit. Créez-en un ou importez depuis Shopify/WooCommerce.</p>
         </div>
       ) : view === 'list' ? (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden overflow-x-auto">
+          <table className="w-full min-w-[600px] text-sm">
             <thead className="bg-gray-50 text-gray-700 font-medium">
               <tr>
                 <th className="text-left px-4 py-3 w-14">Image</th>
