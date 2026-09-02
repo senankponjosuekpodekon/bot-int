@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './product.entity';
@@ -393,14 +393,21 @@ export class ProductsService {
     format?: 'shopify' | 'woocommerce' | 'generic',
     storeDomain?: string,
     agentId?: string,
-  ): Promise<{ imported: number; errors: number }> {
+  ): Promise<{ imported: number; errors: number; details: string[] }> {
     if (agentId) await this.ensureAgentInTenant(tenantId, agentId);
     let imported = 0;
     let errors = 0;
+    const details: string[] = [];
 
-    const rows = this.parseCsv(csvContent);
+    let rows: string[][];
+    try {
+      rows = this.parseCsv(csvContent);
+    } catch (err: any) {
+      this.logger.error(`CSV parsing failed: ${err?.message}`);
+      throw new BadRequestException(`Impossible de parser le CSV: ${err?.message}`);
+    }
     if (rows.length < 2) {
-      throw new Error('CSV vide ou invalide');
+      throw new BadRequestException('CSV vide ou invalide');
     }
 
     const headers = rows[0].map((h) => h.toLowerCase().trim());
@@ -510,7 +517,10 @@ export class ProductsService {
             await this.upsertProduct(tenantId, sku, productData);
             imported++;
           }
-        } catch {
+        } catch (err: any) {
+          const msg = `Erreur groupe ${handle}: ${err?.message || err}`;
+          this.logger.error(msg);
+          details.push(msg);
           errors++;
         }
       }
@@ -538,7 +548,10 @@ export class ProductsService {
           }
           await this.upsertProduct(tenantId, productData.sku, productData);
           imported++;
-        } catch {
+        } catch (err: any) {
+          const msg = `Erreur ligne WooCommerce ${i + 2}: ${err?.message || err}`;
+          this.logger.error(msg);
+          details.push(msg);
           errors++;
         }
       }
@@ -567,14 +580,17 @@ export class ProductsService {
           }
           await this.upsertProduct(tenantId, productData.sku, productData);
           imported++;
-        } catch {
+        } catch (err: any) {
+          const msg = `Erreur ligne générique ${i + 2}: ${err?.message || err}`;
+          this.logger.error(msg);
+          details.push(msg);
           errors++;
         }
       }
     }
 
     this.logger.log(`CSV import (${detectedFormat}): ${imported} imported, ${errors} errors`);
-    return { imported, errors };
+    return { imported, errors, details };
   }
 
   async importFromGoogleMerchantCsv(tenantId: string, csvContent: string, agentId?: string): Promise<{ imported: number; errors: number }> {
@@ -1020,6 +1036,9 @@ export class ProductsService {
           i++;
         }
       }
+    }
+    if (inQuotes) {
+      throw new Error('CSV malformé : guillemet non fermé');
     }
     if (row.length > 0 || current.length > 0) {
       row.push(current.trim());
