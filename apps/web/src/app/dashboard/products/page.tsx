@@ -31,6 +31,7 @@ export default function ProductsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('list');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [importInitialTab, setImportInitialTab] = useState<'feed' | 'csv' | 'csv_url' | 'gmc' | 'sitemap' | 'shopify' | 'woocommerce' | undefined>();
@@ -165,6 +166,28 @@ export default function ProductsPage() {
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const isAllSelected = products.length > 0 && selectedIds.length === products.length;
+  const toggleAll = () => {
+    setSelectedIds(isAllSelected ? [] : products.map((p) => p.id));
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Supprimer ${selectedIds.length} produit(s) ?`)) return;
+    try {
+      await productsApi.bulkDelete(selectedIds);
+      showToast(`${selectedIds.length} produit(s) supprimé(s)`);
+      setSelectedIds([]);
+      load();
+    } catch {
+      showToast('Erreur lors de la suppression groupée', 'error');
+    }
+  };
+
   const handleEdit = (p: Product) => {
     setEditing(p);
     setForm({ name: p.name, description: p.description || '', price: p.price, currency: p.currency, stock: p.stock, category: p.category || '', imageUrl: p.imageUrl || '', productUrl: p.productUrl || '', agentId: p.agentId || '' });
@@ -179,6 +202,11 @@ export default function ProductsPage() {
           <p className="text-sm text-gray-500 mt-1">{total} produit{total > 1 ? 's' : ''} au catalogue</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {selectedIds.length > 0 && (
+            <button onClick={handleBulkDelete} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700">
+              <Trash2 className="w-4 h-4" /> Supprimer ({selectedIds.length})
+            </button>
+          )}
           <button onClick={handleSync} disabled={syncing} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
             <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> {syncing ? 'Sync...' : 'Synchroniser'}
           </button>
@@ -234,6 +262,9 @@ export default function ProductsPage() {
           <table className="w-full min-w-[600px] text-sm">
             <thead className="bg-gray-50 text-gray-700 font-medium">
               <tr>
+                <th className="text-left px-4 py-3 w-10">
+                  <input type="checkbox" checked={isAllSelected} onChange={toggleAll} className="w-4 h-4 rounded border-gray-300" />
+                </th>
                 <th className="text-left px-4 py-3 w-14">Image</th>
                 <th className="text-left px-4 py-3">Produit</th>
                 <th className="text-left px-4 py-3 hidden md:table-cell">SKU</th>
@@ -245,6 +276,9 @@ export default function ProductsPage() {
             <tbody className="divide-y divide-gray-100">
               {products.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => toggleSelect(p.id)} className="w-4 h-4 rounded border-gray-300" />
+                  </td>
                   <td className="px-4 py-3">
                     {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-10 h-10 rounded-lg object-cover" /> : <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><Package className="w-4 h-4" /></div>}
                   </td>
@@ -276,7 +310,10 @@ export default function ProductsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {products.map((p) => (
             <div key={p.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-              {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-full h-40 object-cover" /> : <div className="w-full h-40 bg-gray-100 flex items-center justify-center text-gray-400"><Package className="w-8 h-8" /></div>}
+              <div className="relative">
+                {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-full h-40 object-cover" /> : <div className="w-full h-40 bg-gray-100 flex items-center justify-center text-gray-400"><Package className="w-8 h-8" /></div>}
+                <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={() => toggleSelect(p.id)} className="absolute top-2 right-2 w-5 h-5 rounded border-gray-300 bg-white/90" />
+              </div>
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">{p.name}</h3>

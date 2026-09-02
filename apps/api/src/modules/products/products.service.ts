@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Product } from './product.entity';
 import { ProductImport, ImportSource, ImportStatus } from './product-import.entity';
 import { ProductImportSource, ImportSourceType } from './product-import-source.entity';
@@ -80,6 +80,12 @@ export class ProductsService {
 
   async delete(id: string, tenantId: string): Promise<void> {
     await this.productRepo.delete({ id, tenantId });
+  }
+
+  async bulkDelete(ids: string[], tenantId: string): Promise<{ deleted: number }> {
+    if (!ids?.length) throw new BadRequestException('ids array is required');
+    const result = await this.productRepo.delete({ id: In(ids), tenantId });
+    return { deleted: result.affected ?? 0 };
   }
 
   async getCategories(tenantId: string, agentId?: string): Promise<string[]> {

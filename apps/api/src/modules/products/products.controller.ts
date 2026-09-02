@@ -11,7 +11,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { IsNotEmpty, IsNumber, IsOptional, IsString, IsBoolean, IsInt, Min, Max } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, IsBoolean, IsInt, Min, Max, IsArray, ArrayNotEmpty } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
@@ -83,6 +83,10 @@ class ListProductsDto {
   @Type(() => Number) @IsOptional() page?: number;
   @Type(() => Number) @IsOptional() limit?: number;
   @IsString() @IsOptional() agentId?: string;
+}
+
+class BulkDeleteProductsDto {
+  @IsArray() @ArrayNotEmpty() @IsString({ each: true }) ids: string[];
 }
 
 @ApiTags('products')
@@ -193,6 +197,15 @@ export class ProductsController {
   async remove(@Request() req, @Param('id') id: string) {
     await this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
     return this.productsService.delete(id, req.user.tenantId);
+  }
+
+  @Post('bulk-delete')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Delete many products by IDs' })
+  @ApiResponse({ status: 200, description: 'Products deleted' })
+  async bulkDelete(@Request() req, @Body() dto: BulkDeleteProductsDto) {
+    await this.cacheService.delPattern(`products:${req.user.tenantId}:*`);
+    return this.productsService.bulkDelete(dto.ids, req.user.tenantId);
   }
 
   @Post('import/shopify')

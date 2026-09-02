@@ -269,6 +269,7 @@ export const productsApi = {
   create: (data: any) => api.post('/products', data).then((r) => r.data),
   update: (id: string, data: any) => api.patch(`/products/${id}`, data).then((r) => r.data),
   delete: (id: string) => api.delete(`/products/${id}`).then((r) => r.data),
+  bulkDelete: (ids: string[]) => api.post('/products/bulk-delete', { ids }).then((r) => r.data),
   importShopify: (shopDomain: string, accessToken: string) =>
     api.post('/products/import/shopify', { shopDomain, accessToken }).then((r) => r.data),
   importWooCommerce: (siteUrl: string, consumerKey: string, consumerSecret: string) =>
