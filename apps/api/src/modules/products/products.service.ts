@@ -576,55 +576,47 @@ export class ProductsService {
     return { imported, errors };
   }
 
-  async importFromSitemap(tenantId: string, sitemapUrl: string, agentId?: string): Promise<{ imported: number; errors: number; scanned: number }> {
+  async importFromSitemap(tenantId: string, sitemapUrl: string, agentId?: string, maxPages?: number): Promise<{ imported: number; errors: number; scanned: number }> {
     if (agentId) await this.ensureAgentInTenant(tenantId, agentId);
     let imported = 0;
     let errors = 0;
     let scanned = 0;
+    const limit = Math.min(Math.max(maxPages || 50, 1), 500);
 
     try {
-      const response = await axios.get(sitemapUrl, { timeout: 30000, headers: { 'User-Agent': 'Mozilla/5.0' } });
-      const $ = cheerio.load(response.data, { xmlMode: true });
+      const response = await this.fetchWithRetry(sitemapUrl, { timeout: 30000 });
+      const main = this.extractSitemapUrls(response.data);
+      const urls: string[] = [...main.urls];
+      const nestedSitemaps = [...main.nestedSitemaps];
 
-      const urls: string[] = [];
-      $('url > loc').each((_, el) => {
-        const url = $(el).text().trim();
-        if (url && this.isProductUrl(url)) urls.push(url);
-      });
-
-      // Also check sitemap index (nested sitemaps)
-      const sitemapLocs: string[] = [];
-      $('sitemap > loc').each((_, el) => {
-        sitemapLocs.push($(el).text().trim());
-      });
-
-      // Fetch nested sitemaps (max 3)
-      for (const smUrl of sitemapLocs.slice(0, 3)) {
+      for (const smUrl of nestedSitemaps.slice(0, 5)) {
         try {
-          const smResp = await axios.get(smUrl, { timeout: 20000, headers: { 'User-Agent': 'Mozilla/5.0' } });
-          const $sm = cheerio.load(smResp.data, { xmlMode: true });
-          $sm('url > loc').each((_, el) => {
-            const url = $sm(el).text().trim();
-            if (url && this.isProductUrl(url)) urls.push(url);
-          });
-        } catch { /* skip failed sub-sitemap */ }
+          const smResp = await this.fetchWithRetry(smUrl, { timeout: 20000 });
+          const sub = this.extractSitemapUrls(smResp.data);
+          urls.push(...sub.urls);
+          nestedSitemaps.push(...sub.nestedSitemaps);
+        } catch (err: any) {
+          this.logger.warn(`Failed to fetch nested sitemap ${smUrl}: ${err?.message}`);
+        }
       }
 
-      scanned = urls.length;
+      const productUrls = [...new Set(urls.filter((u) => this.isProductUrl(u)))];
+      scanned = productUrls.length;
       this.logger.log(`Sitemap: found ${scanned} product URLs`);
 
-      // Scrape each product page (max 50 to avoid overload)
-      for (const productUrl of urls.slice(0, 50)) {
+      for (const productUrl of productUrls.slice(0, limit)) {
         try {
           const product = await this.scrapeProductPage(productUrl);
           if (product) {
             const sku = product.sku || `sitemap-${Buffer.from(productUrl).toString('base64').slice(0, 16)}`;
             const productData: any = { ...product, sku, productUrl, agentId, metadata: { ...product.metadata, source: 'sitemap' } };
-
             await this.upsertProduct(tenantId, sku, productData);
             imported++;
+          } else {
+            errors++;
           }
-        } catch {
+        } catch (err: any) {
+          this.logger.warn(`Sitemap: failed to scrape ${productUrl}: ${err?.message}`);
           errors++;
         }
       }
@@ -638,39 +630,200 @@ export class ProductsService {
   }
 
   private isProductUrl(url: string): boolean {
-    const lower = url.toLowerCase();
-    return lower.includes('/product') || lower.includes('/products/') || lower.includes('/p/') ||
-           lower.includes('/item/') || lower.includes('/produit') || lower.includes('/shop/') ||
-           lower.includes('/store/') || lower.includes('/detail');
+    try {
+      const { pathname } = new URL(url);
+      const lower = pathname.toLowerCase();
+      const ext = lower.split('.').pop();
+      const blockedExtensions = ['xml', 'pdf', 'jpg', 'jpeg', 'png', 'gif', 'svg', 'css', 'js', 'zip', 'webp', 'json', 'woff', 'woff2'];
+      if (ext && blockedExtensions.includes(ext)) return false;
+
+      const segments = lower.split('/').filter(Boolean);
+      if (segments.length < 2) return false;
+
+      const last = segments[segments.length - 1];
+      const productKeywords = ['product', 'products', 'produit', 'produits', 'p', 'item', 'artikel', 'detail', 'buy', 'article', 'shop', 'store'];
+      if (productKeywords.includes(last)) return false;
+
+      const excluded = ['category', 'categories', 'cat', 'collection', 'collections', 'tag', 'tags', 'page', 'cart', 'checkout', 'account', 'login', 'register', 'search', 'author', 'wp-admin', 'wp-content', 'wp-includes', 'product-category', 'product_tag', 'archive', 'feed'];
+      if (segments.some((s) => excluded.includes(s))) return false;
+
+      return segments.some((s) => productKeywords.includes(s));
+    } catch {
+      return false;
+    }
+  }
+
+  private extractSitemapUrls(xml: string): { urls: string[]; nestedSitemaps: string[] } {
+    const urls: string[] = [];
+    const nestedSitemaps: string[] = [];
+    const rootMatch = xml.match(/<(\w+:)?(urlset|sitemapindex)[^>]*>/i);
+    const isIndex = rootMatch?.[2]?.toLowerCase() === 'sitemapindex';
+    const locRegex = /<(?:\w+:)?loc[^>]*>([\s\S]*?)<\/(?:\w+:)?loc>/gi;
+    let match = locRegex.exec(xml);
+    while (match !== null) {
+      const u = match[1].trim().replace(/<!\[CDATA\[|\]\]>/g, '');
+      if (u) {
+        if (isIndex) nestedSitemaps.push(u);
+        else urls.push(u);
+      }
+      match = locRegex.exec(xml);
+    }
+    return { urls, nestedSitemaps };
+  }
+
+  private resolveUrl(base: string, url?: string): string | null {
+    if (!url) return null;
+    if (url.startsWith('data:')) return null;
+    try {
+      return new URL(url, base).toString();
+    } catch {
+      return null;
+    }
+  }
+
+  private parseJsonLdScripts($: any): any[] {
+    const results: any[] = [];
+    $('script[type="application/ld+json"]').each((_: any, el: any) => {
+      try {
+        const text = $(el).html() || '';
+        const cleaned = text.replace(/\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->/g, '');
+        const data = JSON.parse(cleaned);
+        if (Array.isArray(data)) results.push(...data);
+        else results.push(data);
+      } catch { /* ignore invalid JSON-LD */ }
+    });
+    return results;
+  }
+
+  private findSchemaProduct(items: any[]): any | null {
+    for (const item of items) {
+      const type = item?.['@type'];
+      const types = Array.isArray(type) ? type.map((t: any) => String(t).toLowerCase()) : [String(type).toLowerCase()];
+      if (types.includes('product')) return item;
+    }
+    for (const item of items) {
+      const type = item?.['@type'];
+      const types = Array.isArray(type) ? type.map((t: any) => String(t).toLowerCase()) : [String(type).toLowerCase()];
+      if (types.some((t: string) => t.includes('product'))) return item;
+    }
+    return null;
+  }
+
+  private findBreadcrumbCategory($: any, productUrl: string): string {
+    const items = this.parseJsonLdScripts($);
+    for (const item of items) {
+      const type = item?.['@type'];
+      const types = Array.isArray(type) ? type.map((t: any) => String(t).toLowerCase()) : [String(type).toLowerCase()];
+      if (types.includes('breadcrumblist') && Array.isArray(item.itemListElement)) {
+        const names = item.itemListElement
+          .map((e: any) => e.item?.name || e.name)
+          .filter((n: any) => n && typeof n === 'string' && !/^(accueil|home|shop|boutique)$/i.test(n));
+        if (names.length > 1) return names.slice(0, -1).join(' > ');
+      }
+    }
+    try {
+      const pathname = new URL(productUrl).pathname;
+      const segments = pathname.split('/').filter(Boolean);
+      if (segments.length >= 2) {
+        const candidate = segments[segments.length - 2];
+        if (candidate && candidate.length > 2) return candidate.replace(/-/g, ' ').replace(/_/g, ' ');
+      }
+    } catch { /* ignore */ }
+    return 'General';
+  }
+
+  private async fetchWithRetry(url: string, options?: any, retries = 2): Promise<any> {
+    let lastErr: any;
+    for (let i = 0; i <= retries; i++) {
+      try {
+        return await axios.get(url, { timeout: 20000, headers: { 'User-Agent': 'Mozilla/5.0' }, ...options });
+      } catch (err: any) {
+        lastErr = err;
+        if (i < retries) await new Promise((r) => setTimeout(r, 500 * (i + 1)));
+      }
+    }
+    throw lastErr;
   }
 
   private async scrapeProductPage(url: string): Promise<Partial<Product> | null> {
     try {
-      const response = await axios.get(url, { timeout: 15000, headers: { 'User-Agent': 'Mozilla/5.0' } });
+      const response = await this.fetchWithRetry(url, { timeout: 15000 });
       const $ = cheerio.load(response.data);
+      const jsonLd = this.parseJsonLdScripts($);
+      const schema = this.findSchemaProduct(jsonLd);
 
-      const name = $('h1').first().text().trim() ||
-                   $('[itemprop="name"]').text().trim() ||
-                   $('title').text().trim() ||
-                   $('meta[property="og:title"]').attr('content') || '';
+      let name = '';
+      let description = '';
+      let price = 0;
+      let currency = 'EUR';
+      let stock = 99;
+      let sku: string | undefined;
+      let imageUrl: string | null = null;
+      let category = 'General';
+      let brand: string | undefined;
 
-      const description = $('[itemprop="description"]').text().trim() ||
-                          $('meta[name="description"]').attr('content') ||
-                          $('meta[property="og:description"]').attr('content') || '';
+      if (schema) {
+        name = schema.name || schema.headline || '';
+        description = schema.description || '';
+        brand = schema.brand?.name || (typeof schema.brand === 'string' ? schema.brand : undefined);
+        sku = schema.sku || schema.mpn || schema.gtin || undefined;
 
-      const priceText = $('[itemprop="price"]').attr('content') ||
-                        $('[itemprop="price"]').text().trim() ||
-                        $('.price').first().text().trim() ||
-                        $('[class*="price"]').first().text().trim() || '0';
-      const price = parseFloat(priceText.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+        const offers = schema.offers;
+        if (offers) {
+          const offer = Array.isArray(offers) ? offers[0] : offers;
+          if (offer) {
+            if (offer.price) {
+              price = parseFloat(String(offer.price).replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+            }
+            if (offer.priceCurrency) currency = String(offer.priceCurrency).toUpperCase();
+            const availability = String(offer.availability || '').toLowerCase();
+            if (availability.includes('outofstock') || availability.includes('soldout')) stock = 0;
+            else if (availability.includes('instock') || availability.includes('preorder')) stock = 99;
+            else if (typeof offer.inventoryLevel?.value === 'number') stock = offer.inventoryLevel.value;
+            else if (typeof offer.inventoryLevel?.value === 'string') stock = parseInt(offer.inventoryLevel.value) || stock;
+            if (offer.sku && !sku) sku = String(offer.sku);
+          }
+        }
 
-      const imageUrl = $('[itemprop="image"]').attr('src') ||
+        let rawImage = Array.isArray(schema.image) ? schema.image[0] : schema.image;
+        if (rawImage && typeof rawImage === 'object') rawImage = rawImage.url || rawImage.contentUrl;
+        if (typeof rawImage === 'string') imageUrl = this.resolveUrl(url, rawImage);
+      }
+
+      if (!name) {
+        name = $('h1').first().text().trim() ||
+               $('[itemprop="name"]').text().trim() ||
+               $('title').text().trim() ||
+               $('meta[property="og:title"]').attr('content') || '';
+      }
+      if (!description) {
+        description = $('[itemprop="description"]').text().trim() ||
+                      $('meta[name="description"]').attr('content') ||
+                      $('meta[property="og:description"]').attr('content') || '';
+      }
+      if (!price) {
+        const priceText = $('[itemprop="price"]').attr('content') ||
+                          $('[itemprop="price"]').text().trim() ||
+                          $('.price').first().text().trim() ||
+                          $('[class*="price"]').first().text().trim() || '0';
+        price = parseFloat(priceText.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+      }
+      if (!imageUrl) {
+        imageUrl = this.resolveUrl(url, $('[itemprop="image"]').attr('src') ||
                        $('meta[property="og:image"]').attr('content') ||
-                       $('img').first().attr('src') || null;
+                       $('img').first().attr('src'));
+      }
+      if (!sku) {
+        sku = $('[itemprop="sku"]').attr('content') ||
+              $('[itemprop="sku"]').text().trim() ||
+              $('[data-sku]').attr('data-sku') || undefined;
+      }
 
-      const sku = $('[itemprop="sku"]').attr('content') ||
-                  $('[itemprop="sku"]').text().trim() ||
-                  $('[data-sku]').attr('data-sku') || undefined;
+      const metaCurrency = $('meta[property="og:price:currency"]').attr('content') ||
+                           $('meta[property="product:price:currency"]').attr('content');
+      if (metaCurrency) currency = metaCurrency.toUpperCase();
+
+      if (category === 'General') category = this.findBreadcrumbCategory($, url);
 
       if (!name) return null;
 
@@ -678,12 +831,12 @@ export class ProductsService {
         name: name.slice(0, 200),
         description: description.slice(0, 2000),
         price,
-        currency: 'EUR',
-        stock: 99,
+        currency,
+        stock,
         sku,
-        category: 'General',
+        category,
         imageUrl,
-        metadata: { scrapedFrom: url },
+        metadata: { scrapedFrom: url, brand },
       };
     } catch {
       return null;

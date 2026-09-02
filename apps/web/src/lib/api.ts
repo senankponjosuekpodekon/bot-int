@@ -279,8 +279,8 @@ export const productsApi = {
     api.post('/products/import/csv', { csvContent, format, storeDomain, agentId }).then((r) => r.data),
   importGoogleMerchant: (csvContent: string, agentId?: string) =>
     api.post('/products/import/google-merchant', { csvContent, agentId }).then((r) => r.data),
-  importSitemap: (sitemapUrl: string, agentId?: string) =>
-    api.post('/products/import/sitemap', { sitemapUrl, agentId }).then((r) => r.data),
+  importSitemap: (sitemapUrl: string, agentId?: string, maxPages?: number) =>
+    api.post('/products/import/sitemap', { sitemapUrl, agentId, maxPages }).then((r) => r.data),
   sync: () => api.post('/products/sync').then((r) => r.data),
   autoSync: () => api.post('/products/auto-sync').then((r) => r.data),
 };

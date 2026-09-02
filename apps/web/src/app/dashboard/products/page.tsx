@@ -259,6 +259,7 @@ function ImportModal({ onClose, onDone, showToast, agents }: { onClose: () => vo
   const [wooForm, setWooForm] = useState({ siteUrl: '', consumerKey: '', consumerSecret: '' });
   const [importAgentId, setImportAgentId] = useState('');
   const [csvStoreDomain, setCsvStoreDomain] = useState('');
+  const [sitemapMaxPages, setSitemapMaxPages] = useState(50);
 
   const handleImport = async () => {
     setLoading(true);
@@ -276,7 +277,7 @@ function ImportModal({ onClose, onDone, showToast, agents }: { onClose: () => vo
         result = await productsApi.importGoogleMerchant(gmcText, selectedAgentId);
       } else if (tab === 'sitemap') {
         if (!sitemapUrl) { showToast('URL sitemap requise', 'error'); setLoading(false); return; }
-        result = await productsApi.importSitemap(sitemapUrl, selectedAgentId);
+        result = await productsApi.importSitemap(sitemapUrl, selectedAgentId, sitemapMaxPages);
       } else if (tab === 'shopify') {
         result = await productsApi.importShopify(shopifyForm.shopDomain, shopifyForm.accessToken);
       } else {
@@ -368,7 +369,12 @@ function ImportModal({ onClose, onDone, showToast, agents }: { onClose: () => vo
             <div>
               <label className="text-sm font-medium text-gray-700">URL du sitemap XML</label>
               <input value={sitemapUrl} onChange={(e) => setSitemapUrl(e.target.value)} placeholder="https://maboutique.com/sitemap.xml" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
-              <p className="text-xs text-gray-400 mt-1">Scraping automatique: lit le sitemap, filtre les URLs produit (/product, /p/, /item/...), scrape chaque page (max 50) pour extraire nom, prix, description, image. Supporte les sitemaps index (nested).</p>
+              <p className="text-xs text-gray-400 mt-1">Scraping automatique: lit le sitemap, filtre les URLs produit (/product, /p/, /item/...), scrape chaque page pour extraire nom, prix, description, image. Supporte les sitemaps index (nested).</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700">Nombre max de pages à scraper</label>
+              <input type="number" min={1} max={500} value={sitemapMaxPages} onChange={(e) => setSitemapMaxPages(Math.max(1, Math.min(500, Number(e.target.value) || 1)))} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
+              <p className="text-xs text-gray-400 mt-1">Entre 1 et 500 (par défaut 50).</p>
             </div>
             {agentSelect}
           </div>

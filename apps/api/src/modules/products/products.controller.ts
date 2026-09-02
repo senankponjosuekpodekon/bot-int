@@ -11,7 +11,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { IsNotEmpty, IsNumber, IsOptional, IsString, IsBoolean, Min } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, IsBoolean, IsInt, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
@@ -62,6 +62,7 @@ class ImportCsvDto {
 class ImportSitemapDto {
   @IsString() @IsNotEmpty() sitemapUrl: string;
   @IsString() @IsOptional() agentId?: string;
+  @Type(() => Number) @IsOptional() @IsInt() @Min(1) @Max(500) maxPages?: number;
 }
 
 class ListProductsDto {
@@ -190,7 +191,7 @@ export class ProductsController {
   @ApiOperation({ summary: 'Import products from sitemap' })
   @ApiResponse({ status: 201, description: 'Products imported' })
   importSitemap(@Request() req, @Body() dto: ImportSitemapDto) {
-    return this.productsService.importFromSitemap(req.user.tenantId, dto.sitemapUrl, dto.agentId);
+    return this.productsService.importFromSitemap(req.user.tenantId, dto.sitemapUrl, dto.agentId, dto.maxPages);
   }
 
   @Post('sync')
