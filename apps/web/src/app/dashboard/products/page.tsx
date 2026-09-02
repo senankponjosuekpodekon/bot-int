@@ -18,9 +18,12 @@ interface Product {
   agentId?: string;
 }
 
+const PAGE_SIZE = 20;
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
@@ -101,7 +104,7 @@ export default function ProductsPage() {
     setLoading(true);
     try {
       const [data, cats] = await Promise.all([
-        productsApi.list({ search, category: category || undefined, limit: 100, agentId: selectedAgent || undefined }),
+        productsApi.list({ search, category: category || undefined, page, limit: PAGE_SIZE, agentId: selectedAgent || undefined }),
         productsApi.categories(selectedAgent || undefined),
       ]);
       setProducts(data.data);
@@ -112,8 +115,9 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, category, selectedAgent]);
+  }, [search, category, selectedAgent, page]);
 
+  useEffect(() => { setPage(1); }, [search, category, selectedAgent]);
   useEffect(() => { load(); }, [load]);
 
   const handleSave = async () => {
@@ -273,6 +277,28 @@ export default function ProductsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {total > PAGE_SIZE && (
+        <div className="flex items-center justify-between mt-4">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Précédent
+          </button>
+          <span className="text-sm text-gray-600">
+            Page {page} / {Math.ceil(total / PAGE_SIZE)} ({total} produits)
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(Math.ceil(total / PAGE_SIZE), p + 1))}
+            disabled={page >= Math.ceil(total / PAGE_SIZE)}
+            className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Suivant
+          </button>
         </div>
       )}
 

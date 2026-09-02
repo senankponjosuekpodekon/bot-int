@@ -74,7 +74,7 @@ export default function Sidebar() {
 
       <aside
         className={clsx(
-          'bg-gray-900 text-white flex flex-col min-h-screen w-64 fixed lg:static z-50 transition-transform duration-300',
+          'bg-gray-900 text-white flex flex-col h-screen w-64 fixed top-0 left-0 z-50 transition-transform duration-300 overflow-y-auto',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         )}
       >
