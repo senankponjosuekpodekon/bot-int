@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { Package, Plus, Search, Trash2, Pencil, Upload, X, RefreshCw } from 'lucide-react';
+import { Package, Plus, Search, Trash2, Pencil, Upload, X, RefreshCw, History, ChevronDown, ChevronUp } from 'lucide-react';
 import { productsApi, agentsApi, type Agent } from '@/lib/api';
 
 interface Product {
@@ -29,6 +29,11 @@ export default function ProductsPage() {
   const [selectedAgent, setSelectedAgent] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [importHistory, setImportHistory] = useState<any[]>([]);
+  const [importHistoryTotal, setImportHistoryTotal] = useState(0);
+  const [importHistoryLoading, setImportHistoryLoading] = useState(false);
+  const [selectedImport, setSelectedImport] = useState<any | null>(null);
   const [editing, setEditing] = useState<Product | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -75,7 +80,21 @@ export default function ProductsPage() {
     }
   }, []);
 
+  const loadHistory = useCallback(async () => {
+    setImportHistoryLoading(true);
+    try {
+      const result = await productsApi.importHistory({ limit: 50 });
+      setImportHistory(result?.data || []);
+      setImportHistoryTotal(result?.total || 0);
+    } catch {
+      showToast('Erreur lors du chargement de l\'historique', 'error');
+    } finally {
+      setImportHistoryLoading(false);
+    }
+  }, []);
+
   useEffect(() => { loadAgents(); }, [loadAgents]);
+  useEffect(() => { if (showHistory) loadHistory(); }, [showHistory, loadHistory]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -145,6 +164,9 @@ export default function ProductsPage() {
           </button>
           <button onClick={handleAutoSync} disabled={syncing} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-50 border border-primary-200 text-sm font-medium text-primary-700 hover:bg-primary-100 disabled:opacity-50" title="Synchronisation automatique depuis Shopify/WooCommerce (cron toutes les 6h)">
             <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> Auto-sync
+          </button>
+          <button onClick={() => setShowHistory(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <History className="w-4 h-4" /> Historique
           </button>
           <button onClick={() => setShowImport(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <Upload className="w-4 h-4" /> Importer
@@ -243,6 +265,18 @@ export default function ProductsPage() {
         <ImportModal onClose={() => setShowImport(false)} onDone={() => { setShowImport(false); load(); }} showToast={showToast} agents={agents} />
       )}
 
+      {showHistory && (
+        <HistoryModal
+          onClose={() => { setShowHistory(false); setSelectedImport(null); }}
+          history={importHistory}
+          total={importHistoryTotal}
+          loading={importHistoryLoading}
+          selected={selectedImport}
+          onSelect={setSelectedImport}
+          onRefresh={loadHistory}
+        />
+      )}
+
       {toast && (
         <div className={`fixed bottom-4 right-4 px-4 py-2.5 rounded-lg text-sm font-medium text-white shadow-lg ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>{toast.msg}</div>
       )}
@@ -285,9 +319,12 @@ function ImportModal({ onClose, onDone, showToast, agents }: { onClose: () => vo
       } else {
         result = await productsApi.importWooCommerce(wooForm.siteUrl, wooForm.consumerKey, wooForm.consumerSecret);
       }
+      const created = result.created ?? 0;
+      const updated = result.updated ?? 0;
+      const errors = result.errors ?? 0;
       const summary = result.scanned != null
-        ? `${result.scanned} URLs scannées, ${result.imported} importés`
-        : `${result.imported} produits importés${result.errors > 0 ? `, ${result.errors} erreurs` : ''}`;
+        ? `${result.scanned} URLs scannées, +${created} · ~${updated}${errors > 0 ? ` · ${errors} erreurs` : ''}`
+        : `+${created} créés · ~${updated} mis à jour${errors > 0 ? ` · ${errors} erreurs` : ''}`;
       showToast(summary);
       onDone();
     } catch (err: any) {
@@ -399,6 +436,104 @@ function ImportModal({ onClose, onDone, showToast, agents }: { onClose: () => vo
         )}
 
         <button onClick={handleImport} disabled={loading} className="w-full mt-4 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50">{loading ? 'Import en cours...' : 'Importer'}</button>
+      </div>
+    </div>
+  );
+}
+
+function HistoryModal({
+  onClose,
+  history,
+  total,
+  loading,
+  selected,
+  onSelect,
+  onRefresh,
+}: {
+  onClose: () => void;
+  history: any[];
+  total: number;
+  loading: boolean;
+  selected: any | null;
+  onSelect: (item: any) => void;
+  onRefresh: () => void;
+}) {
+  const statusBadge = (status: string) => {
+    const map: Record<string, string> = {
+      success: 'bg-green-100 text-green-700',
+      partial: 'bg-yellow-100 text-yellow-700',
+      error: 'bg-red-100 text-red-700',
+    };
+    return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${map[status] || 'bg-gray-100 text-gray-700'}`}>{status}</span>;
+  };
+
+  const sourceLabel = (source: string) => {
+    const labels: Record<string, string> = {
+      csv: 'CSV',
+      sitemap: 'Sitemap',
+      google_merchant: 'Google Merchant',
+      shopify: 'Shopify',
+      woocommerce: 'WooCommerce',
+      feed: 'Feed public',
+      autosync: 'Auto-sync',
+      manual: 'Manuel',
+    };
+    return labels[source] || source;
+  };
+
+  const formatDate = (d: string) => new Date(d).toLocaleString('fr-FR');
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-4 lg:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold">Historique des imports</h2>
+          <div className="flex items-center gap-2">
+            <button onClick={onRefresh} className="p-2 rounded-lg hover:bg-gray-100" title="Rafraîchir"><RefreshCw className="w-4 h-4 text-gray-500" /></button>
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-8 text-gray-500">Chargement...</div>
+        ) : history.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">Aucun import enregistré.</div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-500">{total} import{total > 1 ? 's' : ''}</p>
+            {history.map((h) => (
+              <div key={h.id} className="border border-gray-200 rounded-xl p-3">
+                <div className="flex items-center justify-between cursor-pointer" onClick={() => onSelect(selected?.id === h.id ? null : h)}>
+                  <div>
+                    <p className="font-medium text-sm">{sourceLabel(h.source)}</p>
+                    <p className="text-xs text-gray-500">{formatDate(h.startedAt)}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {statusBadge(h.status)}
+                    <span className="text-xs text-gray-600">+{h.created} · ~{h.updated} · ×{h.errors}</span>
+                    {selected?.id === h.id ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  </div>
+                </div>
+                {selected?.id === h.id && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 text-sm">
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div className="text-center p-2 bg-green-50 rounded-lg"><div className="font-bold text-green-700">{h.created}</div><div className="text-xs text-green-600">Créés</div></div>
+                      <div className="text-center p-2 bg-blue-50 rounded-lg"><div className="font-bold text-blue-700">{h.updated}</div><div className="text-xs text-blue-600">Mis à jour</div></div>
+                      <div className="text-center p-2 bg-red-50 rounded-lg"><div className="font-bold text-red-700">{h.errors}</div><div className="text-xs text-red-600">Erreurs</div></div>
+                    </div>
+                    {h.scanned != null && <p className="text-xs text-gray-500 mb-2">{h.scanned} URLs scannées</p>}
+                    {h.details && h.details.length > 0 && (
+                      <div className="bg-gray-50 rounded-lg p-2 max-h-40 overflow-y-auto">
+                        <p className="text-xs font-medium text-gray-700 mb-1">Détails</p>
+                        {h.details.map((d: string, i: number) => <p key={i} className="text-xs text-gray-600">{d}</p>)}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

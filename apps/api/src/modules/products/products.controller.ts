@@ -119,6 +119,20 @@ export class ProductsController {
     return result;
   }
 
+  @Get('import/history')
+  @ApiOperation({ summary: 'List product import history' })
+  @ApiResponse({ status: 200, description: 'Import history' })
+  async findImportHistory(@Request() req, @Query('limit') limit?: string, @Query('offset') offset?: string) {
+    return this.productsService.getImportHistory(req.user.tenantId, Number(limit) || 50, Number(offset) || 0);
+  }
+
+  @Get('import/history/:id')
+  @ApiOperation({ summary: 'Get import history details' })
+  @ApiResponse({ status: 200, description: 'Import details' })
+  async findImportHistoryById(@Request() req, @Param('id') id: string) {
+    return this.productsService.getImportHistoryById(req.user.tenantId, id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get product by ID' })
   @ApiResponse({ status: 200, description: 'Product details' })

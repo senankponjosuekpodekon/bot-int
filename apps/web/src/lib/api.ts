@@ -283,6 +283,10 @@ export const productsApi = {
     api.post('/products/import/sitemap', { sitemapUrl, agentId, maxPages }).then((r) => r.data),
   sync: () => api.post('/products/sync').then((r) => r.data),
   autoSync: () => api.post('/products/auto-sync').then((r) => r.data),
+  importHistory: (params?: { limit?: number; offset?: number }) =>
+    api.get('/products/import/history', { params }).then((r) => r.data),
+  importHistoryById: (id: string) =>
+    api.get(`/products/import/history/${id}`).then((r) => r.data),
 };
 
 export const analyticsApi = {

@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './product.entity';
+import { ProductImport, ImportSource, ImportStatus } from './product-import.entity';
 import { Agent } from '../agents/agent.entity';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
@@ -13,6 +14,8 @@ export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
+    @InjectRepository(ProductImport)
+    private readonly importRepo: Repository<ProductImport>,
     @InjectRepository(Agent)
     private readonly agentRepo: Repository<Agent>,
   ) {}
@@ -119,8 +122,9 @@ export class ProductsService {
     return qb.getMany();
   }
 
-  async importFromShopify(tenantId: string, shopDomain: string, accessToken: string): Promise<{ imported: number; errors: number }> {
-    let imported = 0;
+  async importFromShopify(tenantId: string, shopDomain: string, accessToken: string): Promise<{ imported: number; errors: number; created: number; updated: number }> {
+    let created = 0;
+    let updated = 0;
     let errors = 0;
     let url: string | null = `https://${shopDomain}/admin/api/2024-01/products.json?limit=250`;
 
@@ -139,7 +143,6 @@ export class ProductsService {
                 const variantLabel = variant?.title && variant.title !== 'Default Title' ? variant.title : null;
                 const name = variantLabel ? `${item.title} — ${variantLabel}` : item.title;
                 const sku = variant?.sku?.toString() || variant?.id?.toString() || item.id?.toString();
-                const existing = await this.productRepo.findOne({ where: { tenantId, sku } });
 
                 const productData: Partial<Product> = {
                   name,
@@ -154,12 +157,9 @@ export class ProductsService {
                   metadata: { vendor: item.vendor, tags: item.tags, handle: item.handle, variantId: variant?.id, optionLabel: variantLabel },
                 };
 
-                if (existing) {
-                  await this.productRepo.update(existing.id, productData);
-                } else {
-                  await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
-                }
-                imported++;
+                const action = await this.upsertProduct(tenantId, sku, productData);
+                if (action === 'created') created++;
+                else updated++;
               } catch {
                 errors++;
               }
@@ -178,12 +178,15 @@ export class ProductsService {
       }
     }
 
+    const imported = created + updated;
     this.logger.log(`Shopify import: ${imported} imported, ${errors} errors`);
-    return { imported, errors };
+    await this.saveImportHistory(tenantId, 'shopify', { created, updated, errors }, { metadata: { shopDomain } });
+    return { imported, errors, created, updated };
   }
 
-  async importFromWooCommerce(tenantId: string, siteUrl: string, consumerKey: string, consumerSecret: string): Promise<{ imported: number; errors: number }> {
-    let imported = 0;
+  async importFromWooCommerce(tenantId: string, siteUrl: string, consumerKey: string, consumerSecret: string): Promise<{ imported: number; errors: number; created: number; updated: number }> {
+    let created = 0;
+    let updated = 0;
     let errors = 0;
     let page = 1;
     let hasMore = true;
@@ -218,7 +221,6 @@ export class ProductsService {
                     const attrs = v.attributes?.map((a: any) => a.option).filter(Boolean).join(' / ') || 'Variante';
                     const name = `${item.name} — ${attrs}`;
                     const sku = v.sku?.toString() || v.id?.toString() || `${item.id}-${v.id}`;
-                    const existing = await this.productRepo.findOne({ where: { tenantId, sku } });
                     const productData: Partial<Product> = {
                       name,
                       description: (v.short_description || v.description || item.short_description || item.description || '').replace(/<[^>]+>/g, '').slice(0, 2000),
@@ -231,9 +233,9 @@ export class ProductsService {
                       productUrl: v.permalink || item.permalink || null,
                       metadata: { type: item.type, tags: item.tags?.map((t: any) => t.name), variantId: v.id, optionLabel: attrs },
                     };
-                    if (existing) await this.productRepo.update(existing.id, productData);
-                    else await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
-                    imported++;
+                    const action = await this.upsertProduct(tenantId, sku, productData);
+                    if (action === 'created') created++;
+                    else updated++;
                   } catch {
                     errors++;
                   }
@@ -242,22 +244,22 @@ export class ProductsService {
                 errors++;
               }
             } else {
-              const existing = await this.productRepo.findOne({ where: { tenantId, sku: item.id?.toString() } });
+              const sku = item.id?.toString();
               const productData: Partial<Product> = {
                 name: item.name,
                 description: (item.short_description || item.description || '').replace(/<[^>]+>/g, '').slice(0, 2000),
                 price: parseFloat(item.price || item.regular_price || '0'),
                 currency: 'EUR',
                 stock: item.stock_quantity ?? 0,
-                sku: item.id?.toString(),
+                sku,
                 category: item.categories?.[0]?.name || 'General',
                 imageUrl: item.images?.[0]?.src || null,
                 productUrl: item.permalink || null,
                 metadata: { type: item.type, tags: item.tags?.map((t: any) => t.name) },
               };
-              if (existing) await this.productRepo.update(existing.id, productData);
-              else await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
-              imported++;
+              const action = await this.upsertProduct(tenantId, sku, productData);
+              if (action === 'created') created++;
+              else updated++;
             }
           } catch {
             errors++;
@@ -272,8 +274,10 @@ export class ProductsService {
       }
     }
 
+    const imported = created + updated;
     this.logger.log(`WooCommerce import: ${imported} imported, ${errors} errors`);
-    return { imported, errors };
+    await this.saveImportHistory(tenantId, 'woocommerce', { created, updated, errors }, { metadata: { siteUrl } });
+    return { imported, errors, created, updated };
   }
 
   async syncFromStoredConfig(tenantId: string, integration: any): Promise<{ imported: number; errors: number }> {
@@ -331,8 +335,9 @@ export class ProductsService {
     }
   }
 
-  async importFromShopifyPublicFeed(tenantId: string, shopUrl: string): Promise<{ imported: number; errors: number }> {
-    let imported = 0;
+  async importFromShopifyPublicFeed(tenantId: string, shopUrl: string): Promise<{ imported: number; errors: number; created: number; updated: number }> {
+    let created = 0;
+    let updated = 0;
     let errors = 0;
     const cleanDomain = shopUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
     const url = `https://${cleanDomain}/products.json?limit=250`;
@@ -349,7 +354,6 @@ export class ProductsService {
               const variantLabel = variant?.title && variant.title !== 'Default Title' ? variant.title : null;
               const name = variantLabel ? `${item.title} — ${variantLabel}` : item.title;
               const sku = variant?.sku?.toString() || variant?.id?.toString() || item.id?.toString();
-              const existing = await this.productRepo.findOne({ where: { tenantId, sku } });
 
               const productData: Partial<Product> = {
                 name,
@@ -364,12 +368,9 @@ export class ProductsService {
                 metadata: { vendor: item.vendor, tags: item.tags, handle: item.handle, variantId: variant?.id, optionLabel: variantLabel, source: 'public_feed' },
               };
 
-              if (existing) {
-                await this.productRepo.update(existing.id, productData);
-              } else {
-                await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
-              }
-              imported++;
+              const action = await this.upsertProduct(tenantId, sku, productData);
+              if (action === 'created') created++;
+              else updated++;
             } catch {
               errors++;
             }
@@ -383,8 +384,10 @@ export class ProductsService {
       throw new Error(`Impossible d'accéder au feed: ${err?.message}`);
     }
 
+    const imported = created + updated;
     this.logger.log(`Shopify public feed: ${imported} imported, ${errors} errors`);
-    return { imported, errors };
+    await this.saveImportHistory(tenantId, 'feed', { created, updated, errors }, { metadata: { shopUrl, cleanDomain } });
+    return { imported, errors, created, updated };
   }
 
   async importFromCsv(
@@ -393,9 +396,10 @@ export class ProductsService {
     format?: 'shopify' | 'woocommerce' | 'generic',
     storeDomain?: string,
     agentId?: string,
-  ): Promise<{ imported: number; errors: number; details: string[] }> {
+  ): Promise<{ imported: number; errors: number; details: string[]; created: number; updated: number }> {
     if (agentId) await this.ensureAgentInTenant(tenantId, agentId);
-    let imported = 0;
+    let created = 0;
+    let updated = 0;
     let errors = 0;
     const details: string[] = [];
 
@@ -514,8 +518,9 @@ export class ProductsService {
                 source: 'csv_shopify',
               },
             };
-            await this.upsertProduct(tenantId, sku, productData);
-            imported++;
+            const action = await this.upsertProduct(tenantId, sku, productData);
+            if (action === 'created') created++;
+            else updated++;
           }
         } catch (err: any) {
           const msg = `Erreur groupe ${handle}: ${err?.message || err}`;
@@ -546,8 +551,9 @@ export class ProductsService {
             errors++;
             continue;
           }
-          await this.upsertProduct(tenantId, productData.sku, productData);
-          imported++;
+          const action = await this.upsertProduct(tenantId, productData.sku, productData);
+          if (action === 'created') created++;
+          else updated++;
         } catch (err: any) {
           const msg = `Erreur ligne WooCommerce ${i + 2}: ${err?.message || err}`;
           this.logger.error(msg);
@@ -578,8 +584,9 @@ export class ProductsService {
             errors++;
             continue;
           }
-          await this.upsertProduct(tenantId, productData.sku, productData);
-          imported++;
+          const action = await this.upsertProduct(tenantId, productData.sku, productData);
+          if (action === 'created') created++;
+          else updated++;
         } catch (err: any) {
           const msg = `Erreur ligne générique ${i + 2}: ${err?.message || err}`;
           this.logger.error(msg);
@@ -589,13 +596,16 @@ export class ProductsService {
       }
     }
 
+    const imported = created + updated;
     this.logger.log(`CSV import (${detectedFormat}): ${imported} imported, ${errors} errors`);
-    return { imported, errors, details };
+    await this.saveImportHistory(tenantId, 'csv', { created, updated, errors }, { details, metadata: { detectedFormat, storeDomain, agentId } });
+    return { imported, errors, details, created, updated };
   }
 
-  async importFromGoogleMerchantCsv(tenantId: string, csvContent: string, agentId?: string): Promise<{ imported: number; errors: number }> {
+  async importFromGoogleMerchantCsv(tenantId: string, csvContent: string, agentId?: string): Promise<{ imported: number; errors: number; created: number; updated: number }> {
     if (agentId) await this.ensureAgentInTenant(tenantId, agentId);
-    let imported = 0;
+    let created = 0;
+    let updated = 0;
     let errors = 0;
 
     const rows = this.parseCsv(csvContent);
@@ -636,20 +646,24 @@ export class ProductsService {
 
         if (!productData.name || Number.isNaN(productData.price) || productData.price < 0) { errors++; continue; }
 
-        await this.upsertProduct(tenantId, productData.sku, productData);
-        imported++;
+        const action = await this.upsertProduct(tenantId, productData.sku, productData);
+        if (action === 'created') created++;
+        else updated++;
       } catch {
         errors++;
       }
     }
 
+    const imported = created + updated;
     this.logger.log(`Google Merchant CSV: ${imported} imported, ${errors} errors`);
-    return { imported, errors };
+    await this.saveImportHistory(tenantId, 'google_merchant', { created, updated, errors }, { metadata: { agentId } });
+    return { imported, errors, created, updated };
   }
 
-  async importFromSitemap(tenantId: string, sitemapUrl: string, agentId?: string, maxPages?: number): Promise<{ imported: number; errors: number; scanned: number }> {
+  async importFromSitemap(tenantId: string, sitemapUrl: string, agentId?: string, maxPages?: number): Promise<{ imported: number; errors: number; scanned: number; created: number; updated: number }> {
     if (agentId) await this.ensureAgentInTenant(tenantId, agentId);
-    let imported = 0;
+    let created = 0;
+    let updated = 0;
     let errors = 0;
     let scanned = 0;
     const limit = Math.min(Math.max(maxPages || 50, 1), 500);
@@ -683,8 +697,9 @@ export class ProductsService {
               const p = products[i];
               const sku = p.sku || `sitemap-${Buffer.from(`${productUrl}-${i}`).toString('base64').slice(0, 16)}`;
               const productData: any = { ...p, sku, productUrl: p.productUrl || productUrl, agentId, metadata: { ...(p.metadata || {}), source: 'sitemap' } };
-              await this.upsertProduct(tenantId, sku, productData);
-              imported++;
+              const action = await this.upsertProduct(tenantId, sku, productData);
+              if (action === 'created') created++;
+              else updated++;
             }
           } else {
             errors++;
@@ -699,8 +714,10 @@ export class ProductsService {
       throw new Error(`Sitemap inaccessible: ${err?.message}`);
     }
 
+    const imported = created + updated;
     this.logger.log(`Sitemap: ${scanned} URLs scanned, ${imported} imported, ${errors} errors`);
-    return { imported, errors, scanned };
+    await this.saveImportHistory(tenantId, 'sitemap', { created, updated, errors, scanned }, { metadata: { sitemapUrl, agentId, maxPages } });
+    return { imported, errors, scanned, created, updated };
   }
 
   private isProductUrl(url: string): boolean {
@@ -986,13 +1003,54 @@ export class ProductsService {
     return `https://${domain}/products/${cleanHandle}`;
   }
 
-  private async upsertProduct(tenantId: string, sku: string, productData: Partial<Product>): Promise<void> {
+  private async upsertProduct(tenantId: string, sku: string, productData: Partial<Product>): Promise<'created' | 'updated'> {
     const existing = await this.productRepo.findOne({ where: { tenantId, sku } });
     if (existing) {
       await this.productRepo.update(existing.id, productData);
-    } else {
-      await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
+      return 'updated';
     }
+    await this.productRepo.save(this.productRepo.create({ ...productData, tenantId }));
+    return 'created';
+  }
+
+  async getImportHistory(tenantId: string, limit = 50, offset = 0): Promise<{ data: ProductImport[]; total: number }> {
+    const [data, total] = await this.importRepo.findAndCount({
+      where: { tenantId },
+      order: { startedAt: 'DESC' },
+      take: limit,
+      skip: offset,
+    });
+    return { data, total };
+  }
+
+  async getImportHistoryById(tenantId: string, id: string): Promise<ProductImport> {
+    const record = await this.importRepo.findOne({ where: { id, tenantId } });
+    if (!record) throw new NotFoundException('Import not found');
+    return record;
+  }
+
+  private async saveImportHistory(
+    tenantId: string,
+    source: ImportSource,
+    result: { created: number; updated: number; errors: number; scanned?: number },
+    options: { details?: string[]; metadata?: Record<string, any> } = {},
+  ): Promise<void> {
+    const imported = result.created + result.updated;
+    const status: ImportStatus = result.errors > 0 ? (imported > 0 ? 'partial' : 'error') : imported > 0 ? 'success' : 'error';
+    const record = this.importRepo.create({
+      tenantId,
+      source,
+      status,
+      created: result.created,
+      updated: result.updated,
+      errors: result.errors,
+      scanned: result.scanned,
+      details: options.details || [],
+      metadata: options.metadata || {},
+      startedAt: new Date(),
+      completedAt: new Date(),
+    });
+    await this.importRepo.save(record);
   }
 
   private detectCsvFormat(headers: string[]): 'shopify' | 'woocommerce' | 'generic' {
