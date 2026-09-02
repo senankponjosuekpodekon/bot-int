@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { LLM_PROVIDER, LLMProvider, LLMMessage } from './llm-provider.interface';
+import { LLM_PROVIDER, LLMProvider, LLMMessage, LLMChatResult } from './llm-provider.interface';
 
 @Injectable()
 export class LLMService {
@@ -13,6 +13,10 @@ export class LLMService {
 
   async chat(messages: LLMMessage[]): Promise<string> {
     return this.provider.chat(messages);
+  }
+
+  async generate(messages: LLMMessage[]): Promise<LLMChatResult> {
+    return this.provider.generate(messages);
   }
 
   async *chatStream(messages: LLMMessage[]): AsyncGenerator<string> {

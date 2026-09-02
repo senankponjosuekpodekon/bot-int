@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MinLength } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
 
 export class CreateTextDocumentDto {
   @IsString()
@@ -8,4 +8,12 @@ export class CreateTextDocumentDto {
   @IsString()
   @IsOptional()
   filename?: string;
+
+  @IsUUID()
+  @IsOptional()
+  agentId?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  shared?: boolean;
 }

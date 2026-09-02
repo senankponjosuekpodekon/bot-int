@@ -4,23 +4,29 @@ import {
   CreditCard, Check, Zap, Crown, Building2, TrendingUp, AlertCircle,
   Calendar, X, Loader2, Sparkles
 } from 'lucide-react';
-import { billingApi } from '@/lib/api';
+import { billingApi, analyticsApi } from '@/lib/api';
 
 export default function BillingPage() {
   const [usage, setUsage] = useState<any>(null);
   const [sub, setSub] = useState<any>(null);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [tokenData, setTokenData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [u, s] = await Promise.all([
+        const [u, s, p, t] = await Promise.all([
           billingApi.usage(),
           billingApi.subscription(),
+          billingApi.plans(),
+          analyticsApi.tokens(7),
         ]);
         setUsage(u);
         setSub(s);
+        setPlans(p);
+        setTokenData(t);
       } catch {
         // error
       } finally {
@@ -32,48 +38,12 @@ export default function BillingPage() {
 
   if (loading) return <div className="p-4 lg:p-6 text-center text-gray-500">Chargement...</div>;
 
-  const plans = [
-    {
-      id: 'free',
-      name: 'Free',
-      price: 0,
-      icon: Sparkles,
-      color: 'gray',
-      features: ['1 agent', '50 conv/mois', 'Web chat', 'Funnel tracking'],
-    },
-    {
-      id: 'starter',
-      name: 'Starter',
-      price: 49,
-      icon: Zap,
-      color: 'blue',
-      features: ['3 agents', '1 000 conv/mois', 'Web + email', 'Funnel tracking', '0,08€/conv overage'],
-    },
-    {
-      id: 'growth',
-      name: 'Growth',
-      price: 149,
-      icon: Crown,
-      color: 'indigo',
-      features: ['Agents illimités', '5 000 conv/mois', 'Multi-canal', 'API access', 'Domaine custom', '0,05€/conv overage'],
-    },
-    {
-      id: 'scale',
-      name: 'Scale',
-      price: 399,
-      icon: Building2,
-      color: 'purple',
-      features: ['20 000 conv/mois', 'MCP Server', 'Outcome tracking', 'White-label', 'SLA 99.9%', '0,03€/conv overage'],
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: null,
-      icon: Building2,
-      color: 'dark',
-      features: ['Volume custom', 'Dedicated MCP', 'Outcome pricing', 'White-label', 'Account manager'],
-    },
-  ];
+  const iconMap: Record<string, any> = {
+    sparkles: Sparkles,
+    zap: Zap,
+    crown: Crown,
+    building2: Building2,
+  };
 
   const currentPlan = sub?.plan || 'free';
   const usagePct = usage ? Math.min(100, (usage.conversationsUsed / usage.conversationsLimit) * 100) : 0;
@@ -186,7 +156,7 @@ export default function BillingPage() {
             <div className="mt-3 p-3 rounded-xl bg-indigo-50 text-indigo-700 text-sm flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4" />
-                Vous êtes sur le plan Free. Passez à Starter pour 1 000 conversations/mois.
+                Vous êtes sur le plan Free. Passez à Starter pour plus de conversations/mois.
               </span>
               <button
                 onClick={() => document.getElementById('plan-selection')?.scrollIntoView({ behavior: 'smooth' })}
@@ -201,6 +171,47 @@ export default function BillingPage() {
           {usage?.overageConversations > 0 && (
             <div className="mt-3 p-3 rounded-xl bg-orange-50 text-orange-700 text-sm">
               <strong>{usage.overageConversations}</strong> conversations en overage — {(usage.overageCostCents / 100).toFixed(2)}€ facturés en sus.
+            </div>
+          )}
+
+          {/* Token consumption */}
+          {tokenData && (
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="w-4 h-4 text-indigo-500" />
+                <h3 className="font-semibold text-gray-900">Consommation de tokens (7 jours)</h3>
+              </div>
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="text-center p-3 bg-gray-50 rounded-xl">
+                  <p className="text-lg font-bold text-gray-900">{tokenData.total?.promptTokens?.toLocaleString('fr-FR') || 0}</p>
+                  <p className="text-xs text-gray-500">Prompt</p>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-xl">
+                  <p className="text-lg font-bold text-gray-900">{tokenData.total?.completionTokens?.toLocaleString('fr-FR') || 0}</p>
+                  <p className="text-xs text-gray-500">Completion</p>
+                </div>
+                <div className="text-center p-3 bg-indigo-50 rounded-xl">
+                  <p className="text-lg font-bold text-indigo-700">{tokenData.total?.totalTokens?.toLocaleString('fr-FR') || 0}</p>
+                  <p className="text-xs text-indigo-600">Total</p>
+                </div>
+              </div>
+              {tokenData.timeline?.length > 0 && (
+                <div className="space-y-2">
+                  {tokenData.timeline.map((day: any, i: number) => {
+                    const max = Math.max(...tokenData.timeline.map((d: any) => d.totalTokens || 0), 1);
+                    const pct = ((day.totalTokens || 0) / max) * 100;
+                    return (
+                      <div key={i} className="flex items-center gap-3 text-sm">
+                        <span className="w-12 text-gray-500 text-xs">{new Date(day.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}</span>
+                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="w-16 text-right font-medium text-gray-700">{(day.totalTokens || 0).toLocaleString('fr-FR')}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -233,6 +244,7 @@ export default function BillingPage() {
       <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 lg:grid-cols-5 gap-4">
         {plans.map((p) => {
           const isCurrent = currentPlan === p.id;
+          const Icon = iconMap[p.icon];
           const colorMap: Record<string, string> = {
             blue: 'border-blue-200 bg-blue-50',
             indigo: 'border-indigo-600 bg-indigo-50',
@@ -247,7 +259,7 @@ export default function BillingPage() {
             >
               <div className="flex items-center gap-2 mb-3">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorMap[p.color] || 'bg-gray-50'}`}>
-                  <p.icon className="w-5 h-5" />
+                  {Icon ? <Icon className="w-5 h-5" /> : <span />}
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900">{p.name}</h3>

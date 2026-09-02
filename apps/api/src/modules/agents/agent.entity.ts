@@ -49,6 +49,9 @@ export class Agent {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ nullable: true })
+  operatorId: string;
+
   @Column({ type: 'jsonb', nullable: true, default: '{}' })
   personalityConfig: {
     tone?: 'professional' | 'friendly' | 'formal' | 'casual';

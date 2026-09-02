@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { LLMService } from '../chat/llm.service';
+import { AgentPolicyService } from './agent-policy.service';
 
 // Action risk classification — enforced before any tool executes:
 // READ: read-only lookup, safe to auto-execute (e.g. search, calculator).
@@ -28,14 +29,15 @@ export interface ToolCallResult {
   requiresApproval: boolean;
 }
 
-const ACTIONS_REQUIRING_APPROVAL = new Set([ToolRiskLevel.WRITE, ToolRiskLevel.EXECUTE]);
-
 @Injectable()
 export class AgentToolsService {
   private readonly logger = new Logger(AgentToolsService.name);
   private readonly tools: Map<string, AgentTool> = new Map();
 
-  constructor(private readonly llmService: LLMService) {
+  constructor(
+    private readonly llmService: LLMService,
+    private readonly policyService: AgentPolicyService,
+  ) {
     this.registerTool(this.webSearchTool());
     this.registerTool(this.calculatorTool());
     this.registerTool(this.calendarTool());
@@ -92,9 +94,8 @@ If no tool is needed, respond: {"calls": []}`;
         const tool = this.tools.get(call.tool);
         if (!tool) continue;
 
-        // WRITE/EXECUTE tools are never auto-executed: the agent can only request them,
-        // a human operator must approve and trigger the actual execution.
-        if (ACTIONS_REQUIRING_APPROVAL.has(tool.riskLevel)) {
+        // Deterministic policy: only READ tools may execute without human approval.
+        if (!this.policyService.canAutoExecute(tool.riskLevel)) {
           results.push({
             toolName: call.tool,
             result: `Action "${call.tool}" en attente de validation humaine (risque: ${tool.riskLevel}). L'agent ne doit pas prétendre avoir déjà exécuté cette action.`,

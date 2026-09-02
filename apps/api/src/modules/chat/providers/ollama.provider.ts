@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { LLMProvider, LLMMessage } from '../llm-provider.interface';
+import { LLMProvider, LLMMessage, LLMChatResult } from '../llm-provider.interface';
 
 @Injectable()
 export class OllamaProvider implements LLMProvider {
@@ -21,13 +21,26 @@ export class OllamaProvider implements LLMProvider {
   }
 
   async chat(messages: LLMMessage[]): Promise<string> {
+    const result = await this.generate(messages);
+    return result.content;
+  }
+
+  async generate(messages: LLMMessage[]): Promise<LLMChatResult> {
     try {
       const response = await axios.post(`${this.baseUrl}/api/chat`, {
         model: this.model,
         messages,
         stream: false,
+        options: { num_ctx: 4096 },
       });
-      return response.data.message.content;
+      const data = response.data || {};
+      const content = data.message?.content || '';
+      const prompt = data.prompt_eval_count || 0;
+      const completion = data.eval_count || 0;
+      return {
+        content,
+        usage: { prompt, completion, total: prompt + completion },
+      };
     } catch (error: any) {
       this.logger.error('Ollama chat failed', error?.message);
       throw new Error('AI service unavailable');
@@ -40,6 +53,7 @@ export class OllamaProvider implements LLMProvider {
         model: this.model,
         messages,
         stream: true,
+        options: { num_ctx: 4096 },
       }, { responseType: 'stream' });
 
       const stream = response.data;

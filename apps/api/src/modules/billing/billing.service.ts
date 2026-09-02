@@ -345,4 +345,64 @@ export class BillingService {
       actualConversations,
     };
   }
+
+  // ─── List all available plans with UI-ready details ───
+  // Single source of truth: the numeric limits are read from PLAN_LIMITS.
+  getPlans() {
+    const planNames: Record<PlanType, string> = {
+      [PlanType.FREE]: 'Free',
+      [PlanType.STARTER]: 'Starter',
+      [PlanType.GROWTH]: 'Growth',
+      [PlanType.SCALE]: 'Scale',
+      [PlanType.ENTERPRISE]: 'Enterprise',
+    };
+    const planIcons: Record<PlanType, string> = {
+      [PlanType.FREE]: 'sparkles',
+      [PlanType.STARTER]: 'zap',
+      [PlanType.GROWTH]: 'crown',
+      [PlanType.SCALE]: 'building2',
+      [PlanType.ENTERPRISE]: 'building2',
+    };
+    const planColors: Record<PlanType, string> = {
+      [PlanType.FREE]: 'gray',
+      [PlanType.STARTER]: 'blue',
+      [PlanType.GROWTH]: 'indigo',
+      [PlanType.SCALE]: 'purple',
+      [PlanType.ENTERPRISE]: 'dark',
+    };
+    const staticFeatures: Record<PlanType, string[]> = {
+      [PlanType.FREE]: ['Funnel tracking'],
+      [PlanType.STARTER]: ['Funnel tracking'],
+      [PlanType.GROWTH]: ['Multi-canal'],
+      [PlanType.SCALE]: ['MCP Server', 'White-label', 'Outcome tracking', 'SLA 99.9%'],
+      [PlanType.ENTERPRISE]: ['Volume custom', 'Dedicated MCP', 'Outcome pricing', 'White-label', 'Account manager'],
+    };
+
+    return (Object.values(PlanType) as PlanType[]).map((plan) => {
+      const limits = PLAN_LIMITS[plan];
+      const price = plan === PlanType.ENTERPRISE ? null : limits.priceMonthly / 100;
+      const features = [
+        limits.maxAgents === 999 ? 'Agents illimités' : `${limits.maxAgents} agent${limits.maxAgents > 1 ? 's' : ''}`,
+        `${limits.conversationsPerMonth.toLocaleString('fr-FR')} conv/mois`,
+        ...limits.channels.map((c) => c === 'web' ? 'Web chat' : c.charAt(0).toUpperCase() + c.slice(1)),
+        ...(staticFeatures[plan] || []),
+      ];
+      if (limits.overagePerConversation > 0) {
+        features.push(`${(limits.overagePerConversation / 100).toFixed(2).replace('.', ',')}€/conv overage`);
+      }
+      if (limits.customDomain) features.push('Domaine custom');
+      if (limits.whiteLabel) features.push('White-label');
+      if (limits.apiAccess) features.push('API access');
+      if (limits.mcpServer) features.push('MCP Server');
+      if (limits.outcomeTracking) features.push('Outcome tracking');
+      return {
+        id: plan,
+        name: planNames[plan],
+        price,
+        icon: planIcons[plan],
+        color: planColors[plan],
+        features,
+      };
+    });
+  }
 }

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -17,6 +18,7 @@ import { AgentMemoryService } from './agent-memory.service';
 import { AgentToolsService } from './agent-tools.service';
 import { AgentWorkflowService } from './agent-workflow.service';
 import { PendingActionService } from './pending-action.service';
+import { AgentPolicyService } from './agent-policy.service';
 import { PendingActionStatus } from './pending-action.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard, Roles } from '../auth/guards/roles.guard';
@@ -107,6 +109,7 @@ export class AgentsController {
     private readonly toolsService: AgentToolsService,
     private readonly workflowService: AgentWorkflowService,
     private readonly pendingActionService: PendingActionService,
+    private readonly policyService: AgentPolicyService,
   ) {}
 
   @Post()
@@ -118,10 +121,11 @@ export class AgentsController {
   }
 
   @Get()
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR, UserRole.VIEWER)
   @ApiOperation({ summary: 'List all agents (paginated)' })
   @ApiResponse({ status: 200, description: 'Paginated list of agents' })
   findAll(@Request() req, @Query() query: PaginationDto) {
-    return this.agentsService.findByTenant(req.user.tenantId, query.page, query.limit);
+    return this.agentsService.findByTenant(req.user.tenantId, query.page, query.limit, req.user);
   }
 
   // ─── Pending actions (WRITE/EXECUTE tool calls awaiting human approval) ───
@@ -134,11 +138,16 @@ export class AgentsController {
   }
 
   @Get(':id')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR, UserRole.VIEWER)
   @ApiOperation({ summary: 'Get agent by ID' })
   @ApiResponse({ status: 200, description: 'Agent details' })
   @ApiResponse({ status: 404, description: 'Agent not found' })
-  findOne(@Request() req, @Param('id') id: string) {
-    return this.agentsService.findById(id, req.user.tenantId);
+  async findOne(@Request() req, @Param('id') id: string) {
+    const agent = await this.agentsService.findById(id, req.user.tenantId);
+    if (req.user.role === UserRole.OPERATOR && agent.operatorId !== req.user.id) {
+      throw new ForbiddenException('Agent not assigned to you');
+    }
+    return agent;
   }
 
   @Patch(':id')
@@ -198,13 +207,21 @@ export class AgentsController {
 
   @Post('pending-actions/:id/approve')
   @ApiOperation({ summary: 'Approve a pending action' })
-  approvePendingAction(@Request() req, @Param('id') id: string) {
+  async approvePendingAction(@Request() req, @Param('id') id: string) {
+    const action = await this.pendingActionService.findById(id, req.user.tenantId);
+    if (!this.policyService.canResolveAction(req.user.role, action.riskLevel)) {
+      throw new ForbiddenException('Insufficient permissions to approve this action');
+    }
     return this.pendingActionService.approve(id, req.user.tenantId, req.user.id || req.user.sub);
   }
 
   @Post('pending-actions/:id/reject')
   @ApiOperation({ summary: 'Reject a pending action' })
-  rejectPendingAction(@Request() req, @Param('id') id: string) {
+  async rejectPendingAction(@Request() req, @Param('id') id: string) {
+    const action = await this.pendingActionService.findById(id, req.user.tenantId);
+    if (!this.policyService.canResolveAction(req.user.role, action.riskLevel)) {
+      throw new ForbiddenException('Insufficient permissions to reject this action');
+    }
     return this.pendingActionService.reject(id, req.user.tenantId, req.user.id || req.user.sub);
   }
 

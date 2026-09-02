@@ -10,6 +10,7 @@ import { AgentToolsService } from './agent-tools.service';
 import { AgentWorkflowService } from './agent-workflow.service';
 import { PendingActionService } from './pending-action.service';
 import { AgentOrchestrationService } from './agent-orchestration.service';
+import { AgentPolicyService } from './agent-policy.service';
 import { AgentsController } from './agents.controller';
 import { ChatModule } from '../chat/chat.module';
 
@@ -18,8 +19,8 @@ import { ChatModule } from '../chat/chat.module';
     TypeOrmModule.forFeature([Agent, AgentMemory, AgentWorkflow, PendingAction]),
     forwardRef(() => ChatModule),
   ],
-  providers: [AgentsService, AgentMemoryService, AgentToolsService, AgentWorkflowService, PendingActionService, AgentOrchestrationService],
+  providers: [AgentsService, AgentMemoryService, AgentToolsService, AgentWorkflowService, PendingActionService, AgentOrchestrationService, AgentPolicyService],
   controllers: [AgentsController],
-  exports: [AgentsService, AgentMemoryService, AgentToolsService, AgentWorkflowService, PendingActionService, AgentOrchestrationService],
+  exports: [AgentsService, AgentMemoryService, AgentToolsService, AgentWorkflowService, PendingActionService, AgentOrchestrationService, AgentPolicyService],
 })
 export class AgentsModule {}

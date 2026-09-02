@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { LLMProvider, LLMMessage } from '../llm-provider.interface';
+import { LLMProvider, LLMMessage, LLMChatResult } from '../llm-provider.interface';
 
 @Injectable()
 export class OpenAIProvider implements LLMProvider {
@@ -27,6 +27,11 @@ export class OpenAIProvider implements LLMProvider {
   }
 
   async chat(messages: LLMMessage[]): Promise<string> {
+    const result = await this.generate(messages);
+    return result.content;
+  }
+
+  async generate(messages: LLMMessage[]): Promise<LLMChatResult> {
     try {
       const response = await axios.post(
         `${this.baseUrl}/chat/completions`,
@@ -42,7 +47,15 @@ export class OpenAIProvider implements LLMProvider {
           },
         },
       );
-      return response.data.choices[0].message.content;
+      const data = response.data || {};
+      const content = data.choices?.[0]?.message?.content || '';
+      const usage = data.usage || {};
+      const prompt = usage.prompt_tokens || 0;
+      const completion = usage.completion_tokens || 0;
+      return {
+        content,
+        usage: { prompt, completion, total: prompt + completion },
+      };
     } catch (error: any) {
       this.logger.error('OpenAI chat failed', error?.message);
       throw new Error('AI service unavailable');

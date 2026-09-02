@@ -42,6 +42,12 @@ export class KnowledgeDocument {
   @Column({ nullable: true })
   embeddingId: string;
 
+  @Column({ nullable: true })
+  agentId: string;
+
+  @Column({ default: true })
+  shared: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 }

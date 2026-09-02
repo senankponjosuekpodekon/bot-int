@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Conversation, ConversationStatus, FunnelStage, AcquisitionChannel } from '../chat/conversation.entity';
 import { Message } from '../chat/message.entity';
 import { Lead, LeadStatus } from '../leads/lead.entity';
@@ -20,6 +20,7 @@ export class AnalyticsService {
     private readonly productRepo: Repository<Product>,
     @InjectRepository(Agent)
     private readonly agentRepo: Repository<Agent>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async getDashboard(tenantId: string) {
@@ -180,6 +181,32 @@ export class AnalyticsService {
         avgLeadScore,
       },
     };
+  }
+
+  async getTokenUsage(tenantId: string, days = 30) {
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const rows = await this.dataSource.query(
+      `SELECT DATE_TRUNC('day', "createdAt") as date,
+              SUM("promptTokens")::int as "promptTokens",
+              SUM("completionTokens")::int as "completionTokens",
+              SUM("totalTokens")::int as "totalTokens",
+              COUNT(*)::int as "conversationCount"
+       FROM conversation_analytics
+       WHERE "tenantId" = $1 AND "createdAt" >= $2
+       GROUP BY DATE_TRUNC('day', "createdAt")
+       ORDER BY date ASC`,
+      [tenantId, since],
+    );
+    const total = rows.reduce(
+      (acc: any, r: any) => ({
+        promptTokens: acc.promptTokens + (r.promptTokens || 0),
+        completionTokens: acc.completionTokens + (r.completionTokens || 0),
+        totalTokens: acc.totalTokens + (r.totalTokens || 0),
+        conversationCount: acc.conversationCount + (r.conversationCount || 0),
+      }),
+      { promptTokens: 0, completionTokens: 0, totalTokens: 0, conversationCount: 0 },
+    );
+    return { days, total, timeline: rows };
   }
 
   async getAcquisitionAnalytics(tenantId: string) {

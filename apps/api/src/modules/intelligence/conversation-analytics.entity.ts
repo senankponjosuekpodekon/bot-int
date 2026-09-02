@@ -35,6 +35,15 @@ export class ConversationAnalytics {
   @Column({ type: 'varchar', length: 50, nullable: true })
   detectedIntent: string;
 
+  @Column({ type: 'int', default: 0 })
+  promptTokens: number;
+
+  @Column({ type: 'int', default: 0 })
+  completionTokens: number;
+
+  @Column({ type: 'int', default: 0 })
+  totalTokens: number;
+
   @CreateDateColumn()
   createdAt: Date;
 }

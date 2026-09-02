@@ -24,6 +24,12 @@ export class PendingActionService {
     return this.repo.save(action);
   }
 
+  async findById(id: string, tenantId: string): Promise<PendingAction> {
+    const action = await this.repo.findOne({ where: { id, tenantId } });
+    if (!action) throw new NotFoundException('Pending action not found');
+    return action;
+  }
+
   async findByTenant(tenantId: string, status?: PendingActionStatus): Promise<PendingAction[]> {
     return this.repo.find({
       where: status ? { tenantId, status } : { tenantId },

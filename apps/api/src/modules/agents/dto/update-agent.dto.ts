@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsOptional, IsString, MinLength, IsArray, IsObject } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString, IsUUID, MinLength, IsArray, IsObject } from 'class-validator';
 import { AgentType } from '../agent.entity';
 
 export class UpdateAgentDto {
@@ -31,6 +31,10 @@ export class UpdateAgentDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @IsUUID()
+  @IsOptional()
+  operatorId?: string;
 
   @IsObject()
   @IsOptional()

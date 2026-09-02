@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Agent } from './agent.entity';
+import { User, UserRole } from '../auth/user.entity';
 import { PaginatedResult } from '../../common/pagination.dto';
 
 @Injectable()
@@ -16,9 +17,13 @@ export class AgentsService {
     return this.agentRepo.save(agent);
   }
 
-  async findByTenant(tenantId: string, page = 1, limit = 20): Promise<PaginatedResult<Agent>> {
+  async findByTenant(tenantId: string, page = 1, limit = 20, user?: { id: string; role: UserRole }): Promise<PaginatedResult<Agent>> {
+    const where: any = { tenantId };
+    if (user?.role === UserRole.OPERATOR) {
+      where.operatorId = user.id;
+    }
     const [data, total] = await this.agentRepo.findAndCount({
-      where: { tenantId },
+      where,
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,

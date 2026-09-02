@@ -70,19 +70,21 @@ export class KnowledgeService implements OnModuleInit {
     }
   }
 
-  async addText(tenantId: string, content: string, filename?: string): Promise<KnowledgeDocument> {
+  async addText(tenantId: string, content: string, filename?: string, agentId?: string, shared?: boolean): Promise<KnowledgeDocument> {
     const doc = this.docRepo.create({
       tenantId,
       type: DocumentType.TEXT,
       content,
       filename,
+      agentId,
+      shared: shared ?? true,
     });
     const saved = await this.docRepo.save(doc);
     await this.chunkAndEmbed(saved.id, tenantId, content);
     return saved;
   }
 
-  async addPdf(tenantId: string, fileBuffer: Buffer, filename: string): Promise<KnowledgeDocument> {
+  async addPdf(tenantId: string, fileBuffer: Buffer, filename: string, agentId?: string, shared?: boolean): Promise<KnowledgeDocument> {
     const parser = new PDFParse({ data: new Uint8Array(fileBuffer) });
     const result = await parser.getText();
     await parser.destroy();
@@ -94,13 +96,15 @@ export class KnowledgeService implements OnModuleInit {
       type: DocumentType.PDF,
       content,
       filename,
+      agentId,
+      shared: shared ?? true,
     });
     const saved = await this.docRepo.save(doc);
     await this.chunkAndEmbed(saved.id, tenantId, content);
     return saved;
   }
 
-  async addDocx(tenantId: string, fileBuffer: Buffer, filename: string): Promise<KnowledgeDocument> {
+  async addDocx(tenantId: string, fileBuffer: Buffer, filename: string, agentId?: string, shared?: boolean): Promise<KnowledgeDocument> {
     const result = await mammoth.extractRawText({ buffer: fileBuffer });
     const content = (result.value || '').trim();
     if (!content) throw new Error('DOCX vide ou illisible');
@@ -110,13 +114,15 @@ export class KnowledgeService implements OnModuleInit {
       type: DocumentType.DOCX,
       content,
       filename,
+      agentId,
+      shared: shared ?? true,
     });
     const saved = await this.docRepo.save(doc);
     await this.chunkAndEmbed(saved.id, tenantId, content);
     return saved;
   }
 
-  async addUrl(tenantId: string, url: string): Promise<KnowledgeDocument> {
+  async addUrl(tenantId: string, url: string, agentId?: string, shared?: boolean): Promise<KnowledgeDocument> {
     const baseUrl = new URL(url);
     const pages = await this.scrapeWithPuppeteer(url, baseUrl.origin, MAX_CRAWL_PAGES);
 
@@ -132,13 +138,15 @@ export class KnowledgeService implements OnModuleInit {
       content: combinedContent,
       sourceUrl: url,
       filename: baseUrl.hostname,
+      agentId,
+      shared: shared ?? true,
     });
     const saved = await this.docRepo.save(doc);
     await this.chunkAndEmbed(saved.id, tenantId, combinedContent);
     return saved;
   }
 
-  async addUrlAsync(tenantId: string, url: string): Promise<{ docId: string; status: string }> {
+  async addUrlAsync(tenantId: string, url: string, agentId?: string, shared?: boolean): Promise<{ docId: string; status: string }> {
     const baseUrl = new URL(url);
     const doc = this.docRepo.create({
       tenantId,
@@ -146,6 +154,8 @@ export class KnowledgeService implements OnModuleInit {
       content: 'Import en cours...',
       sourceUrl: url,
       filename: baseUrl.hostname,
+      agentId,
+      shared: shared ?? true,
     });
     const saved = await this.docRepo.save(doc);
 
@@ -453,65 +463,69 @@ export class KnowledgeService implements OnModuleInit {
     await this.docRepo.delete({ id, tenantId });
   }
 
-  async searchByText(tenantId: string, query: string): Promise<KnowledgeDocument[]> {
-    if (!query.trim()) {
-      return this.docRepo.find({ where: { tenantId }, order: { createdAt: 'DESC' }, take: 20 });
-    }
-    return this.docRepo
+  async searchByText(tenantId: string, query: string, agentId?: string): Promise<KnowledgeDocument[]> {
+    const qb = this.docRepo
       .createQueryBuilder('doc')
       .where('doc.tenantId = :tenantId', { tenantId })
-      .andWhere('doc.content ILIKE :query', { query: `%${query}%` })
-      .limit(10)
-      .getMany();
+      .andWhere('(doc.shared = true OR doc.agentId = :agentId)', { agentId: agentId || '' })
+      .orderBy('doc.createdAt', 'DESC')
+      .take(query.trim() ? 10 : 20);
+    if (query.trim()) {
+      qb.andWhere('doc.content ILIKE :query', { query: `%${query}%` });
+    }
+    return qb.getMany();
   }
 
-  async searchRelevant(tenantId: string, query: string): Promise<string[]> {
+  async searchRelevant(tenantId: string, query: string, agentId?: string): Promise<string[]> {
     try {
       const queryEmbedding = await this.llmService.embed(query, { task: 'retrieval.query' });
 
       if (this.hasPgvector) {
         const embeddingStr = `[${queryEmbedding.join(',')}]`;
         const results = await this.dataSource.query(
-          `SELECT chunk.content
+          `SELECT chunk.content, doc."sourceUrl", doc."createdAt"
            FROM knowledge_chunks chunk
            INNER JOIN knowledge_documents doc ON chunk."documentId" = doc.id
            WHERE doc."tenantId" = $1
              AND chunk.embedding_vector IS NOT NULL
+             AND (doc.shared = true OR doc."agentId" = $4)
            ORDER BY chunk.embedding_vector <=> $2::vector
            LIMIT $3`,
-          [tenantId, embeddingStr, MAX_SEARCH_RESULTS],
+          [tenantId, embeddingStr, MAX_SEARCH_RESULTS, agentId],
         );
-        if (results.length > 0) return results.map((r: any) => r.content);
+        if (results.length > 0) return results.map((r: any) => this.formatChunk(r.content, r.sourceUrl, r.createdAt));
       }
 
       // Fallback: JS cosine similarity (loads chunks into memory)
       const chunks = await this.chunkRepo
         .createQueryBuilder('chunk')
         .innerJoin('chunk.document', 'doc')
+        .addSelect(['doc.sourceUrl', 'doc.createdAt'])
         .where('doc.tenantId = :tenantId', { tenantId })
         .andWhere('chunk.embedding IS NOT NULL')
-        .getMany();
+        .andWhere('(doc.shared = true OR doc.agentId = :agentId)', { agentId: agentId || '' })
+        .getRawMany();
 
       if (chunks.length === 0) return [];
 
       const scored = chunks
-        .map((chunk) => {
+        .map((row: any) => {
           let embedding: number[] = [];
           try {
-            embedding = JSON.parse(chunk.embedding);
+            embedding = JSON.parse(row.chunk_embedding);
           } catch {
-            return { chunk, score: 0 };
+            return { ...row, score: 0 };
           }
-          return { chunk, score: this.cosineSimilarity(queryEmbedding, embedding) };
+          return { ...row, score: this.cosineSimilarity(queryEmbedding, embedding) };
         })
-        .sort((a, b) => b.score - a.score)
+        .sort((a: any, b: any) => b.score - a.score)
         .slice(0, MAX_SEARCH_RESULTS);
 
-      return scored.map((s) => s.chunk.content);
+      return scored.map((s: any) => this.formatChunk(s.chunk_content, s.doc_sourceUrl, s.doc_createdAt));
     } catch (error: any) {
       this.logger.warn('Semantic search failed, falling back to text search', error?.message);
-      const docs = await this.searchByText(tenantId, query);
-      return docs.slice(0, MAX_SEARCH_RESULTS).map((d) => d.content);
+      const docs = await this.searchByText(tenantId, query, agentId);
+      return docs.slice(0, MAX_SEARCH_RESULTS).map((d) => this.formatChunk(d.content, d.sourceUrl, d.createdAt));
     }
   }
 
@@ -549,6 +563,12 @@ export class KnowledgeService implements OnModuleInit {
         }
       }
     }
+  }
+
+  private formatChunk(content: string, sourceUrl?: string, createdAt?: Date | string): string {
+    const source = sourceUrl ? `Source: ${sourceUrl}` : 'Source: base de connaissances';
+    const date = createdAt ? new Date(createdAt).toLocaleDateString('fr-FR') : 'date inconnue';
+    return `${source} (créé le ${date})\n${content}`;
   }
 
   private splitIntoChunks(text: string, size: number, overlap: number): string[] {

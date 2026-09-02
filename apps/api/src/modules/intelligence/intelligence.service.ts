@@ -46,6 +46,9 @@ export class IntelligenceService {
     hadKnowledge: boolean,
     hadProducts: boolean,
     detectedIntent: string | null,
+    promptTokens = 0,
+    completionTokens = 0,
+    totalTokens = 0,
   ): Promise<void> {
     await this.analyticsRepo.save(
       this.analyticsRepo.create({
@@ -58,6 +61,9 @@ export class IntelligenceService {
         hadProducts,
         detectedIntent,
         messageLength: userMessage.length,
+        promptTokens,
+        completionTokens,
+        totalTokens,
       }),
     );
   }

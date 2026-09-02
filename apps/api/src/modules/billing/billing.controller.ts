@@ -82,6 +82,13 @@ export class BillingController {
     return result;
   }
 
+  @Get('plans')
+  @ApiOperation({ summary: 'Get all available plans and limits' })
+  @ApiResponse({ status: 200, description: 'Plans list' })
+  async getPlans() {
+    return this.billingService.getPlans();
+  }
+
   @Post('checkout')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create Stripe checkout session' })

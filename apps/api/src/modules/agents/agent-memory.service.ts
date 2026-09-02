@@ -150,6 +150,7 @@ Example:
   "company": "Boulangerie Martin",
   "budget": "2000€",
   "need": "un site vitrine avec commande en ligne",
+  "problem": "trop de demandes par email, pas de chat en ligne",
   "location": "Lyon",
   "deadline": "dans 2 mois",
   "language": "fr",
@@ -157,7 +158,7 @@ Example:
   "industry": "restauration"
 }
 
-Allowed keys: name, email, phone, company, budget, need, location, deadline, language, role, industry, preferences, decision_maker, competitors, interests, notes.`;
+Allowed keys: name, email, phone, company, budget, need, problem, location, deadline, language, role, industry, preferences, decision_maker, competitors, interests, notes.`;
 
     const messages: LLMMessage[] = [
       { role: 'system', content: prompt },

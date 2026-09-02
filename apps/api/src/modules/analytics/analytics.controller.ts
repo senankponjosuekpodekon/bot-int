@@ -32,4 +32,9 @@ export class AnalyticsController {
   getAcquisition(@Request() req) {
     return this.analyticsService.getAcquisitionAnalytics(req.user.tenantId);
   }
+
+  @Get('tokens')
+  getTokenUsage(@Request() req, @Query() query: TimelineDto) {
+    return this.analyticsService.getTokenUsage(req.user.tenantId, query.days || 30);
+  }
 }

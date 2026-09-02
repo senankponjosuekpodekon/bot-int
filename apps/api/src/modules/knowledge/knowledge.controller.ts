@@ -13,7 +13,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsUrl, IsUUID } from 'class-validator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { KnowledgeService } from './knowledge.service';
 import { SiteScraperService } from './site-scraper.service';
@@ -26,12 +26,24 @@ class SearchQueryDto {
   @IsOptional()
   @IsNotEmpty()
   q?: string;
+
+  @IsUUID()
+  @IsOptional()
+  agentId?: string;
 }
 
 class ImportUrlDto {
   @IsString()
   @IsUrl()
   url: string;
+
+  @IsUUID()
+  @IsOptional()
+  agentId?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  shared?: boolean;
 }
 
 class SearchCompanyDto {
@@ -54,7 +66,7 @@ export class KnowledgeController {
   @ApiOperation({ summary: 'Add text document to knowledge base' })
   @ApiResponse({ status: 201, description: 'Document created' })
   addText(@Request() req, @Body() dto: CreateTextDocumentDto) {
-    return this.knowledgeService.addText(req.user.tenantId, dto.content, dto.filename);
+    return this.knowledgeService.addText(req.user.tenantId, dto.content, dto.filename, dto.agentId, dto.shared);
   }
 
   @Post('upload')
@@ -62,34 +74,40 @@ export class KnowledgeController {
   @ApiResponse({ status: 201, description: 'File uploaded and processed' })
   @ApiResponse({ status: 400, description: 'No file provided' })
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
-  async uploadFile(@Request() req, @UploadedFile() file: Express.Multer.File) {
+  async uploadFile(
+    @Request() req,
+    @UploadedFile() file: Express.Multer.File,
+    @Query('agentId') agentId?: string,
+    @Query('shared') sharedStr?: string,
+  ) {
     if (!file) throw new BadRequestException('Aucun fichier fourni');
+    const shared = sharedStr ? sharedStr === 'true' : undefined;
     const isPdf = file.mimetype === 'application/pdf' || file.originalname.endsWith('.pdf');
     const isDocx =
       file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
       file.originalname.endsWith('.docx');
     if (isPdf) {
-      return this.knowledgeService.addPdf(req.user.tenantId, file.buffer, file.originalname);
+      return this.knowledgeService.addPdf(req.user.tenantId, file.buffer, file.originalname, agentId, shared);
     }
     if (isDocx) {
-      return this.knowledgeService.addDocx(req.user.tenantId, file.buffer, file.originalname);
+      return this.knowledgeService.addDocx(req.user.tenantId, file.buffer, file.originalname, agentId, shared);
     }
     const content = file.buffer.toString('utf-8');
-    return this.knowledgeService.addText(req.user.tenantId, content, file.originalname);
+    return this.knowledgeService.addText(req.user.tenantId, content, file.originalname, agentId, shared);
   }
 
   @Post('url')
   @ApiOperation({ summary: 'Import content from URL' })
   @ApiResponse({ status: 201, description: 'URL content imported' })
   importUrl(@Request() req, @Body() dto: ImportUrlDto) {
-    return this.knowledgeService.addUrl(req.user.tenantId, dto.url);
+    return this.knowledgeService.addUrl(req.user.tenantId, dto.url, dto.agentId, dto.shared);
   }
 
   @Post('url-async')
   @ApiOperation({ summary: 'Import content from URL (async)' })
   @ApiResponse({ status: 201, description: 'Import job started' })
   importUrlAsync(@Request() req, @Body() dto: ImportUrlDto) {
-    return this.knowledgeService.addUrlAsync(req.user.tenantId, dto.url);
+    return this.knowledgeService.addUrlAsync(req.user.tenantId, dto.url, dto.agentId, dto.shared);
   }
 
   @Post('search-company')
@@ -117,7 +135,7 @@ export class KnowledgeController {
   @ApiOperation({ summary: 'Search knowledge base by text' })
   @ApiResponse({ status: 200, description: 'Search results' })
   search(@Request() req, @Query() query: SearchQueryDto) {
-    return this.knowledgeService.searchByText(req.user.tenantId, query.q || '');
+    return this.knowledgeService.searchByText(req.user.tenantId, query.q || '', query.agentId);
   }
 
   @Delete(':id')
