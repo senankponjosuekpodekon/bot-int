@@ -1102,6 +1102,26 @@ export class ProductsService {
     });
   }
 
+  async updateImportSource(
+    tenantId: string,
+    id: string,
+    updates: Partial<{ enabled: boolean; config: Record<string, any> }>,
+  ): Promise<ProductImportSource> {
+    const record = await this.sourceRepo.findOne({ where: { id, tenantId } });
+    if (!record) throw new NotFoundException('Source not found');
+    if (typeof updates.enabled === 'boolean') record.enabled = updates.enabled;
+    if (updates.config) record.config = { ...record.config, ...updates.config };
+    record.updatedAt = new Date();
+    await this.sourceRepo.save(record);
+    return record;
+  }
+
+  async deleteImportSource(tenantId: string, id: string): Promise<void> {
+    const record = await this.sourceRepo.findOne({ where: { id, tenantId } });
+    if (!record) throw new NotFoundException('Source not found');
+    await this.sourceRepo.remove(record);
+  }
+
   private detectCsvFormat(headers: string[]): 'shopify' | 'woocommerce' | 'generic' {
     if (headers.some((h) => h.includes('variant') || h.includes('body (html)') || h.includes('handle'))) {
       return 'shopify';

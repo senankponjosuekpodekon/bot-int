@@ -72,6 +72,10 @@ class ImportSitemapDto {
   @Type(() => Number) @IsOptional() @IsInt() @Min(1) @Max(500) maxPages?: number;
 }
 
+class UpdateImportSourceDto {
+  @IsBoolean() @IsOptional() enabled?: boolean;
+}
+
 class ListProductsDto {
   @IsString() @IsOptional() category?: string;
   @IsString() @IsOptional() search?: string;
@@ -138,6 +142,31 @@ export class ProductsController {
   @ApiResponse({ status: 200, description: 'Import details' })
   async findImportHistoryById(@Request() req, @Param('id') id: string) {
     return this.productsService.getImportHistoryById(req.user.tenantId, id);
+  }
+
+  @Get('import/sources')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'List saved import sources' })
+  @ApiResponse({ status: 200, description: 'List of sources' })
+  async findImportSources(@Request() req) {
+    return this.productsService.getImportSources(req.user.tenantId);
+  }
+
+  @Patch('import/sources/:id')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Update saved import source' })
+  @ApiResponse({ status: 200, description: 'Source updated' })
+  async updateImportSource(@Request() req, @Param('id') id: string, @Body() dto: UpdateImportSourceDto) {
+    return this.productsService.updateImportSource(req.user.tenantId, id, dto);
+  }
+
+  @Delete('import/sources/:id')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Delete saved import source' })
+  @ApiResponse({ status: 200, description: 'Source deleted' })
+  async deleteImportSource(@Request() req, @Param('id') id: string) {
+    await this.productsService.deleteImportSource(req.user.tenantId, id);
+    return { deleted: true };
   }
 
   @Get(':id')

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { Package, Plus, Search, Trash2, Pencil, Upload, X, RefreshCw, History, ChevronDown, ChevronUp, LayoutGrid, List } from 'lucide-react';
+import { Package, Plus, Search, Trash2, Pencil, Upload, X, RefreshCw, History, ChevronDown, ChevronUp, LayoutGrid, List, Database } from 'lucide-react';
 import { productsApi, agentsApi, type Agent } from '@/lib/api';
 
 interface Product {
@@ -36,6 +36,8 @@ export default function ProductsPage() {
   const [importInitialTab, setImportInitialTab] = useState<'feed' | 'csv' | 'csv_url' | 'gmc' | 'sitemap' | 'shopify' | 'woocommerce' | undefined>();
   const [importInitialConfig, setImportInitialConfig] = useState<{ storeDomain?: string; agentId?: string; csvUrl?: string; format?: string } | undefined>();
   const [showHistory, setShowHistory] = useState(false);
+  const [showSources, setShowSources] = useState(false);
+  const [importSources, setImportSources] = useState<any[]>([]);
   const [importHistory, setImportHistory] = useState<any[]>([]);
   const [importHistoryTotal, setImportHistoryTotal] = useState(0);
   const [importHistoryLoading, setImportHistoryLoading] = useState(false);
@@ -99,8 +101,18 @@ export default function ProductsPage() {
     }
   }, []);
 
+  const loadSources = useCallback(async () => {
+    try {
+      const data = await productsApi.importSources();
+      setImportSources(data || []);
+    } catch {
+      showToast('Erreur lors du chargement des sources', 'error');
+    }
+  }, []);
+
   useEffect(() => { loadAgents(); }, [loadAgents]);
   useEffect(() => { if (showHistory) loadHistory(); }, [showHistory, loadHistory]);
+  useEffect(() => { if (showSources) loadSources(); }, [showSources, loadSources]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -174,6 +186,9 @@ export default function ProductsPage() {
           </button>
           <button onClick={() => setShowHistory(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <History className="w-4 h-4" /> Historique
+          </button>
+          <button onClick={() => setShowSources(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <Database className="w-4 h-4" /> Sources
           </button>
           <button onClick={() => setShowImport(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
             <Upload className="w-4 h-4" /> Importer
@@ -359,6 +374,15 @@ export default function ProductsPage() {
           onRefresh={loadHistory}
           showToast={showToast}
           onReimport={(config) => { setShowHistory(false); setSelectedImport(null); setImportInitialTab(config.tab); setImportInitialConfig(config); setShowImport(true); }}
+        />
+      )}
+
+      {showSources && (
+        <SourcesModal
+          onClose={() => setShowSources(false)}
+          sources={importSources}
+          onRefresh={loadSources}
+          showToast={showToast}
         />
       )}
 
@@ -701,6 +725,82 @@ function HistoryModal({
                     )}
                   </div>
                 )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SourcesModal({
+  onClose,
+  sources,
+  onRefresh,
+  showToast,
+}: {
+  onClose: () => void;
+  sources: any[];
+  onRefresh: () => void;
+  showToast: (msg: string, type?: 'success' | 'error') => void;
+}) {
+  const toggle = async (id: string, enabled: boolean) => {
+    try {
+      await productsApi.updateImportSource(id, !enabled);
+      showToast(enabled ? 'Source désactivée' : 'Source activée');
+      onRefresh();
+    } catch {
+      showToast('Erreur lors de la mise à jour', 'error');
+    }
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm('Supprimer cette source ?')) return;
+    try {
+      await productsApi.deleteImportSource(id);
+      showToast('Source supprimée');
+      onRefresh();
+    } catch {
+      showToast('Erreur lors de la suppression', 'error');
+    }
+  };
+
+  const label = (s: any) => {
+    if (s.source === 'sitemap') return `Sitemap : ${s.config?.sitemapUrl}`;
+    if (s.source === 'csv_url') return `CSV URL : ${s.config?.csvUrl}`;
+    return s.source;
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-4 lg:p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold">Sources d'import mémorisées</h2>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
+        </div>
+        {sources.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center py-6">Aucune source enregistrée. Importez depuis sitemap ou CSV URL pour en créer.</p>
+        ) : (
+          <div className="space-y-3">
+            {sources.map((s) => (
+              <div key={s.id} className="border border-gray-200 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{label(s)}</p>
+                  <p className="text-xs text-gray-500">Dernier import : {s.lastImportAt ? new Date(s.lastImportAt).toLocaleString() : 'Jamais'}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={s.enabled}
+                      onChange={() => toggle(s.id, s.enabled)}
+                      className="w-4 h-4 rounded border-gray-300 text-primary-600"
+                    />
+                    <span className="text-sm text-gray-700">{s.enabled ? 'Active' : 'Inactive'}</span>
+                  </label>
+                  <button onClick={() => remove(s.id)} className="p-1.5 rounded-lg hover:bg-red-50"><Trash2 className="w-4 h-4 text-red-500" /></button>
+                </div>
               </div>
             ))}
           </div>
