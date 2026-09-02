@@ -74,6 +74,7 @@ class ImportSitemapDto {
 
 class UpdateImportSourceDto {
   @IsBoolean() @IsOptional() enabled?: boolean;
+  @Type(() => Number) @IsOptional() @IsInt() @Min(5) @Max(10080) frequencyMinutes?: number;
 }
 
 class ListProductsDto {

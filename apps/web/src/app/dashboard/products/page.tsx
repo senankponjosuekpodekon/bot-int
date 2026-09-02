@@ -747,11 +747,21 @@ function SourcesModal({
 }) {
   const toggle = async (id: string, enabled: boolean) => {
     try {
-      await productsApi.updateImportSource(id, !enabled);
+      await productsApi.updateImportSource(id, { enabled: !enabled });
       showToast(enabled ? 'Source désactivée' : 'Source activée');
       onRefresh();
     } catch {
       showToast('Erreur lors de la mise à jour', 'error');
+    }
+  };
+
+  const updateFrequency = async (id: string, frequencyMinutes: number) => {
+    try {
+      await productsApi.updateImportSource(id, { frequencyMinutes });
+      showToast('Fréquence mise à jour');
+      onRefresh();
+    } catch {
+      showToast('Erreur lors de la mise à jour de la fréquence', 'error');
     }
   };
 
@@ -789,7 +799,20 @@ function SourcesModal({
                   <p className="text-sm font-medium text-gray-900 truncate">{label(s)}</p>
                   <p className="text-xs text-gray-500">Dernier import : {s.lastImportAt ? new Date(s.lastImportAt).toLocaleString() : 'Jamais'}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <select
+                    value={s.config?.frequencyMinutes || 360}
+                    onChange={(e) => updateFrequency(s.id, Number(e.target.value))}
+                    className="px-2 py-1 rounded-lg border border-gray-300 text-xs"
+                  >
+                    <option value={5}>5 min</option>
+                    <option value={15}>15 min</option>
+                    <option value={60}>1 h</option>
+                    <option value={360}>6 h</option>
+                    <option value={720}>12 h</option>
+                    <option value={1440}>24 h</option>
+                    <option value={10080}>7 j</option>
+                  </select>
                   <label className="inline-flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"

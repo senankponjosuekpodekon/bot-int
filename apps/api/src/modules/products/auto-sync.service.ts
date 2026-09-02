@@ -53,54 +53,53 @@ export class AutoSyncService {
       }
     }
 
-    const sitemapSources = await this.sourceRepo.find({
-      where: { source: 'sitemap', enabled: true },
-    });
-    for (const source of sitemapSources) {
-      try {
-        const result = await this.productsService.importFromSitemap(
-          source.tenantId,
-          source.config.sitemapUrl,
-          source.config.agentId,
-          source.config.maxPages,
-        );
-        totalSynced += result.imported;
-        totalErrors += result.errors;
-        source.lastImportAt = new Date();
-        await this.sourceRepo.save(source);
-        this.logger.log(
-          `Synced sitemap ${source.config.sitemapUrl}: ${result.imported} imported, ${result.errors} errors`,
-        );
-      } catch (err: any) {
-        this.logger.error(`Sitemap sync failed for ${source.config.sitemapUrl}: ${err?.message}`);
-      }
-    }
-
-    const csvUrlSources = await this.sourceRepo.find({
-      where: { source: 'csv_url', enabled: true },
-    });
-    for (const source of csvUrlSources) {
-      try {
-        const result = await this.productsService.importFromCsvUrl(
-          source.tenantId,
-          source.config.csvUrl,
-          source.config.format,
-          source.config.storeDomain,
-          source.config.agentId,
-        );
-        totalSynced += result.imported;
-        totalErrors += result.errors;
-        source.lastImportAt = new Date();
-        await this.sourceRepo.save(source);
-        this.logger.log(
-          `Synced CSV URL ${source.config.csvUrl}: ${result.imported} imported, ${result.errors} errors`,
-        );
-      } catch (err: any) {
-        this.logger.error(`CSV URL sync failed for ${source.config.csvUrl}: ${err?.message}`);
-      }
-    }
-
     this.logger.log(`Auto-sync complete: ${totalSynced} products synced, ${totalErrors} errors`);
+  }
+
+  @Cron('*/5 * * * *')
+  async autoSyncSources(): Promise<void> {
+    this.logger.log('Starting scheduled source sync...');
+    let totalSynced = 0;
+    let totalErrors = 0;
+
+    const now = Date.now();
+    const sources = await this.sourceRepo.find({ where: { enabled: true } });
+    for (const source of sources) {
+      const freq = (source.config?.frequencyMinutes || 360) * 60 * 1000;
+      const last = source.lastImportAt ? new Date(source.lastImportAt).getTime() : 0;
+      if (last && now - last < freq) continue;
+
+      try {
+        let result: { imported: number; errors: number } | undefined;
+        if (source.source === 'sitemap') {
+          result = await this.productsService.importFromSitemap(
+            source.tenantId,
+            source.config.sitemapUrl,
+            source.config.agentId,
+            source.config.maxPages,
+          );
+        } else if (source.source === 'csv_url') {
+          result = await this.productsService.importFromCsvUrl(
+            source.tenantId,
+            source.config.csvUrl,
+            source.config.format,
+            source.config.storeDomain,
+            source.config.agentId,
+          );
+        }
+        if (result) {
+          totalSynced += result.imported;
+          totalErrors += result.errors;
+        }
+        source.lastImportAt = new Date();
+        await this.sourceRepo.save(source);
+        this.logger.log(`Synced source ${source.id}: ${result?.imported ?? 0} imported, ${result?.errors ?? 0} errors`);
+      } catch (err: any) {
+        this.logger.error(`Source sync failed for ${source.id}: ${err?.message}`);
+      }
+    }
+
+    this.logger.log(`Scheduled source sync complete: ${totalSynced} products synced, ${totalErrors} errors`);
   }
 
   // Manual trigger for a single tenant

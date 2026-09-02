@@ -291,8 +291,8 @@ export const productsApi = {
     api.get(`/products/import/history/${id}`).then((r) => r.data),
   importSources: () =>
     api.get('/products/import/sources').then((r) => r.data),
-  updateImportSource: (id: string, enabled: boolean) =>
-    api.patch(`/products/import/sources/${id}`, { enabled }).then((r) => r.data),
+  updateImportSource: (id: string, data: { enabled?: boolean; frequencyMinutes?: number }) =>
+    api.patch(`/products/import/sources/${id}`, data).then((r) => r.data),
   deleteImportSource: (id: string) =>
     api.delete(`/products/import/sources/${id}`).then((r) => r.data),
 };

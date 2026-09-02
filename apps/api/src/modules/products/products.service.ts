@@ -1081,15 +1081,20 @@ export class ProductsService {
     const existing = await this.sourceRepo.findOne({
       where: { tenantId, source, config: { id: config.id || 'default' } },
     });
+    const configWithFrequency = {
+      ...config,
+      id: config.id || 'default',
+      frequencyMinutes: typeof config.frequencyMinutes === 'number' ? config.frequencyMinutes : 360,
+    };
     if (existing) {
-      existing.config = config;
+      existing.config = { ...existing.config, ...configWithFrequency };
       await this.sourceRepo.save(existing);
       return;
     }
     const record = this.sourceRepo.create({
       tenantId,
       source,
-      config: { ...config, id: config.id || 'default' },
+      config: configWithFrequency,
       enabled: true,
     });
     await this.sourceRepo.save(record);
@@ -1105,11 +1110,12 @@ export class ProductsService {
   async updateImportSource(
     tenantId: string,
     id: string,
-    updates: Partial<{ enabled: boolean; config: Record<string, any> }>,
+    updates: Partial<{ enabled: boolean; frequencyMinutes: number; config: Record<string, any> }>,
   ): Promise<ProductImportSource> {
     const record = await this.sourceRepo.findOne({ where: { id, tenantId } });
     if (!record) throw new NotFoundException('Source not found');
     if (typeof updates.enabled === 'boolean') record.enabled = updates.enabled;
+    if (typeof updates.frequencyMinutes === 'number') record.config = { ...record.config, frequencyMinutes: updates.frequencyMinutes };
     if (updates.config) record.config = { ...record.config, ...updates.config };
     record.updatedAt = new Date();
     await this.sourceRepo.save(record);
