@@ -115,6 +115,28 @@ export class WebhooksController {
     }
   }
 
+  @Post('sms/:tenantId')
+  async receiveSms(@Param('tenantId') tenantId: string, @Body() body: any) {
+    try {
+      const from = body.From || body.from || '';
+      const text = body.Body || body.body || '';
+
+      if (text && from) {
+        const fromNumber = from.replace(/\D/g, '');
+        await this.processIncomingMessage(tenantId, {
+          visitorId: `sms_${fromNumber}`,
+          text: text.trim(),
+          channel: 'sms',
+          metadata: { from: fromNumber },
+        });
+      }
+      return { status: 'ok' };
+    } catch (err: any) {
+      this.logger.error(`SMS webhook error: ${err?.message}`);
+      return { status: 'error' };
+    }
+  }
+
   private async processIncomingMessage(
     tenantId: string,
     normalized: { visitorId: string; text: string; channel: string; metadata?: Record<string, any> },
@@ -139,6 +161,12 @@ export class WebhooksController {
         await this.integrationsService.sendWhatsApp(tenantId, normalized.metadata?.from, result.reply);
       } else if (normalized.channel === 'telegram') {
         await this.integrationsService.sendTelegram(tenantId, normalized.metadata?.from, result.reply);
+      } else if (normalized.channel === 'email') {
+        const subject = normalized.metadata?.subject || 'Re:';
+        const replySubject = subject.toLowerCase().startsWith('re:') ? subject : `Re: ${subject}`;
+        await this.integrationsService.sendEmail(tenantId, normalized.metadata?.from, replySubject, result.reply);
+      } else if (normalized.channel === 'sms') {
+        await this.integrationsService.sendSMS(tenantId, normalized.metadata?.from, result.reply);
       }
     } catch (err: any) {
       this.logger.error(`Failed to send reply via ${normalized.channel}: ${err?.message}`);
