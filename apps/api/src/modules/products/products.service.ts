@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './product.entity';
 import { ProductImport, ImportSource, ImportStatus } from './product-import.entity';
+import { ProductImportSource, ImportSourceType } from './product-import-source.entity';
 import { Agent } from '../agents/agent.entity';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
@@ -16,6 +17,8 @@ export class ProductsService {
     private readonly productRepo: Repository<Product>,
     @InjectRepository(ProductImport)
     private readonly importRepo: Repository<ProductImport>,
+    @InjectRepository(ProductImportSource)
+    private readonly sourceRepo: Repository<ProductImportSource>,
     @InjectRepository(Agent)
     private readonly agentRepo: Repository<Agent>,
   ) {}
@@ -716,6 +719,7 @@ export class ProductsService {
 
     const imported = created + updated;
     this.logger.log(`Sitemap: ${scanned} URLs scanned, ${imported} imported, ${errors} errors`);
+    await this.saveImportSource(tenantId, 'sitemap', { sitemapUrl, agentId, maxPages });
     await this.saveImportHistory(tenantId, 'sitemap', { created, updated, errors, scanned }, { metadata: { sitemapUrl, agentId, maxPages } });
     return { imported, errors, scanned, created, updated };
   }
@@ -1051,6 +1055,35 @@ export class ProductsService {
       completedAt: new Date(),
     });
     await this.importRepo.save(record);
+  }
+
+  private async saveImportSource(
+    tenantId: string,
+    source: ImportSourceType,
+    config: Record<string, any>,
+  ): Promise<void> {
+    const existing = await this.sourceRepo.findOne({
+      where: { tenantId, source, config: { id: config.id || 'default' } },
+    });
+    if (existing) {
+      existing.config = config;
+      await this.sourceRepo.save(existing);
+      return;
+    }
+    const record = this.sourceRepo.create({
+      tenantId,
+      source,
+      config: { ...config, id: config.id || 'default' },
+      enabled: true,
+    });
+    await this.sourceRepo.save(record);
+  }
+
+  async getImportSources(tenantId: string, source?: ImportSourceType): Promise<ProductImportSource[]> {
+    return this.sourceRepo.find({
+      where: { tenantId, ...(source ? { source } : {}) },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   private detectCsvFormat(headers: string[]): 'shopify' | 'woocommerce' | 'generic' {

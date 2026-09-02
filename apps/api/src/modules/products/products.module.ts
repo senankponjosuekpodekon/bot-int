@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Product } from './product.entity';
 import { ProductImport } from './product-import.entity';
+import { ProductImportSource } from './product-import-source.entity';
 import { Agent } from '../agents/agent.entity';
 import { ProductsService } from './products.service';
 import { ProductsController } from './products.controller';
@@ -14,7 +15,7 @@ import { Integration } from '../integrations/integration.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Product, ProductImport, Agent, Integration]),
+    TypeOrmModule.forFeature([Product, ProductImport, ProductImportSource, Agent, Integration]),
     IntegrationsModule,
     SurveysModule,
     forwardRef(() => QueueModule),

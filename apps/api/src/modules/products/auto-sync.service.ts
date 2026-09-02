@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Integration } from '../integrations/integration.entity';
+import { ProductImportSource } from '../products/product-import-source.entity';
 import { ProductsService } from '../products/products.service';
 
 @Injectable()
@@ -12,6 +13,8 @@ export class AutoSyncService {
   constructor(
     @InjectRepository(Integration)
     private readonly integrationRepo: Repository<Integration>,
+    @InjectRepository(ProductImportSource)
+    private readonly sourceRepo: Repository<ProductImportSource>,
     private readonly productsService: ProductsService,
   ) {}
 
@@ -50,6 +53,29 @@ export class AutoSyncService {
       }
     }
 
+    const sitemapSources = await this.sourceRepo.find({
+      where: { source: 'sitemap', enabled: true },
+    });
+    for (const source of sitemapSources) {
+      try {
+        const result = await this.productsService.importFromSitemap(
+          source.tenantId,
+          source.config.sitemapUrl,
+          source.config.agentId,
+          source.config.maxPages,
+        );
+        totalSynced += result.imported;
+        totalErrors += result.errors;
+        source.lastImportAt = new Date();
+        await this.sourceRepo.save(source);
+        this.logger.log(
+          `Synced sitemap ${source.config.sitemapUrl}: ${result.imported} imported, ${result.errors} errors`,
+        );
+      } catch (err: any) {
+        this.logger.error(`Sitemap sync failed for ${source.config.sitemapUrl}: ${err?.message}`);
+      }
+    }
+
     this.logger.log(`Auto-sync complete: ${totalSynced} products synced, ${totalErrors} errors`);
   }
 
@@ -63,8 +89,12 @@ export class AutoSyncService {
     });
 
     const allIntegrations = [...integrations, ...wooIntegrations].filter((i) => i.enabled);
-    if (allIntegrations.length === 0) {
-      throw new Error('No enabled e-commerce integration found for this tenant');
+    const sitemapSources = await this.sourceRepo.find({
+      where: { tenantId, source: 'sitemap', enabled: true },
+    });
+
+    if (allIntegrations.length === 0 && sitemapSources.length === 0) {
+      throw new Error('No enabled e-commerce integration or sitemap source found for this tenant');
     }
 
     let totalImported = 0;
@@ -77,6 +107,24 @@ export class AutoSyncService {
         totalErrors += result.errors;
       } catch (err: any) {
         this.logger.error(`Manual sync failed: ${err?.message}`);
+        totalErrors++;
+      }
+    }
+
+    for (const source of sitemapSources) {
+      try {
+        const result = await this.productsService.importFromSitemap(
+          tenantId,
+          source.config.sitemapUrl,
+          source.config.agentId,
+          source.config.maxPages,
+        );
+        totalImported += result.imported;
+        totalErrors += result.errors;
+        source.lastImportAt = new Date();
+        await this.sourceRepo.save(source);
+      } catch (err: any) {
+        this.logger.error(`Manual sitemap sync failed: ${err?.message}`);
         totalErrors++;
       }
     }

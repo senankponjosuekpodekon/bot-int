@@ -348,6 +348,7 @@ export default function ProductsPage() {
           selected={selectedImport}
           onSelect={setSelectedImport}
           onRefresh={loadHistory}
+          showToast={showToast}
         />
       )}
 
@@ -523,6 +524,7 @@ function HistoryModal({
   selected,
   onSelect,
   onRefresh,
+  showToast,
 }: {
   onClose: () => void;
   history: any[];
@@ -531,6 +533,7 @@ function HistoryModal({
   selected: any | null;
   onSelect: (item: any) => void;
   onRefresh: () => void;
+  showToast: (msg: string, type?: 'success' | 'error') => void;
 }) {
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
@@ -596,6 +599,22 @@ function HistoryModal({
                       <div className="text-center p-2 bg-red-50 rounded-lg"><div className="font-bold text-red-700">{h.errors}</div><div className="text-xs text-red-600">Erreurs</div></div>
                     </div>
                     {h.scanned != null && <p className="text-xs text-gray-500 mb-2">{h.scanned} URLs scannées</p>}
+                    {h.source === 'sitemap' && h.metadata?.sitemapUrl && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await productsApi.importSitemap(h.metadata.sitemapUrl, h.metadata.agentId, h.metadata.maxPages);
+                            showToast('Import sitemap relancé');
+                            onRefresh();
+                          } catch {
+                            showToast('Erreur lors du re-lancement', 'error');
+                          }
+                        }}
+                        className="mt-2 w-full py-2 rounded-lg bg-primary-600 text-white text-xs font-medium hover:bg-primary-700"
+                      >
+                        Re-lancer cet import
+                      </button>
+                    )}
                     {h.details && h.details.length > 0 && (
                       <div className="bg-gray-50 rounded-lg p-2 max-h-40 overflow-y-auto">
                         <p className="text-xs font-medium text-gray-700 mb-1">Détails</p>
