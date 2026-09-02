@@ -13,12 +13,19 @@ export class AddProductAgentId1788307200000 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      ALTER TABLE "products"
-      ADD CONSTRAINT IF NOT EXISTS "FK_products_agentId"
-      FOREIGN KEY ("agentId")
-      REFERENCES "agents"("id")
-      ON DELETE SET NULL
-      ON UPDATE NO ACTION
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'FK_products_agentId'
+        ) THEN
+          ALTER TABLE "products"
+          ADD CONSTRAINT "FK_products_agentId"
+          FOREIGN KEY ("agentId")
+          REFERENCES "agents"("id")
+          ON DELETE SET NULL
+          ON UPDATE NO ACTION;
+        END IF;
+      END $$
     `);
   }
 
