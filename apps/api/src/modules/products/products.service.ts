@@ -865,6 +865,10 @@ export class ProductsService {
 
   private extractOfferPrice(offer: any): number {
     if (!offer) return 0;
+    if (Array.isArray(offer)) offer = offer.find((o: any) => o && (o.price || o.lowPrice || o.highPrice)) || offer[0];
+    if (offer?.['@type'] === 'AggregateOffer' && Array.isArray(offer.offers)) {
+      offer = offer.offers.find((o: any) => o && o.price) || offer.offers[0] || offer;
+    }
     const raw = offer.price ?? offer.lowPrice ?? offer.highPrice ?? '';
     const priceString = String(raw || '').trim();
     if (!priceString || priceString.toLowerCase() === 'undefined' || priceString.toLowerCase() === 'null') return 0;
@@ -882,10 +886,14 @@ export class ProductsService {
   }
 
   private extractOfferCurrency(offer: any): string | undefined {
+    if (Array.isArray(offer)) offer = offer[0];
+    if (offer?.['@type'] === 'AggregateOffer' && Array.isArray(offer.offers)) offer = offer.offers[0];
     return offer?.priceCurrency?.toUpperCase();
   }
 
   private extractOfferStock(offer: any, fallback = 99): number {
+    if (Array.isArray(offer)) offer = offer[0];
+    if (offer?.['@type'] === 'AggregateOffer' && Array.isArray(offer.offers)) offer = offer.offers[0];
     const availability = String(offer?.availability || '').toLowerCase();
     if (availability.includes('outofstock') || availability.includes('soldout') || availability.includes('discontinued')) return 0;
     if (availability.includes('instock') || availability.includes('preorder') || availability.includes('backorder')) return 99;
@@ -895,6 +903,8 @@ export class ProductsService {
   }
 
   private extractOfferSku(offer: any): string | undefined {
+    if (Array.isArray(offer)) offer = offer[0];
+    if (offer?.['@type'] === 'AggregateOffer' && Array.isArray(offer.offers)) offer = offer.offers[0];
     const item = offer?.itemOffered || offer;
     return offer?.sku || item?.sku || item?.mpn || item?.gtin || undefined;
   }
