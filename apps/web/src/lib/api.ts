@@ -57,8 +57,15 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use((response) => {
   const payload = response.data;
-  if (payload && typeof payload === 'object' && !Array.isArray(payload) && Array.isArray(payload.data)) {
-    response.data = payload.data;
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    !Array.isArray(payload) &&
+    'data' in payload &&
+    Array.isArray((payload as any).data) &&
+    Object.keys(payload).length === 1
+  ) {
+    response.data = (payload as any).data;
   }
   return response;
 });
