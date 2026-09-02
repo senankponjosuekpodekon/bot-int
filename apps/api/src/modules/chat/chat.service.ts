@@ -622,8 +622,9 @@ export class ChatService {
       }
     }
 
-    // Agent tools: detect and execute relevant tools before LLM response (only if tools are enabled and message is substantial)
-    if (personalityConfig.toolsEnabled === true && userMessage.length > 15) {
+    // Agent tools: detect and execute relevant tools before LLM response.
+    // Tools (web search, calculator, calendar) are enabled by default and can be disabled explicitly.
+    if (personalityConfig.toolsEnabled !== false && userMessage.length > 15) {
       try {
         const toolResults = await this.agentToolsService.detectAndExecuteTools(userMessage, tenantId);
         if (toolResults.length > 0) {
