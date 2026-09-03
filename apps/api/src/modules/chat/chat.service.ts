@@ -1017,6 +1017,22 @@ export class ChatService {
       const result = await this.llmService.generate(messages);
       finalReply = result.content;
       usage = result.usage;
+
+      try {
+        this.assertCriticalFactsGrounded(finalReply, carouselProducts);
+      } catch (err: any) {
+        this.logger.error(
+          JSON.stringify({
+            debug: 'CRITICAL_FACT_UNGROUNDED',
+            conversationId: conversation.id,
+            reason: err?.message,
+          }),
+        );
+        finalReply = conversation.language === 'en'
+          ? "I don't have that exact information. I'll put you in touch with an advisor."
+          : "Je n'ai pas cette information exacte. Je vous mets en relation avec un conseiller.";
+        usage = { prompt: 0, completion: 0, total: 0 };
+      }
     }
 
     // Fallback for empty/unhelpful LLM output
@@ -1377,6 +1393,28 @@ export class ChatService {
           }),
         );
         throw new Error('Business context leak detected: product belongs to a different business');
+      }
+    }
+  }
+
+  private assertCriticalFactsGrounded(reply: string, products: any[]): void {
+    if (!reply) return;
+    const priceRegex = /\b(\d+(?:[.,]\d{1,2})?)\s*(?:€|EUR|euros?)\b/gi;
+    const matches = Array.from(reply.matchAll(priceRegex) || []);
+    if (matches.length === 0) return;
+    if (products.length === 0) {
+      throw new Error('Price mentioned without grounded products');
+    }
+    const productPrices = products
+      .map((p) => Number(p?.price))
+      .filter((p) => !Number.isNaN(p));
+    for (const match of matches) {
+      const raw = match[1].replace(/,/g, '.');
+      const price = Number(raw);
+      if (Number.isNaN(price)) continue;
+      const isGrounded = productPrices.some((p) => Math.abs(p - price) < 0.01);
+      if (!isGrounded) {
+        throw new Error(`Price ${price} not found in grounded products`);
       }
     }
   }
