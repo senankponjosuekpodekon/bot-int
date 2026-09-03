@@ -6,6 +6,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './modules/auth/auth.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
+import { BusinessModule } from './modules/business/business.module';
 import { AgentsModule } from './modules/agents/agents.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { KnowledgeModule } from './modules/knowledge/knowledge.module';
@@ -71,6 +72,7 @@ import { CacheModule } from './common/cache.module';
     CacheModule,
     AuthModule,
     TenantsModule,
+    BusinessModule,
     AgentsModule,
     ChatModule,
     KnowledgeModule,

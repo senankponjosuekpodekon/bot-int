@@ -6,8 +6,10 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Tenant } from '../tenants/tenant.entity';
+import { Business } from '../business/business.entity';
 
 export enum AgentType {
   SALES = 'sales',
@@ -17,6 +19,7 @@ export enum AgentType {
 }
 
 @Entity('agents')
+@Index(['tenantId', 'businessId'])
 export class Agent {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -27,6 +30,13 @@ export class Agent {
   @ManyToOne(() => Tenant, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'tenantId' })
   tenant: Tenant;
+
+  @Column({ nullable: true })
+  businessId?: string;
+
+  @ManyToOne(() => Business, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'businessId' })
+  business?: Business;
 
   @Column()
   name: string;
