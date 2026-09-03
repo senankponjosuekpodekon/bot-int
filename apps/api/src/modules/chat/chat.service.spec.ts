@@ -31,6 +31,8 @@ describe('ChatService', () => {
   let agentsService: { findById: jest.Mock };
   let llmService: { chat: jest.Mock; generate: jest.Mock };
   let leadsService: { create: jest.Mock; findById: jest.Mock };
+  let knowledgeService: { searchRelevant: jest.Mock };
+  let productsService: { searchRelevant: jest.Mock; findByTenant: jest.Mock };
   let chatEvents: { emitMessage: jest.Mock; emitTyping: jest.Mock };
 
   beforeEach(() => {
@@ -39,6 +41,8 @@ describe('ChatService', () => {
     agentsService = { findById: jest.fn() };
     llmService = { chat: jest.fn(), generate: jest.fn() };
     leadsService = { create: jest.fn(), findById: jest.fn() };
+    knowledgeService = { searchRelevant: jest.fn().mockResolvedValue([]) };
+    productsService = { searchRelevant: jest.fn().mockResolvedValue([]), findByTenant: jest.fn().mockResolvedValue({ data: [], total: 0 }) };
     chatEvents = { emitMessage: jest.fn(), emitTyping: jest.fn() };
 
     service = new ChatService(
@@ -46,15 +50,15 @@ describe('ChatService', () => {
       msgRepo as unknown as Repository<Message>,
       { create: jest.fn(), find: jest.fn() } as any, // feedbackRepo
       agentsService as unknown as AgentsService,
-      { getDefaultForTenant: jest.fn().mockResolvedValue({ id: 'b-1' }) } as any, // businessService
+      { getDefaultForTenant: jest.fn().mockResolvedValue({ id: 'b-1' }), findById: jest.fn().mockResolvedValue(null) } as any, // businessService
       llmService as unknown as LLMService,
       { detect: jest.fn().mockResolvedValue({ intent: 'greeting', confidence: 0.9, language: 'fr', sentiment: 'neutral' }) } as any, // intentService
       { startFlow: jest.fn().mockResolvedValue(null), processAnswer: jest.fn().mockResolvedValue({ completed: false }) } as any, // formService
       { summarize: jest.fn().mockResolvedValue('') } as any, // summarizationService
       leadsService as unknown as LeadsService,
       new LeadTagService(),
-      noopService() as any, // knowledgeService
-      noopService() as any, // productsService
+      knowledgeService as any, // knowledgeService
+      productsService as any, // productsService
       noopService() as any, // integrationsService
       { getFlowForIntent: jest.fn().mockResolvedValue(null) } as any, // flowsService
       noopService() as any, // intelligenceService
@@ -126,6 +130,31 @@ describe('ChatService', () => {
       convRepo.findOne?.mockResolvedValue(null);
 
       await expect(service.sendMessage('t-1', 'agent-1', 'Salut', 'missing-id')).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('routes context lookups through the active businessId', async () => {
+      const agent = { id: 'agent-1', systemPrompt: 'Helpful bot', tenantId: 't-1', businessId: 'b-1' } as Agent;
+      const lead = { id: 'lead-1' } as Lead;
+      const conversation = { id: 'conv-1', agentId: agent.id, tenantId: 't-1', businessId: 'b-1', leadId: undefined } as Conversation;
+
+      agentsService.findById.mockResolvedValue(agent);
+      convRepo.create?.mockReturnValue(conversation);
+      convRepo.save?.mockResolvedValue(conversation);
+      leadsService.create.mockResolvedValue(lead);
+      convRepo.update?.mockResolvedValue(undefined);
+      msgRepo.create?.mockImplementation((m: Partial<Message>) => ({ id: 'msg-1', ...m } as Message));
+      msgRepo.save?.mockImplementation((m: any) => m);
+      msgRepo.find?.mockImplementation((options: any) => {
+        const where = options?.where ?? {};
+        return Promise.resolve(where.conversationId === 'conv-1' ? [{ id: 'msg-1', role: MessageRole.USER, content: 'Salut', createdAt: new Date() }] : []);
+      });
+      llmService.generate.mockResolvedValue({ content: 'Bonjour !', usage: { prompt: 0, completion: 0, total: 0 } });
+
+      await service.sendMessage('t-1', 'agent-1', 'Salut');
+
+      expect(knowledgeService.searchRelevant).toHaveBeenCalledWith('t-1', 'Salut', 'agent-1', 'b-1');
+      expect(productsService.searchRelevant).toHaveBeenCalledWith('t-1', 'Salut', 'agent-1', 'b-1');
+      expect(leadsService.create).toHaveBeenCalledWith('t-1', expect.objectContaining({ agentId: 'agent-1', businessId: 'b-1' }));
     });
   });
 
