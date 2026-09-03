@@ -1090,24 +1090,49 @@ export class ProductsService {
     await this.importRepo.save(record);
   }
 
+  private sourceConfigKeyField(source: ImportSourceType): string | undefined {
+    switch (source) {
+      case 'sitemap':
+        return 'sitemapUrl';
+      case 'csv_url':
+        return 'csvUrl';
+      case 'google_merchant':
+        return 'agentId';
+      default:
+        return undefined;
+    }
+  }
+
   private async saveImportSource(
     tenantId: string,
     source: ImportSourceType,
     config: Record<string, any>,
   ): Promise<void> {
-    const existing = await this.sourceRepo.findOne({
-      where: { tenantId, source, config: { id: config.id || 'default' } },
-    });
+    const keyField = this.sourceConfigKeyField(source);
+    const keyValue = (keyField ? config[keyField] : config.id) || 'default';
     const configWithFrequency = {
       ...config,
-      id: config.id || 'default',
+      id: keyValue,
       frequencyMinutes: typeof config.frequencyMinutes === 'number' ? config.frequencyMinutes : 360,
     };
+
+    const qb = this.sourceRepo
+      .createQueryBuilder('source')
+      .where('source.tenantId = :tenantId', { tenantId })
+      .andWhere('source.source = :source', { source });
+    if (keyField) {
+      qb.andWhere(`source.config ->> '${keyField}' = :keyValue`, { keyValue });
+    } else {
+      qb.andWhere("source.config ->> 'id' = :keyValue", { keyValue });
+    }
+
+    const existing = await qb.getOne();
     if (existing) {
       existing.config = { ...existing.config, ...configWithFrequency };
       await this.sourceRepo.save(existing);
       return;
     }
+
     const record = this.sourceRepo.create({
       tenantId,
       source,
