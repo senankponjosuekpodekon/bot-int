@@ -7,6 +7,7 @@ import { AgentFeedback } from './agent-feedback.entity';
 import { ChatEventsService } from './chat-events.service';
 import { AgentsService } from '../agents/agents.service';
 import { BusinessService } from '../business/business.service';
+import { Business } from '../business/business.entity';
 import { AgentMemoryService } from '../agents/agent-memory.service';
 import { AgentToolsService } from '../agents/agent-tools.service';
 import { AgentWorkflowService } from '../agents/agent-workflow.service';
@@ -609,6 +610,20 @@ export class ChatService {
         content: m.content,
       })),
     ];
+
+    if (activeBusinessId) {
+      try {
+        const business = await this.businessService.findById(activeBusinessId, tenantId);
+        if (business?.profile) {
+          messages.push({
+            role: 'system',
+            content: this.buildBusinessProfilePrompt(business),
+          });
+        }
+      } catch {
+        // Business profile is optional
+      }
+    }
 
     if (conversation.contextSummary) {
       messages.splice(messages.length - history.length, 0, {
@@ -1728,6 +1743,21 @@ export class ChatService {
       conversationsWithLead,
       conversionRate,
     };
+  }
+
+  private buildBusinessProfilePrompt(business: Business): string {
+    const p = business.profile || {};
+    const lines: string[] = [`Tu représentes l'entreprise: ${business.name}.`];
+    if (p.tagline) lines.push(`Accroche: ${p.tagline}`);
+    if (p.about) lines.push(`À propos: ${p.about}`);
+    if (p.sellingPoints?.length) {
+      lines.push(`Points de vente à mettre en avant:\n${p.sellingPoints.map((s) => `- ${s}`).join('\n')}`);
+    }
+    if (p.complianceNote) lines.push(`Contrainte / conformité: ${p.complianceNote}`);
+    if (p.contact?.email) lines.push(`Email: ${p.contact.email}`);
+    if (p.contact?.phone) lines.push(`Téléphone: ${p.contact.phone}`);
+    if (p.contact?.address) lines.push(`Adresse: ${p.contact.address}`);
+    return lines.join('\n');
   }
 
   private async getDiscoveryFacts(

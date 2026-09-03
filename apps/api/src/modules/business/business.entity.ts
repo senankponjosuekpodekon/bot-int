@@ -10,6 +10,20 @@ import {
 } from 'typeorm';
 import { Tenant } from '../tenants/tenant.entity';
 
+export interface BusinessProfile {
+  tagline?: string;
+  about?: string;
+  sellingPoints?: string[];
+  complianceNote?: string;
+  tone?: 'professional' | 'friendly' | 'formal' | 'casual';
+  language?: string;
+  contact?: {
+    email?: string;
+    phone?: string;
+    address?: string;
+  };
+}
+
 @Entity('businesses')
 @Index(['tenantId', 'isDefault'])
 export class Business {
@@ -28,6 +42,9 @@ export class Business {
 
   @Column({ default: false })
   isDefault: boolean;
+
+  @Column({ type: 'jsonb', nullable: true })
+  profile: BusinessProfile;
 
   @CreateDateColumn()
   createdAt: Date;
