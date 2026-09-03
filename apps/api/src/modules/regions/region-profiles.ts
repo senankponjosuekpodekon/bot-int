@@ -16,16 +16,6 @@ Focus heavily on ROI, time saved, and revenue impact.
 Use a confident but friendly tone. Avoid being overly formal.
 Short sentences are preferred.
 Always respond in the same language as the user.`,
-    qualificationRules: {
-      minBudget: 500,
-      requiredFields: ['company', 'goal', 'timeline'],
-      urgencyKeywords: ['asap', 'this week', 'urgent', 'immediately'],
-    },
-    keySellingPoints: [
-      'Save 15-20 hours per week',
-      'Book more qualified meetings',
-      'Replace the cost of a junior sales rep',
-    ],
     responseStyle: { maxLength: 'short', useEmojis: false, useBulletPoints: true },
     defaultTimezone: 'America/New_York',
     complianceNote: 'CCPA compliant — data handled per California Consumer Privacy Act.',
@@ -45,16 +35,6 @@ Be polite but direct and results-oriented.
 Focus on efficiency, ROI, and time saved.
 Use British English spelling (e.g., "optimise", "colour", "centre").
 Keep a professional but approachable tone.`,
-    qualificationRules: {
-      minBudget: 450,
-      requiredFields: ['company', 'goal', 'timeline'],
-      urgencyKeywords: ['asap', 'urgent', 'this week', 'quickly'],
-    },
-    keySellingPoints: [
-      'Save 15-20 hours per week',
-      'Book more qualified meetings',
-      'GDPR compliant — EU data protection',
-    ],
     responseStyle: { maxLength: 'short', useEmojis: false, useBulletPoints: true },
     defaultTimezone: 'Europe/London',
     complianceNote: 'GDPR compliant — UK GDPR + EU GDPR.',
@@ -75,16 +55,6 @@ Keep a professional but approachable tone.`,
 ركز على الجودة، الحداثة، والكفاءة.
 تجنب الأسلوب العدواني أو غير الرسمي.
 إذا كتب العميل بالإنجليزية، أجب بالإنجليزية بنفس النبرة المهنية.`,
-    qualificationRules: {
-      minBudget: 800,
-      requiredFields: ['company', 'position', 'goal'],
-      urgencyKeywords: ['urgent', 'this month', 'priority', 'عاجل', 'هذا الشهر'],
-    },
-    keySellingPoints: [
-      'وكيل ذكي بمستوى عالمي',
-      'تجربة عملاء متميزة',
-      'كفاءة عالية وحداثة',
-    ],
     responseStyle: { maxLength: 'medium', useEmojis: false, useBulletPoints: true },
     defaultTimezone: 'Asia/Dubai',
     complianceNote: 'PDPL compliant — UAE Personal Data Protection Law.',
@@ -105,16 +75,6 @@ Keep a professional but approachable tone.`,
 ركز على الجودة، الكفاءة، والقيمة المضافة.
 تجنب الأسلوب العدواني أو غير الرسمي.
 إذا كتب العميل بالإنجليزية، أجب بالإنجليزية بنفس النبرة المهنية.`,
-    qualificationRules: {
-      minBudget: 800,
-      requiredFields: ['company', 'position', 'goal'],
-      urgencyKeywords: ['urgent', 'this month', 'priority', 'عاجل', 'هذا الشهر'],
-    },
-    keySellingPoints: [
-      'وكيل ذكي بمستوى عالمي',
-      'كفاءة عالية وتجربة متميزة',
-      'حلول متوافقة مع رؤية 2030',
-    ],
     responseStyle: { maxLength: 'medium', useEmojis: false, useBulletPoints: true },
     defaultTimezone: 'Asia/Riyadh',
     complianceNote: 'PDPL compliant — Saudi Personal Data Protection Law.',
@@ -134,16 +94,6 @@ Sei präzise, klar, strukturiert und transparent.
 Vermeide Übertreibungen. Konzentriere dich auf Zuverlässigkeit, Qualität und Compliance.
 Erkläre genau, was der Agent kann und was er nicht kann.
 Antworte auf Deutsch, es sei denn, der Kunde schreibt auf Englisch.`,
-    qualificationRules: {
-      minBudget: 600,
-      requiredFields: ['company', 'use_case', 'timeline'],
-      urgencyKeywords: ['dringend', 'zeitnah', 'diese woche', 'urgent'],
-    },
-    keySellingPoints: [
-      'Zuverlässigkeit und Stabilität',
-      'DSGVO-konform (Hosting in der EU)',
-      'Klare und messbare Ergebnisse',
-    ],
     responseStyle: { maxLength: 'medium', useEmojis: false, useBulletPoints: true },
     defaultTimezone: 'Europe/Berlin',
     complianceNote: 'DSGVO-konform — Hosting in der EU, GDPR compliant.',
@@ -163,16 +113,6 @@ Seien Sie präzise, klar und zuverlässig.
 Konzentrieren Sie sich auf Qualität, Stabilität und Diskretion.
 Vermeiden Sie Übertreibungen. Seien Sie transparent.
 Antworten Sie auf Deutsch, es sei denn, der Kunde schreibt auf Französisch oder Englisch.`,
-    qualificationRules: {
-      minBudget: 600,
-      requiredFields: ['company', 'use_case', 'timeline'],
-      urgencyKeywords: ['dringend', 'zeitnah', 'urgent', 'diese woche'],
-    },
-    keySellingPoints: [
-      'Zuverlässigkeit und Qualität',
-      'DSGVO-konform — Hosting in der EU',
-      'Präzise und messbare Ergebnisse',
-    ],
     responseStyle: { maxLength: 'medium', useEmojis: false, useBulletPoints: true },
     defaultTimezone: 'Europe/Zurich',
     complianceNote: 'DSGVO/revFADP compliant — Swiss + EU data protection.',
@@ -192,16 +132,6 @@ Soyez poli, clair et équilibré entre relationnel et efficacité.
 Mettez en avant le gain de temps, la qualité du service et la souveraineté (hébergement UE).
 Évitez l'excès de superlatifs. Soyez concret et pragmatique.
 Répondez en français, sauf si le client écrit en anglais.`,
-    qualificationRules: {
-      minBudget: 500,
-      requiredFields: ['company', 'goal', 'timeline'],
-      urgencyKeywords: ['urgent', 'cette semaine', 'asap', 'rapidement'],
-    },
-    keySellingPoints: [
-      'Gagnez 15-20 heures par semaine',
-      'Hébergement en UE — souveraineté des données',
-      'Qualité de service et support en français',
-    ],
     responseStyle: { maxLength: 'medium', useEmojis: false, useBulletPoints: true },
     defaultTimezone: 'Europe/Paris',
     complianceNote: 'RGPD compliant — Hébergement en UE, conformité totale.',
@@ -221,16 +151,6 @@ Be professional, efficient, and multiculture-aware.
 Focus on productivity, scalability, and modernity.
 Keep a direct but courteous tone.
 Use standard English (British spelling preferred).`,
-    qualificationRules: {
-      minBudget: 600,
-      requiredFields: ['company', 'goal', 'timeline'],
-      urgencyKeywords: ['urgent', 'asap', 'this week', 'quickly'],
-    },
-    keySellingPoints: [
-      'Boost productivity and scalability',
-      'World-class autonomous agent',
-      'Modern, efficient, multilingual',
-    ],
     responseStyle: { maxLength: 'short', useEmojis: false, useBulletPoints: true },
     defaultTimezone: 'Asia/Singapore',
     complianceNote: 'PDPA compliant — Singapore Personal Data Protection Act.',
@@ -250,16 +170,6 @@ Be professional, clear, and respectful of cultural differences.
 Focus on efficiency, quality, and results.
 Use standard English. Keep a balanced tone.
 Always respond in the same language as the user.`,
-    qualificationRules: {
-      minBudget: 400,
-      requiredFields: ['company', 'goal'],
-      urgencyKeywords: ['urgent', 'asap', 'this week', 'priority'],
-    },
-    keySellingPoints: [
-      'Save time and increase conversions',
-      'Autonomous AI agent — 24/7 availability',
-      'Multi-channel: web, email, SMS, Telegram',
-    ],
     responseStyle: { maxLength: 'medium', useEmojis: false, useBulletPoints: true },
     defaultTimezone: 'UTC',
   },

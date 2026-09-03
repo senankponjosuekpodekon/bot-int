@@ -16,12 +16,6 @@ export type Formality = 'casual' | 'neutral' | 'formal';
 export type UseOfName = 'first_name' | 'full_name' | 'title_last_name';
 export type ResponseLength = 'short' | 'medium' | 'long';
 
-export interface QualificationRules {
-  minBudget?: number;
-  requiredFields: string[];
-  urgencyKeywords: string[];
-}
-
 export interface ResponseStyle {
   maxLength: ResponseLength;
   useEmojis: boolean;
@@ -41,8 +35,6 @@ export interface RegionProfile {
 
   systemPromptAddition: string;
 
-  qualificationRules: QualificationRules;
-  keySellingPoints: string[];
   responseStyle: ResponseStyle;
 
   defaultTimezone: string;

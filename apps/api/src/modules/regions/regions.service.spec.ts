@@ -138,9 +138,9 @@ describe('RegionsService', () => {
       expect(prompt).toContain('Language:');
     });
 
-    it('should include selling points when no base prompt is provided', () => {
-      const prompt = service.buildSystemPrompt('', 'us');
-      expect(prompt).toContain('Key selling points');
+    it('should not include generic selling points in the prompt', () => {
+      const prompt = service.buildSystemPrompt('You are a helpful agent.', 'us');
+      expect(prompt).not.toContain('Key selling points');
     });
   });
 
