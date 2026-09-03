@@ -260,6 +260,9 @@ export class BillingService {
 
   // ─── Check if tenant can send messages ───
   async checkQuota(tenantId: string): Promise<{ allowed: boolean; remaining: number; limit: number; overage?: boolean; overageRate?: number }> {
+    if (this.config.get<string>('BILLING_BYPASS_QUOTA', 'false') === 'true') {
+      return { allowed: true, remaining: 999999, limit: 999999 };
+    }
     const sub = await this.getSubscription(tenantId);
     const limits = PLAN_LIMITS[sub.plan];
 
