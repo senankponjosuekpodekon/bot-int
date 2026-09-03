@@ -52,6 +52,15 @@ export class AgentMemory {
   @Column({ type: 'float', default: 1.0 })
   importance: number;
 
+  @Column({ type: 'varchar', default: 'stated' })
+  source: 'stated' | 'inferred';
+
+  @Column({ type: 'float', default: 1.0 })
+  confidence: number;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  expiresAt?: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

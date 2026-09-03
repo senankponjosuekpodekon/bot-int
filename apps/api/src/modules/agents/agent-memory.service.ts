@@ -28,19 +28,26 @@ export class AgentMemoryService {
     agentId?: string,
     importance = 1.0,
     businessId?: string,
+    source: 'stated' | 'inferred' = 'stated',
+    confidence = 1.0,
+    expiresAt?: Date,
   ): Promise<AgentMemory> {
-    const where: any = { tenantId, scope, scopeId, key };
+    const where: any = { tenantId, scope, scopeId, key, source };
     if (businessId) where.businessId = businessId;
+    if (agentId) where.agentId = agentId;
     const existing = await this.memoryRepo.findOne({ where });
     if (existing) {
       existing.value = value;
       existing.importance = importance;
+      existing.confidence = confidence;
+      existing.source = source;
+      if (expiresAt !== undefined) existing.expiresAt = expiresAt;
       if (agentId) existing.agentId = agentId;
       if (businessId) existing.businessId = businessId;
       return this.memoryRepo.save(existing);
     }
     return this.memoryRepo.save(
-      this.memoryRepo.create({ tenantId, agentId, businessId, scope, scopeId, key, value, importance }),
+      this.memoryRepo.create({ tenantId, agentId, businessId, scope, scopeId, key, value, importance, source, confidence, expiresAt }),
     );
   }
 
@@ -51,17 +58,22 @@ export class AgentMemoryService {
     keys?: string[],
     agentId?: string,
     businessId?: string,
+    source?: 'stated' | 'inferred',
   ): Promise<AgentMemory[]> {
     const qb = this.memoryRepo
       .createQueryBuilder('mem')
       .where('mem.tenantId = :tenantId', { tenantId })
       .andWhere('mem.scope = :scope', { scope })
-      .andWhere('mem.scopeId = :scopeId', { scopeId });
+      .andWhere('mem.scopeId = :scopeId', { scopeId })
+      .andWhere('(mem.expiresAt IS NULL OR mem.expiresAt > :now)', { now: new Date() });
     if (businessId) {
       qb.andWhere('mem.businessId = :businessId', { businessId });
     }
     if (agentId) {
       qb.andWhere('mem.agentId = :agentId', { agentId });
+    }
+    if (source) {
+      qb.andWhere('mem.source = :source', { source });
     }
     qb.orderBy('mem.importance', 'DESC')
       .addOrderBy('mem.updatedAt', 'DESC');
@@ -80,7 +92,7 @@ export class AgentMemoryService {
     agentId?: string,
     businessId?: string,
   ): Promise<string | null> {
-    const memories = await this.recall(tenantId, scope, scopeId, undefined, agentId, businessId);
+    const memories = await this.recall(tenantId, scope, scopeId, undefined, agentId, businessId, 'stated');
     if (memories.length === 0) return null;
     const top = memories.slice(0, limit);
     return top
@@ -121,7 +133,7 @@ export class AgentMemoryService {
         const value = pattern.extract(match);
         facts[pattern.key] = value;
         try {
-          await this.remember(tenantId, scope, scopeId, pattern.key, value, agentId, 1.0, businessId);
+          await this.remember(tenantId, scope, scopeId, pattern.key, value, agentId, 1.0, businessId, 'stated');
         } catch (err: any) {
           this.logger.warn(`Failed to store memory ${pattern.key}: ${err?.message}`);
         }
@@ -138,7 +150,7 @@ export class AgentMemoryService {
         if (!existing || normalized.length > existing.length || !normalized.includes(existing)) {
           facts[key] = normalized;
         }
-        await this.remember(tenantId, scope, scopeId, key, normalized, agentId, 1.0, businessId);
+        await this.remember(tenantId, scope, scopeId, key, normalized, agentId, 1.0, businessId, 'inferred', 0.8);
       }
     } catch (err: any) {
       this.logger.warn(`LLM profile extraction failed: ${err?.message}`);
