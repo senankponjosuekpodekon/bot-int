@@ -249,7 +249,7 @@ export const chatApi = {
 
 export const leadsApi = {
   list: (params?: { status?: string; tag?: string; search?: string; page?: number; limit?: number }) =>
-    api.get('/leads', { params }).then((r) => r.data),
+    api.get('/leads', { params }).then((r) => r.data?.data ?? r.data),
   getById: (id: string) => api.get(`/leads/${id}`).then((r) => r.data),
   create: (data: any) => api.post('/leads', data).then((r) => r.data),
   update: (id: string, data: any) => api.patch(`/leads/${id}`, data).then((r) => r.data),
@@ -357,8 +357,8 @@ export const quotesApi = {
 };
 
 export const knowledgeApi = {
-  list: () => api.get('/knowledge').then((r) => r.data),
-  search: (q: string) => api.get('/knowledge/search', { params: { q } }).then((r) => r.data),
+  list: () => api.get('/knowledge').then((r) => r.data?.data ?? r.data),
+  search: (q: string) => api.get('/knowledge/search', { params: { q } }).then((r) => r.data?.data ?? r.data),
   addText: (content: string, filename?: string) =>
     api.post('/knowledge/text', { content, filename }).then((r) => r.data),
   uploadFile: (file: File) => {

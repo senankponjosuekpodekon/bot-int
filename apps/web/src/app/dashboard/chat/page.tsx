@@ -150,7 +150,7 @@ export default function ChatPage() {
   }, [loadConversations]);
 
   useEffect(() => {
-    leadsApi.list().then(setLeads).catch(() => {
+    leadsApi.list().then((res) => setLeads(Array.isArray(res) ? res : res?.data ?? [])).catch(() => {
       toast.error('Impossible de charger les leads');
     });
   }, []);
@@ -198,7 +198,8 @@ export default function ChatPage() {
     setLoadingHistory(true);
     try {
       const history = await chatApi.history(id);
-      const formatted = history.map((msg: any) => ({
+      const list = Array.isArray(history) ? history : history?.data ?? [];
+      const formatted = list.map((msg: any) => ({
         id: msg.id,
         role: msg.role === 'user' ? 'user' : 'assistant',
         content: msg.content,

@@ -113,7 +113,8 @@ export class RegionsService {
 
   buildSystemPrompt(basePrompt: string, region: RegionCode): string {
     const profile = this.getProfile(region);
-    const sellingPoints = profile.keySellingPoints.map((p) => `- ${p}`).join('\n');
+    const hasBasePrompt = (basePrompt || '').trim().length > 0;
+    const sellingPoints = hasBasePrompt ? '' : `\nKey selling points to prioritize:\n${profile.keySellingPoints.map((p) => `- ${p}`).join('\n')}`;
     const complianceLine = profile.complianceNote ? `\nCompliance: ${profile.complianceNote}` : '';
 
     return `${basePrompt}
@@ -123,10 +124,7 @@ Region: ${profile.name}
 Language: ${profile.language}
 Direction: ${profile.direction}
 
-${profile.systemPromptAddition}
-
-Key selling points to prioritize:
-${sellingPoints}
+${profile.systemPromptAddition}${sellingPoints}
 
 Communication style:
 - Tone: ${profile.tone}
