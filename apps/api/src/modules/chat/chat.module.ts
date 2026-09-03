@@ -31,9 +31,10 @@ import { IntelligenceModule } from '../intelligence/intelligence.module';
 import { BillingModule } from '../billing/billing.module';
 import { RegionsModule } from '../regions/regions.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
+import { BusinessModule } from '../business/business.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Conversation, Message, AgentFeedback, Agent]), forwardRef(() => AgentsModule), forwardRef(() => LeadsModule), forwardRef(() => KnowledgeModule), forwardRef(() => ProductsModule), forwardRef(() => IntegrationsModule), forwardRef(() => FlowsModule), forwardRef(() => IntelligenceModule), forwardRef(() => BillingModule), forwardRef(() => RegionsModule), forwardRef(() => WebhooksModule)],
+  imports: [TypeOrmModule.forFeature([Conversation, Message, AgentFeedback, Agent]), forwardRef(() => AgentsModule), forwardRef(() => LeadsModule), forwardRef(() => KnowledgeModule), forwardRef(() => ProductsModule), forwardRef(() => IntegrationsModule), forwardRef(() => FlowsModule), forwardRef(() => IntelligenceModule), forwardRef(() => BillingModule), forwardRef(() => RegionsModule), forwardRef(() => WebhooksModule), forwardRef(() => BusinessModule)],
   providers: [
     OpenAIProvider,
     {

@@ -46,6 +46,7 @@ describe('ChatService', () => {
       msgRepo as unknown as Repository<Message>,
       { create: jest.fn(), find: jest.fn() } as any, // feedbackRepo
       agentsService as unknown as AgentsService,
+      { getDefaultForTenant: jest.fn().mockResolvedValue({ id: 'b-1' }) } as any, // businessService
       llmService as unknown as LLMService,
       { detect: jest.fn().mockResolvedValue({ intent: 'greeting', confidence: 0.9, language: 'fr', sentiment: 'neutral' }) } as any, // intentService
       { startFlow: jest.fn().mockResolvedValue(null), processAnswer: jest.fn().mockResolvedValue({ completed: false }) } as any, // formService

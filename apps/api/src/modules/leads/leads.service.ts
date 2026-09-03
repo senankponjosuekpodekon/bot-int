@@ -21,7 +21,7 @@ export class LeadsService {
 
   async findByTenant(
     tenantId: string,
-    params?: { status?: LeadStatus; tag?: string; search?: string; page?: number; limit?: number },
+    params?: { status?: LeadStatus; tag?: string; search?: string; page?: number; limit?: number; businessId?: string },
   ): Promise<PaginatedResult<Lead>> {
     const page = params?.page ?? 1;
     const limit = params?.limit ?? 20;
@@ -32,6 +32,10 @@ export class LeadsService {
       .orderBy('lead.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
+
+    if (params?.businessId) {
+      qb.andWhere('lead.businessId = :businessId', { businessId: params.businessId });
+    }
 
     if (params?.status) {
       qb.andWhere('lead.status = :status', { status: params.status });
@@ -51,9 +55,9 @@ export class LeadsService {
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
-  async findById(id: string, tenantId: string, agentId?: string): Promise<Lead> {
+  async findById(id: string, tenantId: string, businessId?: string): Promise<Lead> {
     const where: any = { id, tenantId };
-    if (agentId) where.agentId = agentId;
+    if (businessId) where.businessId = businessId;
     const lead = await this.leadRepo.findOne({ where });
     if (!lead) throw new NotFoundException('Lead not found');
     return lead;
@@ -84,8 +88,10 @@ export class LeadsService {
     return this.findById(id, tenantId);
   }
 
-  async getPipelineStats(tenantId: string): Promise<Record<string, number>> {
-    const leads = await this.leadRepo.find({ where: { tenantId } });
+  async getPipelineStats(tenantId: string, businessId?: string): Promise<Record<string, number>> {
+    const where: any = { tenantId };
+    if (businessId) where.businessId = businessId;
+    const leads = await this.leadRepo.find({ where });
     const stats: Record<string, number> = {
       total: leads.length,
       new: 0,
@@ -102,8 +108,10 @@ export class LeadsService {
     return stats;
   }
 
-  async exportCsv(tenantId: string): Promise<string> {
-    const leads = await this.leadRepo.find({ where: { tenantId }, order: { createdAt: 'DESC' } });
+  async exportCsv(tenantId: string, businessId?: string): Promise<string> {
+    const where: any = { tenantId };
+    if (businessId) where.businessId = businessId;
+    const leads = await this.leadRepo.find({ where, order: { createdAt: 'DESC' } });
     const headers = ['id', 'name', 'email', 'phone', 'company', 'status', 'score', 'source', 'tags', 'notes', 'createdAt'];
     const rows = leads.map((l) => {
       return [
@@ -123,10 +131,12 @@ export class LeadsService {
     return [headers.join(','), ...rows].join('\n');
   }
 
-  async getComments(leadId: string, tenantId: string): Promise<LeadComment[]> {
-    await this.findById(leadId, tenantId);
+  async getComments(leadId: string, tenantId: string, businessId?: string): Promise<LeadComment[]> {
+    await this.findById(leadId, tenantId, businessId);
+    const where: any = { leadId, tenantId };
+    if (businessId) where.businessId = businessId;
     return this.commentRepo.find({
-      where: { leadId, tenantId },
+      where,
       order: { createdAt: 'DESC' },
     });
   }
@@ -137,11 +147,13 @@ export class LeadsService {
     authorId: string,
     authorName: string,
     content: string,
+    businessId?: string,
   ): Promise<LeadComment> {
-    await this.findById(leadId, tenantId);
+    await this.findById(leadId, tenantId, businessId);
     const comment = this.commentRepo.create({
       leadId,
       tenantId,
+      businessId,
       authorId,
       authorName,
       content,

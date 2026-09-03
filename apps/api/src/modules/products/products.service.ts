@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, Brackets } from 'typeorm';
 import { Product } from './product.entity';
 import { ProductImport, ImportSource, ImportStatus } from './product-import.entity';
 import { ProductImportSource, ImportSourceType } from './product-import-source.entity';
@@ -35,7 +35,10 @@ export class ProductsService {
     return this.productRepo.save(product);
   }
 
-  async findByTenant(tenantId: string, params?: { category?: string; search?: string; page?: number; limit?: number; agentId?: string }): Promise<{ data: Product[]; total: number }> {
+  async findByTenant(
+    tenantId: string,
+    params?: { category?: string; search?: string; page?: number; limit?: number; agentId?: string; businessId?: string },
+  ): Promise<{ data: Product[]; total: number }> {
     const page = params?.page ?? 1;
     const limit = Math.min(params?.limit ?? 50, 100);
     const skip = (page - 1) * limit;
@@ -47,8 +50,18 @@ export class ProductsService {
       .where('product.tenantId = :tenantId', { tenantId })
       .andWhere('product.isActive = :active', { active: true });
 
+    if (params?.businessId) {
+      qb.andWhere('product.businessId = :businessId', { businessId: params.businessId });
+    }
+
     if (params?.agentId) {
-      qb.andWhere('product.agentId = :agentId', { agentId: params.agentId });
+      qb.andWhere(
+        new Brackets((sub) => {
+          sub
+            .where('product.agentId = :agentId', { agentId: params.agentId })
+            .orWhere('product.agentId IS NULL');
+        }),
+      );
     }
 
     if (params?.category) {
@@ -88,13 +101,16 @@ export class ProductsService {
     return { deleted: result.affected ?? 0 };
   }
 
-  async getCategories(tenantId: string, agentId?: string): Promise<string[]> {
+  async getCategories(tenantId: string, agentId?: string, businessId?: string): Promise<string[]> {
     if (agentId) await this.ensureAgentInTenant(tenantId, agentId);
     const qb = this.productRepo
       .createQueryBuilder('product')
       .select('DISTINCT product.category', 'category')
       .where('product.tenantId = :tenantId', { tenantId })
       .andWhere('product.category IS NOT NULL');
+    if (businessId) {
+      qb.andWhere('product.businessId = :businessId', { businessId });
+    }
     if (agentId) {
       qb.andWhere('(product.agentId = :agentId OR product.agentId IS NULL)', { agentId });
     }
@@ -102,7 +118,7 @@ export class ProductsService {
     return result.map((r) => r.category).filter(Boolean);
   }
 
-  async searchRelevant(tenantId: string, query: string, agentId?: string): Promise<Product[]> {
+  async searchRelevant(tenantId: string, query: string, agentId?: string, businessId?: string): Promise<Product[]> {
     if (agentId) await this.ensureAgentInTenant(tenantId, agentId);
     const keywords = query
       .toLowerCase()
@@ -117,8 +133,19 @@ export class ProductsService {
       .createQueryBuilder('product')
       .where('product.tenantId = :tenantId', { tenantId })
       .andWhere('product.isActive = :active', { active: true });
+
+    if (businessId) {
+      qb.andWhere('product.businessId = :businessId', { businessId });
+    }
+
     if (agentId) {
-      qb.andWhere('product.agentId = :agentId', { agentId });
+      qb.andWhere(
+        new Brackets((sub) => {
+          sub
+            .where('product.agentId = :agentId', { agentId })
+            .orWhere('product.agentId IS NULL');
+        }),
+      );
     }
     qb.andWhere(
       keywords

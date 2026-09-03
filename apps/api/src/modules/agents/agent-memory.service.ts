@@ -27,18 +27,20 @@ export class AgentMemoryService {
     value: string,
     agentId?: string,
     importance = 1.0,
+    businessId?: string,
   ): Promise<AgentMemory> {
-    const existing = await this.memoryRepo.findOne({
-      where: { tenantId, scope, scopeId, key },
-    });
+    const where: any = { tenantId, scope, scopeId, key };
+    if (businessId) where.businessId = businessId;
+    const existing = await this.memoryRepo.findOne({ where });
     if (existing) {
       existing.value = value;
       existing.importance = importance;
       if (agentId) existing.agentId = agentId;
+      if (businessId) existing.businessId = businessId;
       return this.memoryRepo.save(existing);
     }
     return this.memoryRepo.save(
-      this.memoryRepo.create({ tenantId, agentId, scope, scopeId, key, value, importance }),
+      this.memoryRepo.create({ tenantId, agentId, businessId, scope, scopeId, key, value, importance }),
     );
   }
 
@@ -48,12 +50,16 @@ export class AgentMemoryService {
     scopeId: string,
     keys?: string[],
     agentId?: string,
+    businessId?: string,
   ): Promise<AgentMemory[]> {
     const qb = this.memoryRepo
       .createQueryBuilder('mem')
       .where('mem.tenantId = :tenantId', { tenantId })
       .andWhere('mem.scope = :scope', { scope })
       .andWhere('mem.scopeId = :scopeId', { scopeId });
+    if (businessId) {
+      qb.andWhere('mem.businessId = :businessId', { businessId });
+    }
     if (agentId) {
       qb.andWhere('mem.agentId = :agentId', { agentId });
     }
@@ -72,8 +78,9 @@ export class AgentMemoryService {
     scopeId: string,
     limit = 10,
     agentId?: string,
+    businessId?: string,
   ): Promise<string | null> {
-    const memories = await this.recall(tenantId, scope, scopeId, undefined, agentId);
+    const memories = await this.recall(tenantId, scope, scopeId, undefined, agentId, businessId);
     if (memories.length === 0) return null;
     const top = memories.slice(0, limit);
     return top
@@ -94,6 +101,7 @@ export class AgentMemoryService {
     userMessage: string,
     agentReply: string,
     agentId?: string,
+    businessId?: string,
   ): Promise<Record<string, string>> {
     const facts: Record<string, string> = {};
 
@@ -113,7 +121,7 @@ export class AgentMemoryService {
         const value = pattern.extract(match);
         facts[pattern.key] = value;
         try {
-          await this.remember(tenantId, scope, scopeId, pattern.key, value, agentId);
+          await this.remember(tenantId, scope, scopeId, pattern.key, value, agentId, 1.0, businessId);
         } catch (err: any) {
           this.logger.warn(`Failed to store memory ${pattern.key}: ${err?.message}`);
         }
@@ -130,7 +138,7 @@ export class AgentMemoryService {
         if (!existing || normalized.length > existing.length || !normalized.includes(existing)) {
           facts[key] = normalized;
         }
-        await this.remember(tenantId, scope, scopeId, key, normalized, agentId);
+        await this.remember(tenantId, scope, scopeId, key, normalized, agentId, 1.0, businessId);
       }
     } catch (err: any) {
       this.logger.warn(`LLM profile extraction failed: ${err?.message}`);

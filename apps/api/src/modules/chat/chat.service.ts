@@ -6,6 +6,7 @@ import { Message, MessageRole } from './message.entity';
 import { AgentFeedback } from './agent-feedback.entity';
 import { ChatEventsService } from './chat-events.service';
 import { AgentsService } from '../agents/agents.service';
+import { BusinessService } from '../business/business.service';
 import { AgentMemoryService } from '../agents/agent-memory.service';
 import { AgentToolsService } from '../agents/agent-tools.service';
 import { AgentWorkflowService } from '../agents/agent-workflow.service';
@@ -129,6 +130,7 @@ export class ChatService {
     @InjectRepository(AgentFeedback)
     private readonly feedbackRepo: Repository<AgentFeedback>,
     private readonly agentsService: AgentsService,
+    private readonly businessService: BusinessService,
     private readonly llmService: LLMService,
     private readonly intentService: IntentService,
     private readonly formService: FormService,
@@ -208,6 +210,21 @@ export class ChatService {
       throw new NotFoundException('Agent not found');
     }
 
+    if (activeAgent.businessId && agent.businessId && activeAgent.businessId !== agent.businessId) {
+      this.logger.error(
+        JSON.stringify({
+          debug: 'AGENT_RESOLUTION_BLOCKED_BUSINESS',
+          requestedAgentId: agentId,
+          resolvedAgentId: activeAgent.id,
+          requestedBusinessId: agent.businessId,
+          resolvedBusinessId: activeAgent.businessId,
+        }),
+      );
+      throw new NotFoundException('Agent not found');
+    }
+
+    const activeBusinessId = activeAgent.businessId || agent.businessId || (await this.businessService.getDefaultForTenant(tenantId)).id;
+
     // Detect region for regional adaptation
     let detectedRegion: RegionCode = 'international';
     try {
@@ -235,7 +252,7 @@ export class ChatService {
           if (!targetConv) throw new NotFoundException('Conversation not found');
         } else {
           targetConv = await this.convRepo.save(
-            this.convRepo.create({ agentId, tenantId, visitorId }),
+            this.convRepo.create({ agentId, tenantId, visitorId, businessId: activeBusinessId }),
           );
         }
         await this.msgRepo.save(this.msgRepo.create({ conversationId: targetConv.id, role: MessageRole.USER, content: userMessage }));
@@ -261,7 +278,7 @@ export class ChatService {
           if (!targetConv) throw new NotFoundException('Conversation not found');
         } else {
           targetConv = await this.convRepo.save(
-            this.convRepo.create({ agentId, tenantId, visitorId }),
+            this.convRepo.create({ agentId, tenantId, visitorId, businessId: activeBusinessId }),
           );
         }
         await this.msgRepo.save(this.msgRepo.create({ conversationId: targetConv.id, role: MessageRole.USER, content: userMessage }));
@@ -296,7 +313,7 @@ export class ChatService {
 
       conversation = await this.convRepo.save(
         this.convRepo.create({
-          agentId, tenantId, visitorId,
+          agentId, tenantId, visitorId, businessId: activeBusinessId,
           utmParams: tracking?.utmParams || {},
           referrerUrl: tracking?.referrerUrl || null,
           landingPageUrl: tracking?.landingPageUrl || null,
@@ -332,6 +349,7 @@ export class ChatService {
         });
         const lead = await this.leadsService.create(tenantId, {
           agentId,
+          businessId: activeBusinessId,
           source: 'chat',
           tags: autoTags,
           metadata: {
@@ -370,7 +388,7 @@ export class ChatService {
     if (conversation.leadId) {
       const extracted = this.extractData(userMessage);
       if (extracted.email || extracted.phone || extracted.name) {
-        await this.updateLeadData(conversation.leadId, tenantId, extracted, agentId);
+        await this.updateLeadData(conversation.leadId, tenantId, extracted, activeBusinessId);
       }
     }
 
@@ -409,7 +427,7 @@ export class ChatService {
 
       if (cmd === '/products') {
         try {
-          const { data: products } = await this.productsService.findByTenant(tenantId, { limit: 5, agentId: agent.id });
+          const { data: products } = await this.productsService.findByTenant(tenantId, { limit: 5, agentId: agent.id, businessId: activeBusinessId });
           if (products.length > 0) {
             cmdReply = `Voici nos produits disponibles:\n\n` + products
               .map((p) => `• ${p.name} — ${p.price}${p.currency === 'EUR' ? '€' : ' ' + p.currency}${p.stock > 0 ? '' : ' (rupture)'}${p.description ? `\n  ${p.description.slice(0, 100)}` : ''}`)
@@ -602,7 +620,7 @@ export class ChatService {
     // Returning visitor memory: inject summary of past conversations
     if (isReturningVisitor && visitorId) {
       try {
-        const pastSummary = await this.getVisitorMemory(agentId, tenantId, visitorId);
+        const pastSummary = await this.getVisitorMemory(agentId, tenantId, visitorId, activeBusinessId);
         if (pastSummary) {
           messages.splice(1, 0, {
             role: 'system',
@@ -619,7 +637,7 @@ export class ChatService {
       if (visitorId) {
         try {
           const memoryContext = await this.agentMemoryService.recallAsContext(
-            tenantId, MemoryScope.VISITOR, visitorId, 10, agentId,
+            tenantId, MemoryScope.VISITOR, visitorId, 10, agentId, activeBusinessId,
           );
           if (memoryContext) {
             messages.splice(1, 0, {
@@ -633,7 +651,7 @@ export class ChatService {
       } else if (conversation.leadId) {
         try {
           const memoryContext = await this.agentMemoryService.recallAsContext(
-            tenantId, MemoryScope.LEAD, conversation.leadId, 10, agentId,
+            tenantId, MemoryScope.LEAD, conversation.leadId, 10, agentId, activeBusinessId,
           );
           if (memoryContext) {
             messages.splice(1, 0, {
@@ -706,7 +724,7 @@ export class ChatService {
 
     if (conversation.leadId) {
       try {
-        const lead = await this.leadsService.findById(conversation.leadId, tenantId, agentId);
+        const lead = await this.leadsService.findById(conversation.leadId, tenantId, activeBusinessId);
         const profileParts: string[] = [];
         if (lead.name) profileParts.push(`Nom du visiteur: ${lead.name}`);
         if (lead.email) profileParts.push(`Email: ${lead.email}`);
@@ -736,7 +754,7 @@ export class ChatService {
 
     let relevantContext: string[] = [];
     try {
-      relevantContext = await this.knowledgeService.searchRelevant(tenantId, userMessage, agent.id);
+      relevantContext = await this.knowledgeService.searchRelevant(tenantId, userMessage, agent.id, activeBusinessId);
     } catch {
       // Knowledge search is optional — continue without context
     }
@@ -767,7 +785,7 @@ export class ChatService {
     let productsContext = '';
     let carouselProducts: any[] = [];
     try {
-      const products = await this.productsService.searchRelevant(tenantId, userMessage, agent.id);
+      const products = await this.productsService.searchRelevant(tenantId, userMessage, agent.id, activeBusinessId);
       if (products.length > 0) {
         carouselProducts = products.slice(0, 5).map((p) => ({
           id: p.id,
@@ -853,7 +871,7 @@ export class ChatService {
       });
       if (messageTags.length > 0) {
         try {
-          const lead = await this.leadsService.findById(conversation.leadId, tenantId, agentId);
+          const lead = await this.leadsService.findById(conversation.leadId, tenantId, activeBusinessId);
           const merged = this.leadTagService.mergeTags(lead.tags, messageTags);
           if (merged.length !== (lead.tags || []).length) {
             await this.leadsService.update(conversation.leadId, tenantId, { tags: merged });
@@ -926,7 +944,7 @@ export class ChatService {
     }
 
     const priceSignal = /\b(budget|prix|co[uû]t|offre|devis|proposition|tarif|combien|solution)\b/i.test(userMessage);
-    const discoveryFacts = await this.getDiscoveryFacts(tenantId, conversation, visitorId, agentId);
+    const discoveryFacts = await this.getDiscoveryFacts(tenantId, conversation, visitorId, activeBusinessId);
     let finalReply: string;
     let usage: { prompt: number; completion: number; total: number };
     let discoveryRedirect = false;
@@ -1063,7 +1081,7 @@ export class ChatService {
 
       if (wantsToBuy) {
         try {
-          const products = await this.productsService.searchRelevant(tenantId, userMessage, agent.id);
+          const products = await this.productsService.searchRelevant(tenantId, userMessage, agent.id, activeBusinessId);
           if (products.length > 0) {
             const product = products[0];
             const link = await this.integrationsService.createStripePaymentLink(
@@ -1109,7 +1127,7 @@ export class ChatService {
       if (visitorId) {
         try {
           const res = await this.agentMemoryService.extractAndStore(
-            tenantId, MemoryScope.VISITOR, visitorId, userMessage, finalReply, agentId,
+            tenantId, MemoryScope.VISITOR, visitorId, userMessage, finalReply, agentId, activeBusinessId,
           );
           if (res) Object.assign(extractedFacts, res);
         } catch {
@@ -1118,7 +1136,7 @@ export class ChatService {
       } else if (conversation.leadId) {
         try {
           const res = await this.agentMemoryService.extractAndStore(
-            tenantId, MemoryScope.LEAD, conversation.leadId, userMessage, finalReply, agentId,
+            tenantId, MemoryScope.LEAD, conversation.leadId, userMessage, finalReply, agentId, activeBusinessId,
           );
           if (res) Object.assign(extractedFacts, res);
         } catch {
@@ -1129,7 +1147,7 @@ export class ChatService {
 
     if (conversation.leadId && Object.keys(extractedFacts).length > 0) {
       try {
-        await this.updateLeadProfile(conversation.leadId, tenantId, extractedFacts, agentId);
+        await this.updateLeadProfile(conversation.leadId, tenantId, extractedFacts, activeBusinessId);
       } catch {
         // Profile update is optional
       }
@@ -1261,7 +1279,7 @@ export class ChatService {
     const conversation = await this.convRepo.findOne({ where: { id: conversationId, tenantId } });
     if (!conversation) throw new NotFoundException('Conversation not found');
 
-    const lead = await this.leadsService.findById(leadId, tenantId, conversation.agentId);
+    const lead = await this.leadsService.findById(leadId, tenantId, conversation.businessId);
     conversation.leadId = lead.id;
     await this.convRepo.save(conversation);
 
@@ -1311,8 +1329,8 @@ export class ChatService {
     return data;
   }
 
-  private async updateLeadData(leadId: string, tenantId: string, data: ExtractedData, agentId: string): Promise<void> {
-    const lead = await this.leadsService.findById(leadId, tenantId, agentId);
+  private async updateLeadData(leadId: string, tenantId: string, data: ExtractedData, businessId: string): Promise<void> {
+    const lead = await this.leadsService.findById(leadId, tenantId, businessId);
     const updates: Partial<typeof lead> = {};
     if (data.email && !lead.email) updates.email = data.email;
     if (data.phone && !lead.phone) updates.phone = data.phone;
@@ -1329,8 +1347,8 @@ export class ChatService {
   }
 
   // ─── Build a structured user profile from extracted conversation facts ───
-  private async updateLeadProfile(leadId: string, tenantId: string, facts: Record<string, string>, agentId: string): Promise<void> {
-    const lead = await this.leadsService.findById(leadId, tenantId, agentId);
+  private async updateLeadProfile(leadId: string, tenantId: string, facts: Record<string, string>, businessId: string): Promise<void> {
+    const lead = await this.leadsService.findById(leadId, tenantId, businessId);
     const updates: Partial<typeof lead> = {};
     const profile = { ...(lead.profile || {}), ...facts };
 
@@ -1344,9 +1362,11 @@ export class ChatService {
   }
 
   // ─── Visitor memory: summarize past conversations for returning visitors ───
-  private async getVisitorMemory(agentId: string, tenantId: string, visitorId: string): Promise<string | null> {
+  private async getVisitorMemory(agentId: string, tenantId: string, visitorId: string, businessId?: string): Promise<string | null> {
+    const where: any = { agentId, tenantId, visitorId };
+    if (businessId) where.businessId = businessId;
     const pastConvs = await this.convRepo.find({
-      where: { agentId, tenantId, visitorId },
+      where,
       order: { createdAt: 'DESC' },
       take: 3,
     });
@@ -1369,7 +1389,7 @@ export class ChatService {
       let leadInfo = '';
       if (conv.leadId) {
         try {
-          const lead = await this.leadsService.findById(conv.leadId, tenantId, agentId);
+          const lead = await this.leadsService.findById(conv.leadId, tenantId, businessId);
           if (lead.name) leadInfo += `Nom: ${lead.name}. `;
           if (lead.email) leadInfo += `Email: ${lead.email}. `;
         } catch {}
@@ -1714,12 +1734,12 @@ export class ChatService {
     tenantId: string,
     conversation: Conversation,
     visitorId?: string,
-    agentId?: string,
+    businessId?: string,
   ): Promise<{ industry?: string; problem?: string }> {
     const scope = conversation.leadId ? MemoryScope.LEAD : MemoryScope.VISITOR;
     const scopeId = conversation.leadId || visitorId;
     if (!scopeId) return {};
-    const memories = await this.agentMemoryService.recall(tenantId, scope, scopeId, ['industry', 'problem', 'need'], agentId);
+    const memories = await this.agentMemoryService.recall(tenantId, scope, scopeId, ['industry', 'problem', 'need'], undefined, businessId);
     const industry = memories.find((m) => m.key === 'industry')?.value;
     const problemMem = memories.find((m) => ['problem', 'need'].includes(m.key));
     return { industry, problem: problemMem?.value };

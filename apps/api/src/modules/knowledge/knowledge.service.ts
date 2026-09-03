@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { KnowledgeDocument, DocumentType } from './knowledge-document.entity';
+import { Repository, DataSource, Brackets } from 'typeorm';
+import { KnowledgeDocument, DocumentType, KnowledgeScope } from './knowledge-document.entity';
 import { KnowledgeChunk } from './knowledge-chunk.entity';
 import { LLMService } from '../chat/llm.service';
 import { PaginatedResult } from '../../common/pagination.dto';
@@ -463,13 +463,32 @@ export class KnowledgeService implements OnModuleInit {
     await this.docRepo.delete({ id, tenantId });
   }
 
-  async searchByText(tenantId: string, query: string, agentId?: string): Promise<KnowledgeDocument[]> {
+  async searchByText(
+    tenantId: string,
+    query: string,
+    agentId?: string,
+    businessId?: string,
+  ): Promise<KnowledgeDocument[]> {
     const qb = this.docRepo
       .createQueryBuilder('doc')
       .where('doc.tenantId = :tenantId', { tenantId });
-    if (agentId) {
+
+    if (businessId) {
+      qb.andWhere('doc.businessId = :businessId', { businessId })
+        .andWhere(
+          new Brackets((sub) => {
+            sub
+              .where('doc.scope = :business', { business: KnowledgeScope.BUSINESS })
+              .orWhere('(doc.scope = :agent AND doc.agentId = :agentId)', {
+                agent: KnowledgeScope.AGENT,
+                agentId: agentId || '',
+              });
+          }),
+        );
+    } else if (agentId) {
       qb.andWhere('doc.agentId = :agentId', { agentId });
     }
+
     if (query.trim()) {
       qb.andWhere('doc.content ILIKE :query', { query: `%${query}%` });
     }
@@ -477,23 +496,37 @@ export class KnowledgeService implements OnModuleInit {
     return qb.getMany();
   }
 
-  async searchRelevant(tenantId: string, query: string, agentId?: string): Promise<string[]> {
+  async searchRelevant(
+    tenantId: string,
+    query: string,
+    agentId?: string,
+    businessId?: string,
+  ): Promise<string[]> {
     try {
       const queryEmbedding = await this.llmService.embed(query, { task: 'retrieval.query' });
 
       if (this.hasPgvector) {
         const embeddingStr = `[${queryEmbedding.join(',')}]`;
-        const agentFilter = agentId ? `doc."agentId" = $4` : `1=1`;
-        const sql = `SELECT chunk.content, doc."sourceUrl", doc."createdAt"
+        let sql = `SELECT chunk.content, doc."sourceUrl", doc."createdAt"
            FROM knowledge_chunks chunk
            INNER JOIN knowledge_documents doc ON chunk."documentId" = doc.id
            WHERE doc."tenantId" = $1
-             AND chunk.embedding_vector IS NOT NULL
-             AND ${agentFilter}
-           ORDER BY chunk.embedding_vector <=> $2::vector
-           LIMIT $3`;
+             AND chunk.embedding_vector IS NOT NULL`;
         const params: (string | number)[] = [tenantId, embeddingStr, MAX_SEARCH_RESULTS];
-        if (agentId) params.push(agentId);
+        if (businessId) {
+          sql += ` AND doc."businessId" = $4`;
+          params.push(businessId);
+          if (agentId) {
+            sql += ` AND ((doc.scope = 'business') OR (doc.scope = 'agent' AND doc."agentId" = $5))`;
+            params.push(agentId);
+          } else {
+            sql += ` AND (doc.scope = 'business')`;
+          }
+        } else if (agentId) {
+          sql += ` AND doc."agentId" = $4`;
+          params.push(agentId);
+        }
+        sql += ` ORDER BY chunk.embedding_vector <=> $2::vector LIMIT $3`;
         const results = await this.dataSource.query(sql, params as any[]);
         if (results.length > 0) return results.map((r: any) => this.formatChunk(r.content, r.sourceUrl, r.createdAt));
       }
@@ -505,7 +538,20 @@ export class KnowledgeService implements OnModuleInit {
         .addSelect(['doc.sourceUrl', 'doc.createdAt'])
         .where('doc.tenantId = :tenantId', { tenantId })
         .andWhere('chunk.embedding IS NOT NULL');
-      if (agentId) {
+
+      if (businessId) {
+        chunksQb.andWhere('doc.businessId = :businessId', { businessId })
+          .andWhere(
+            new Brackets((sub) => {
+              sub
+                .where('doc.scope = :business', { business: KnowledgeScope.BUSINESS })
+                .orWhere('(doc.scope = :agent AND doc.agentId = :agentId)', {
+                  agent: KnowledgeScope.AGENT,
+                  agentId: agentId || '',
+                });
+            }),
+          );
+      } else if (agentId) {
         chunksQb.andWhere('doc.agentId = :agentId', { agentId });
       }
       const chunks = await chunksQb.getRawMany();
@@ -528,7 +574,7 @@ export class KnowledgeService implements OnModuleInit {
       return scored.map((s: any) => this.formatChunk(s.chunk_content, s.doc_sourceUrl, s.doc_createdAt));
     } catch (error: any) {
       this.logger.warn('Semantic search failed, falling back to text search', error?.message);
-      const docs = await this.searchByText(tenantId, query, agentId);
+      const docs = await this.searchByText(tenantId, query, agentId, businessId);
       return docs.slice(0, MAX_SEARCH_RESULTS).map((d) => this.formatChunk(d.content, d.sourceUrl, d.createdAt));
     }
   }
