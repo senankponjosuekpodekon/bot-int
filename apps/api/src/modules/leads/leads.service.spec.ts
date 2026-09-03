@@ -2,10 +2,9 @@ import { NotFoundException } from '@nestjs/common';
 import { ObjectLiteral, Repository } from 'typeorm';
 import { LeadsService } from './leads.service';
 import { Lead, LeadStatus } from './lead.entity';
+import { LeadComment } from './lead-comment.entity';
 
 type RepositoryMock<T extends ObjectLiteral> = Partial<Record<keyof Repository<T>, jest.Mock>>;
-
-import { LeadComment } from './lead-comment.entity';
 
 const createRepositoryMock = <T extends ObjectLiteral>(): RepositoryMock<T> => ({
   create: jest.fn(),
