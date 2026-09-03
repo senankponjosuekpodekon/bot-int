@@ -20,6 +20,7 @@ import { IntentService } from './intent.service';
 import { FormService, FlowData } from './form.service';
 import { SummarizationService } from './summarization.service';
 import { LeadsService } from '../leads/leads.service';
+import { Lead } from '../leads/lead.entity';
 import { LeadTagService } from '../leads/lead-tag.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ProductsService } from '../products/products.service';
@@ -225,6 +226,7 @@ export class ChatService {
     }
 
     const activeBusinessId = activeAgent.businessId || agent.businessId || (await this.businessService.getDefaultForTenant(tenantId)).id;
+    let currentLead: Lead | null = null;
 
     // Detect region for regional adaptation
     let detectedRegion: RegionCode = 'international';
@@ -740,6 +742,7 @@ export class ChatService {
     if (conversation.leadId) {
       try {
         const lead = await this.leadsService.findById(conversation.leadId, tenantId, activeBusinessId);
+        currentLead = lead;
         const profileParts: string[] = [];
         if (lead.name) profileParts.push(`Nom du visiteur: ${lead.name}`);
         if (lead.email) profileParts.push(`Email: ${lead.email}`);
@@ -1009,6 +1012,8 @@ export class ChatService {
           messagePreviews: messages.map((m) => ({ role: m.role, preview: (m.content || '').slice(0, 180) })),
         }),
       );
+      this.assertContextScope(activeBusinessId, currentLead, carouselProducts);
+
       const result = await this.llmService.generate(messages);
       finalReply = result.content;
       usage = result.usage;
@@ -1346,6 +1351,34 @@ export class ChatService {
     }
 
     return data;
+  }
+
+  private assertContextScope(activeBusinessId: string, lead: Lead | null, products: any[]): void {
+    if (!activeBusinessId) return;
+    if (lead?.businessId && lead.businessId !== activeBusinessId) {
+      this.logger.error(
+        JSON.stringify({
+          debug: 'CONTEXT_LEAK_BLOCKED',
+          source: 'lead',
+          expectedBusinessId: activeBusinessId,
+          receivedBusinessId: lead.businessId,
+        }),
+      );
+      throw new Error('Business context leak detected: lead belongs to a different business');
+    }
+    for (const product of products) {
+      if (product?.businessId && product.businessId !== activeBusinessId) {
+        this.logger.error(
+          JSON.stringify({
+            debug: 'CONTEXT_LEAK_BLOCKED',
+            source: 'product',
+            expectedBusinessId: activeBusinessId,
+            receivedBusinessId: product.businessId,
+          }),
+        );
+        throw new Error('Business context leak detected: product belongs to a different business');
+      }
+    }
   }
 
   private async updateLeadData(leadId: string, tenantId: string, data: ExtractedData, businessId: string): Promise<void> {
