@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Bot, MessageSquare, Users, BookOpen, LayoutDashboard, LogOut, Package, KanbanSquare, BarChart3, Settings, Brain, FileText, Headphones, Code2, Sparkles, ClipboardList, Globe, CreditCard, Crown, Menu, X, Workflow } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
+import BusinessSelector from '@/components/BusinessSelector';
 import { clsx } from 'clsx';
 
 const nav = [
@@ -83,6 +84,10 @@ export default function Sidebar() {
           <Bot className="w-5 h-5 text-white" />
         </div>
         <span className="font-bold text-base">Stiamond Agents</span>
+      </div>
+
+      <div className="px-4 py-3">
+        <BusinessSelector />
       </div>
 
       <nav className="flex-1 p-3 space-y-1">

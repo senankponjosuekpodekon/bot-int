@@ -437,6 +437,10 @@ export const channelsApi = {
     api.delete('/channels/webhooks', { params: id ? { id } : undefined }).then((r) => r.data),
 };
 
+export const businessApi = {
+  list: () => api.get('/business').then((r) => r.data as { id: string; name: string; isDefault: boolean }[]),
+};
+
 export const adminApi = {
   stats: () => api.get('/admin/stats').then((r) => r.data),
   tenants: (page = 1, limit = 20, search?: string) =>
