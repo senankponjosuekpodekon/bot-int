@@ -63,7 +63,7 @@ export class KnowledgeDocument {
   @JoinColumn({ name: 'businessId' })
   business?: Business;
 
-  @Column({ type: 'enum', enum: KnowledgeScope, default: KnowledgeScope.AGENT })
+  @Column({ type: 'varchar', default: KnowledgeScope.AGENT })
   scope: KnowledgeScope;
 
   @CreateDateColumn()
