@@ -184,6 +184,17 @@ export class ChatService {
       this.logger.warn(`Orchestration resolution failed: ${err?.message}`);
     }
 
+    this.logger.log(
+      JSON.stringify({
+        debug: 'AGENT_RESOLUTION',
+        requestedAgentId: agentId,
+        resolvedAgentId: activeAgent.id,
+        resolvedAgentName: activeAgent.name,
+        resolvedSystemPromptPreview: (activeAgent.systemPrompt || '').slice(0, 500),
+        requestedAgentSubAgents: (agent.personalityConfig?.subAgents || []).map((s: any) => s.agentId),
+      }),
+    );
+
     // Detect region for regional adaptation
     let detectedRegion: RegionCode = 'international';
     try {
@@ -384,7 +395,7 @@ export class ChatService {
 
       if (cmd === '/products') {
         try {
-          const { data: products } = await this.productsService.findByTenant(tenantId, { limit: 5 });
+          const { data: products } = await this.productsService.findByTenant(tenantId, { limit: 5, agentId: agent.id });
           if (products.length > 0) {
             cmdReply = `Voici nos produits disponibles:\n\n` + products
               .map((p) => `• ${p.name} — ${p.price}${p.currency === 'EUR' ? '€' : ' ' + p.currency}${p.stock > 0 ? '' : ' (rupture)'}${p.description ? `\n  ${p.description.slice(0, 100)}` : ''}`)
@@ -726,6 +737,19 @@ export class ChatService {
       });
     }
 
+    const contaminatedKnowledge = relevantContext.filter((ctx) => /stiamond|systeme\.io/i.test(ctx));
+    if (contaminatedKnowledge.length > 0) {
+      this.logger.warn(
+        JSON.stringify({
+          debug: 'CONTAMINATION',
+          source: 'knowledge',
+          requestedAgentId: agentId,
+          resolvedAgentId: activeAgent.id,
+          snippets: contaminatedKnowledge.map((c) => c.slice(0, 300)),
+        }),
+      );
+    }
+
     let productsContext = '';
     let carouselProducts: any[] = [];
     try {
@@ -751,6 +775,18 @@ export class ChatService {
       }
     } catch {
       // Products search is optional
+    }
+
+    if (productsContext && /stiamond|systeme\.io/i.test(productsContext)) {
+      this.logger.warn(
+        JSON.stringify({
+          debug: 'CONTAMINATION',
+          source: 'products',
+          requestedAgentId: agentId,
+          resolvedAgentId: activeAgent.id,
+          productsContextPreview: productsContext.slice(0, 500),
+        }),
+      );
     }
 
     // Funnel stage detection and agent behavior adaptation
@@ -896,6 +932,18 @@ export class ChatService {
       }
       usage = { prompt: 0, completion: 0, total: 0 };
     } else {
+      this.logger.log(
+        JSON.stringify({
+          debug: 'LLM_CONTEXT',
+          conversationId: conversation.id,
+          requestedAgentId: agentId,
+          resolvedAgentId: activeAgent.id,
+          resolvedAgentName: activeAgent.name,
+          knowledgeCount: relevantContext.length,
+          productCount: carouselProducts.length,
+          messagePreviews: messages.map((m) => ({ role: m.role, preview: (m.content || '').slice(0, 180) })),
+        }),
+      );
       const result = await this.llmService.generate(messages);
       finalReply = result.content;
       usage = result.usage;
