@@ -9,11 +9,19 @@ export class OllamaProvider implements LLMProvider {
   private readonly baseUrl: string;
   private readonly model: string;
   private readonly embedModel: string;
+  private readonly authHeaders: Record<string, string> = {};
 
   constructor(private readonly config: ConfigService) {
     this.baseUrl = config.get('OLLAMA_URL', 'http://localhost:11434');
     this.model = config.get('OLLAMA_MODEL', 'llama3.2');
     this.embedModel = config.get('OLLAMA_EMBED_MODEL', this.model);
+
+    const clientId = this.config.get<string>('OLLAMA_CF_ACCESS_CLIENT_ID', '');
+    const clientSecret = this.config.get<string>('OLLAMA_CF_ACCESS_CLIENT_SECRET', '');
+    if (clientId && clientSecret) {
+      this.authHeaders['CF-Access-Client-Id'] = clientId;
+      this.authHeaders['CF-Access-Client-Secret'] = clientSecret;
+    }
   }
 
   getProviderName(): string {
@@ -32,7 +40,7 @@ export class OllamaProvider implements LLMProvider {
         messages,
         stream: false,
         options: { num_ctx: 4096 },
-      });
+      }, { headers: this.authHeaders });
       const data = response.data || {};
       const content = data.message?.content || '';
       const prompt = data.prompt_eval_count || 0;
@@ -54,7 +62,7 @@ export class OllamaProvider implements LLMProvider {
         messages,
         stream: true,
         options: { num_ctx: 4096 },
-      }, { responseType: 'stream' });
+      }, { headers: this.authHeaders, responseType: 'stream' });
 
       const stream = response.data;
       let buffer = '';
@@ -86,7 +94,7 @@ export class OllamaProvider implements LLMProvider {
       const response = await axios.post(`${this.baseUrl}/api/embeddings`, {
         model: this.embedModel,
         prompt: text,
-      });
+      }, { headers: this.authHeaders });
       return response.data.embedding;
     } catch (error: any) {
       this.logger.error('Ollama embedding failed', error?.message);
@@ -96,7 +104,7 @@ export class OllamaProvider implements LLMProvider {
 
   async isAvailable(): Promise<boolean> {
     try {
-      await axios.get(`${this.baseUrl}/api/tags`);
+      await axios.get(`${this.baseUrl}/api/tags`, { headers: this.authHeaders });
       return true;
     } catch {
       return false;
