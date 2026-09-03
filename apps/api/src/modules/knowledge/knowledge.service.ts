@@ -466,13 +466,14 @@ export class KnowledgeService implements OnModuleInit {
   async searchByText(tenantId: string, query: string, agentId?: string): Promise<KnowledgeDocument[]> {
     const qb = this.docRepo
       .createQueryBuilder('doc')
-      .where('doc.tenantId = :tenantId', { tenantId })
-      .andWhere('(doc.shared = true OR doc.agentId = :agentId)', { agentId: agentId || '' })
-      .orderBy('doc.createdAt', 'DESC')
-      .take(query.trim() ? 10 : 20);
+      .where('doc.tenantId = :tenantId', { tenantId });
+    if (agentId) {
+      qb.andWhere('doc.agentId = :agentId', { agentId });
+    }
     if (query.trim()) {
       qb.andWhere('doc.content ILIKE :query', { query: `%${query}%` });
     }
+    qb.orderBy('doc.createdAt', 'DESC').take(query.trim() ? 10 : 20);
     return qb.getMany();
   }
 
@@ -482,29 +483,32 @@ export class KnowledgeService implements OnModuleInit {
 
       if (this.hasPgvector) {
         const embeddingStr = `[${queryEmbedding.join(',')}]`;
-        const results = await this.dataSource.query(
-          `SELECT chunk.content, doc."sourceUrl", doc."createdAt"
+        const agentFilter = agentId ? `doc."agentId" = $4` : `1=1`;
+        const sql = `SELECT chunk.content, doc."sourceUrl", doc."createdAt"
            FROM knowledge_chunks chunk
            INNER JOIN knowledge_documents doc ON chunk."documentId" = doc.id
            WHERE doc."tenantId" = $1
              AND chunk.embedding_vector IS NOT NULL
-             AND (doc.shared = true OR doc."agentId" = $4)
+             AND ${agentFilter}
            ORDER BY chunk.embedding_vector <=> $2::vector
-           LIMIT $3`,
-          [tenantId, embeddingStr, MAX_SEARCH_RESULTS, agentId],
-        );
+           LIMIT $3`;
+        const params: (string | number)[] = [tenantId, embeddingStr, MAX_SEARCH_RESULTS];
+        if (agentId) params.push(agentId);
+        const results = await this.dataSource.query(sql, params as any[]);
         if (results.length > 0) return results.map((r: any) => this.formatChunk(r.content, r.sourceUrl, r.createdAt));
       }
 
       // Fallback: JS cosine similarity (loads chunks into memory)
-      const chunks = await this.chunkRepo
+      const chunksQb = this.chunkRepo
         .createQueryBuilder('chunk')
         .innerJoin('chunk.document', 'doc')
         .addSelect(['doc.sourceUrl', 'doc.createdAt'])
         .where('doc.tenantId = :tenantId', { tenantId })
-        .andWhere('chunk.embedding IS NOT NULL')
-        .andWhere('(doc.shared = true OR doc.agentId = :agentId)', { agentId: agentId || '' })
-        .getRawMany();
+        .andWhere('chunk.embedding IS NOT NULL');
+      if (agentId) {
+        chunksQb.andWhere('doc.agentId = :agentId', { agentId });
+      }
+      const chunks = await chunksQb.getRawMany();
 
       if (chunks.length === 0) return [];
 

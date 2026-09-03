@@ -51,8 +51,10 @@ export class LeadsService {
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
-  async findById(id: string, tenantId: string): Promise<Lead> {
-    const lead = await this.leadRepo.findOne({ where: { id, tenantId } });
+  async findById(id: string, tenantId: string, agentId?: string): Promise<Lead> {
+    const where: any = { id, tenantId };
+    if (agentId) where.agentId = agentId;
+    const lead = await this.leadRepo.findOne({ where });
     if (!lead) throw new NotFoundException('Lead not found');
     return lead;
   }

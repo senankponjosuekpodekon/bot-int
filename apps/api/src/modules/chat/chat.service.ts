@@ -195,6 +195,19 @@ export class ChatService {
       }),
     );
 
+    const allowedSubAgentIds = (agent.personalityConfig?.subAgents || []).map((s: any) => s.agentId);
+    if (activeAgent.id !== agent.id && !allowedSubAgentIds.includes(activeAgent.id)) {
+      this.logger.error(
+        JSON.stringify({
+          debug: 'AGENT_RESOLUTION_BLOCKED',
+          requestedAgentId: agentId,
+          resolvedAgentId: activeAgent.id,
+          allowedSubAgentIds,
+        }),
+      );
+      throw new NotFoundException('Agent not found');
+    }
+
     // Detect region for regional adaptation
     let detectedRegion: RegionCode = 'international';
     try {
@@ -267,6 +280,7 @@ export class ChatService {
         where: { id: conversationId, tenantId },
       });
       if (!conversation) throw new NotFoundException('Conversation not found');
+      if (conversation.agentId !== agentId) throw new NotFoundException('Conversation not found');
     } else {
       // Check for returning visitor (cross-conversation memory)
       if (visitorId) {
@@ -356,7 +370,7 @@ export class ChatService {
     if (conversation.leadId) {
       const extracted = this.extractData(userMessage);
       if (extracted.email || extracted.phone || extracted.name) {
-        await this.updateLeadData(conversation.leadId, tenantId, extracted);
+        await this.updateLeadData(conversation.leadId, tenantId, extracted, agentId);
       }
     }
 
@@ -605,7 +619,7 @@ export class ChatService {
       if (visitorId) {
         try {
           const memoryContext = await this.agentMemoryService.recallAsContext(
-            tenantId, MemoryScope.VISITOR, visitorId, 10,
+            tenantId, MemoryScope.VISITOR, visitorId, 10, agentId,
           );
           if (memoryContext) {
             messages.splice(1, 0, {
@@ -619,7 +633,7 @@ export class ChatService {
       } else if (conversation.leadId) {
         try {
           const memoryContext = await this.agentMemoryService.recallAsContext(
-            tenantId, MemoryScope.LEAD, conversation.leadId, 10,
+            tenantId, MemoryScope.LEAD, conversation.leadId, 10, agentId,
           );
           if (memoryContext) {
             messages.splice(1, 0, {
@@ -692,7 +706,7 @@ export class ChatService {
 
     if (conversation.leadId) {
       try {
-        const lead = await this.leadsService.findById(conversation.leadId, tenantId);
+        const lead = await this.leadsService.findById(conversation.leadId, tenantId, agentId);
         const profileParts: string[] = [];
         if (lead.name) profileParts.push(`Nom du visiteur: ${lead.name}`);
         if (lead.email) profileParts.push(`Email: ${lead.email}`);
@@ -839,7 +853,7 @@ export class ChatService {
       });
       if (messageTags.length > 0) {
         try {
-          const lead = await this.leadsService.findById(conversation.leadId, tenantId);
+          const lead = await this.leadsService.findById(conversation.leadId, tenantId, agentId);
           const merged = this.leadTagService.mergeTags(lead.tags, messageTags);
           if (merged.length !== (lead.tags || []).length) {
             await this.leadsService.update(conversation.leadId, tenantId, { tags: merged });
@@ -912,7 +926,7 @@ export class ChatService {
     }
 
     const priceSignal = /\b(budget|prix|co[uû]t|offre|devis|proposition|tarif|combien|solution)\b/i.test(userMessage);
-    const discoveryFacts = await this.getDiscoveryFacts(tenantId, conversation, visitorId);
+    const discoveryFacts = await this.getDiscoveryFacts(tenantId, conversation, visitorId, agentId);
     let finalReply: string;
     let usage: { prompt: number; completion: number; total: number };
     let discoveryRedirect = false;
@@ -932,6 +946,24 @@ export class ChatService {
       }
       usage = { prompt: 0, completion: 0, total: 0 };
     } else {
+      const activeAgentIdentity = `${activeAgent.name || ''} ${activeAgent.systemPrompt || ''}`.toLowerCase();
+      const isStiamondAgent = activeAgentIdentity.includes('stiamond') || activeAgentIdentity.includes('systeme.io');
+      const injectedContext = messages
+        .filter((m) => m.role === 'system')
+        .map((m) => m.content || '')
+        .join('\n');
+      if (!isStiamondAgent && /stiamond|systeme\.io/i.test(injectedContext)) {
+        this.logger.error(
+          JSON.stringify({
+            debug: 'CONTEXT_LEAK_BLOCKED',
+            requestedAgentId: agentId,
+            resolvedAgentId: activeAgent.id,
+            resolvedAgentName: activeAgent.name,
+          }),
+        );
+        throw new Error('Context leak detected: external identity found in LLM context');
+      }
+
       this.logger.log(
         JSON.stringify({
           debug: 'LLM_CONTEXT',
@@ -1097,7 +1129,7 @@ export class ChatService {
 
     if (conversation.leadId && Object.keys(extractedFacts).length > 0) {
       try {
-        await this.updateLeadProfile(conversation.leadId, tenantId, extractedFacts);
+        await this.updateLeadProfile(conversation.leadId, tenantId, extractedFacts, agentId);
       } catch {
         // Profile update is optional
       }
@@ -1229,7 +1261,7 @@ export class ChatService {
     const conversation = await this.convRepo.findOne({ where: { id: conversationId, tenantId } });
     if (!conversation) throw new NotFoundException('Conversation not found');
 
-    const lead = await this.leadsService.findById(leadId, tenantId);
+    const lead = await this.leadsService.findById(leadId, tenantId, conversation.agentId);
     conversation.leadId = lead.id;
     await this.convRepo.save(conversation);
 
@@ -1279,8 +1311,8 @@ export class ChatService {
     return data;
   }
 
-  private async updateLeadData(leadId: string, tenantId: string, data: ExtractedData): Promise<void> {
-    const lead = await this.leadsService.findById(leadId, tenantId);
+  private async updateLeadData(leadId: string, tenantId: string, data: ExtractedData, agentId: string): Promise<void> {
+    const lead = await this.leadsService.findById(leadId, tenantId, agentId);
     const updates: Partial<typeof lead> = {};
     if (data.email && !lead.email) updates.email = data.email;
     if (data.phone && !lead.phone) updates.phone = data.phone;
@@ -1297,8 +1329,8 @@ export class ChatService {
   }
 
   // ─── Build a structured user profile from extracted conversation facts ───
-  private async updateLeadProfile(leadId: string, tenantId: string, facts: Record<string, string>): Promise<void> {
-    const lead = await this.leadsService.findById(leadId, tenantId);
+  private async updateLeadProfile(leadId: string, tenantId: string, facts: Record<string, string>, agentId: string): Promise<void> {
+    const lead = await this.leadsService.findById(leadId, tenantId, agentId);
     const updates: Partial<typeof lead> = {};
     const profile = { ...(lead.profile || {}), ...facts };
 
@@ -1337,7 +1369,7 @@ export class ChatService {
       let leadInfo = '';
       if (conv.leadId) {
         try {
-          const lead = await this.leadsService.findById(conv.leadId, tenantId);
+          const lead = await this.leadsService.findById(conv.leadId, tenantId, agentId);
           if (lead.name) leadInfo += `Nom: ${lead.name}. `;
           if (lead.email) leadInfo += `Email: ${lead.email}. `;
         } catch {}
@@ -1682,11 +1714,12 @@ export class ChatService {
     tenantId: string,
     conversation: Conversation,
     visitorId?: string,
+    agentId?: string,
   ): Promise<{ industry?: string; problem?: string }> {
     const scope = conversation.leadId ? MemoryScope.LEAD : MemoryScope.VISITOR;
     const scopeId = conversation.leadId || visitorId;
     if (!scopeId) return {};
-    const memories = await this.agentMemoryService.recall(tenantId, scope, scopeId, ['industry', 'problem', 'need']);
+    const memories = await this.agentMemoryService.recall(tenantId, scope, scopeId, ['industry', 'problem', 'need'], agentId);
     const industry = memories.find((m) => m.key === 'industry')?.value;
     const problemMem = memories.find((m) => ['problem', 'need'].includes(m.key));
     return { industry, problem: problemMem?.value };

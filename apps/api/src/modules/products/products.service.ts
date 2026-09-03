@@ -48,7 +48,7 @@ export class ProductsService {
       .andWhere('product.isActive = :active', { active: true });
 
     if (params?.agentId) {
-      qb.andWhere('(product.agentId = :agentId OR product.agentId IS NULL)', { agentId: params.agentId });
+      qb.andWhere('product.agentId = :agentId', { agentId: params.agentId });
     }
 
     if (params?.category) {
@@ -118,7 +118,7 @@ export class ProductsService {
       .where('product.tenantId = :tenantId', { tenantId })
       .andWhere('product.isActive = :active', { active: true });
     if (agentId) {
-      qb.andWhere('(product.agentId = :agentId OR product.agentId IS NULL)', { agentId });
+      qb.andWhere('product.agentId = :agentId', { agentId });
     }
     qb.andWhere(
       keywords

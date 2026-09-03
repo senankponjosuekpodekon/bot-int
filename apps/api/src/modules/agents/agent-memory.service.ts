@@ -47,13 +47,17 @@ export class AgentMemoryService {
     scope: MemoryScope,
     scopeId: string,
     keys?: string[],
+    agentId?: string,
   ): Promise<AgentMemory[]> {
     const qb = this.memoryRepo
       .createQueryBuilder('mem')
       .where('mem.tenantId = :tenantId', { tenantId })
       .andWhere('mem.scope = :scope', { scope })
-      .andWhere('mem.scopeId = :scopeId', { scopeId })
-      .orderBy('mem.importance', 'DESC')
+      .andWhere('mem.scopeId = :scopeId', { scopeId });
+    if (agentId) {
+      qb.andWhere('mem.agentId = :agentId', { agentId });
+    }
+    qb.orderBy('mem.importance', 'DESC')
       .addOrderBy('mem.updatedAt', 'DESC');
 
     if (keys && keys.length > 0) {
@@ -67,8 +71,9 @@ export class AgentMemoryService {
     scope: MemoryScope,
     scopeId: string,
     limit = 10,
+    agentId?: string,
   ): Promise<string | null> {
-    const memories = await this.recall(tenantId, scope, scopeId);
+    const memories = await this.recall(tenantId, scope, scopeId, undefined, agentId);
     if (memories.length === 0) return null;
     const top = memories.slice(0, limit);
     return top
