@@ -181,7 +181,7 @@ export class ChatService {
 
     let activeAgent = agent;
     try {
-      activeAgent = await this.agentOrchestrationService.resolveActiveAgent(tenantId, agent, userMessage);
+      activeAgent = await this.agentOrchestrationService.resolveActiveAgent(tenantId, agent, userMessage, agent.businessId);
     } catch (err: any) {
       this.logger.warn(`Orchestration resolution failed: ${err?.message}`);
     }

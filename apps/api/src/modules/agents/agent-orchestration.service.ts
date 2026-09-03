@@ -14,6 +14,7 @@ export class AgentOrchestrationService {
     tenantId: string,
     parentAgent: Agent,
     message: string,
+    businessId?: string,
   ): Promise<Agent> {
     const subAgents = parentAgent.personalityConfig?.subAgents;
     if (!subAgents || subAgents.length === 0) {
@@ -33,6 +34,7 @@ export class AgentOrchestrationService {
       if (score > bestMatch.score) {
         try {
           const agent = await this.agentsService.findById(config.agentId, tenantId);
+          if (businessId && agent.businessId !== businessId) continue;
           bestMatch = { agent, score };
         } catch {
           // Ignore missing or inaccessible sub-agents
