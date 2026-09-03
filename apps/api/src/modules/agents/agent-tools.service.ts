@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { LLMService } from '../chat/llm.service';
+import { ProductsService } from '../products/products.service';
 import { AgentPolicyService } from './agent-policy.service';
 
 // Action risk classification — enforced before any tool executes:
@@ -36,12 +37,15 @@ export class AgentToolsService {
 
   constructor(
     private readonly llmService: LLMService,
+    private readonly productsService: ProductsService,
     private readonly policyService: AgentPolicyService,
   ) {
     this.registerTool(this.webSearchTool());
     this.registerTool(this.calculatorTool());
     this.registerTool(this.calendarTool());
     this.registerTool(this.memoryRecallTool());
+    this.registerTool(this.getProductPriceTool());
+    this.registerTool(this.checkAvailabilityTool());
   }
 
   private registerTool(tool: AgentTool) {
@@ -62,6 +66,7 @@ export class AgentToolsService {
     userMessage: string,
     tenantId: string,
     availableToolNames?: string[],
+    businessId?: string,
   ): Promise<ToolCallResult[]> {
     const tools = availableToolNames
       ? this.getAvailableTools().filter((t) => availableToolNames.includes(t.name))
@@ -106,7 +111,8 @@ If no tool is needed, respond: {"calls": []}`;
         }
 
         try {
-          const result = await tool.execute(call.args || {}, tenantId);
+          const mergedArgs = { ...(call.args || {}), ...(businessId ? { businessId } : {}) };
+          const result = await tool.execute(mergedArgs, tenantId);
           results.push({ toolName: call.tool, result, riskLevel: tool.riskLevel, requiresApproval: false });
         } catch (err: any) {
           this.logger.warn(`Tool ${call.tool} failed: ${err?.message}`);
@@ -207,6 +213,49 @@ If no tool is needed, respond: {"calls": []}`;
         { name: 'key', type: 'string', description: 'Memory key to recall', required: false },
       ],
       execute: async () => 'Memory recall is handled by the chat service',
+    };
+  }
+
+  private getProductPriceTool(): AgentTool {
+    return {
+      name: 'get_product_price',
+      description: 'Get the real price and stock of a product by its name. Returns the matching product only if it belongs to the active business.',
+      riskLevel: ToolRiskLevel.READ,
+      parameters: [
+        { name: 'product', type: 'string', description: 'Product name to look up', required: true },
+      ],
+      execute: async (args) => {
+        const product = args.product?.trim();
+        const businessId = args.businessId?.trim();
+        if (!product) return 'Aucun produit spécifié';
+        try {
+          const { data } = await this.productsService.findByTenant(args.tenantId ?? '', {
+            search: product,
+            businessId,
+            limit: 1,
+          });
+          if (!data || data.length === 0) return `Produit "${product}" non trouvé`;
+          const item = data[0];
+          return `${item.name} — ${item.price ?? 'prix non renseigné'}€ (stock: ${item.stock ?? 'non renseigné'})`;
+        } catch (err: any) {
+          return `Erreur lors de la récupération du prix: ${err?.message}`;
+        }
+      },
+    };
+  }
+
+  private checkAvailabilityTool(): AgentTool {
+    return {
+      name: 'check_availability',
+      description: 'Check real-time availability for an appointment or service.',
+      riskLevel: ToolRiskLevel.READ,
+      parameters: [
+        { name: 'service', type: 'string', description: 'Service or appointment type', required: false },
+      ],
+      execute: async (args) => {
+        const service = args.service?.trim() ?? 'service demandé';
+        return `Aucun créneau n'est configurable automatiquement pour "${service}". La vérification en temps réel nécessite un connecteur de calendrier. Proposez la mise en relation avec un conseiller.`;
+      },
     };
   }
 }

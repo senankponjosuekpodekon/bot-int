@@ -13,10 +13,12 @@ import { AgentOrchestrationService } from './agent-orchestration.service';
 import { AgentPolicyService } from './agent-policy.service';
 import { AgentsController } from './agents.controller';
 import { ChatModule } from '../chat/chat.module';
+import { ProductsModule } from '../products/products.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Agent, AgentMemory, AgentWorkflow, PendingAction]),
+    ProductsModule,
     forwardRef(() => ChatModule),
   ],
   providers: [AgentsService, AgentMemoryService, AgentToolsService, AgentWorkflowService, PendingActionService, AgentOrchestrationService, AgentPolicyService],

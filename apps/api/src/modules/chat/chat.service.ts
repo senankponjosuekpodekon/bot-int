@@ -1014,6 +1014,24 @@ export class ChatService {
       );
       this.assertContextScope(activeBusinessId, currentLead, carouselProducts);
 
+      const needsTooling = /\b(prix|tarif|combien|co[uû]t|stock|disponible|créneau|rdv|réserver|book)\b/i.test(userMessage);
+      if (needsTooling) {
+        const toolResults = await this.agentToolsService.detectAndExecuteTools(
+          userMessage,
+          tenantId,
+          ['get_product_price', 'check_availability'],
+          activeBusinessId,
+        );
+        if (toolResults.length > 0) {
+          messages.push({
+            role: 'system',
+            content: `Résultats d'outils à jour pour cette réponse (prioritaires sur toute information textuelle) :\n${toolResults
+              .map((r) => `- ${r.toolName}: ${r.result}`)
+              .join('\n')}\n\nTu ne dois jamais inventer un prix, un stock ou un créneau. Utilise uniquement ces valeurs si elles correspondent à la question de l'utilisateur.`,
+          });
+        }
+      }
+
       const result = await this.llmService.generate(messages);
       finalReply = result.content;
       usage = result.usage;
