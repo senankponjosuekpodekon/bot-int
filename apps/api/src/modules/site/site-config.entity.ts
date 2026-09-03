@@ -6,10 +6,13 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Agent } from '../agents/agent.entity';
+import { Business } from '../business/business.entity';
 
 @Entity('site_configs')
+@Index(['tenantId', 'businessId', 'agentId'])
 export class SiteConfig {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -23,6 +26,13 @@ export class SiteConfig {
   @ManyToOne(() => Agent, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'agentId' })
   agent: Agent;
+
+  @Column({ nullable: true })
+  businessId?: string;
+
+  @ManyToOne(() => Business, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'businessId' })
+  business?: Business;
 
   @Column({ unique: true })
   slug: string;

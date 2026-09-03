@@ -6,8 +6,10 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Agent } from '../agents/agent.entity';
+import { Business } from '../business/business.entity';
 
 export enum SurveyType {
   PRE_PURCHASE = 'pre_purchase',
@@ -47,6 +49,7 @@ export interface SurveyResponseAnswer {
 }
 
 @Entity('surveys')
+@Index(['tenantId', 'businessId', 'agentId'])
 export class Survey {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -60,6 +63,13 @@ export class Survey {
   @ManyToOne(() => Agent, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'agentId' })
   agent: Agent;
+
+  @Column({ nullable: true })
+  businessId?: string;
+
+  @ManyToOne(() => Business, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'businessId' })
+  business?: Business;
 
   @Column()
   title: string;

@@ -5,7 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Business } from '../business/business.entity';
 
 export enum WorkflowStepType {
   LLM_CALL = 'llm_call',
@@ -24,6 +27,7 @@ export enum WorkflowStatus {
 @Entity('agent_workflows')
 @Index(['tenantId', 'status'])
 @Index(['tenantId', 'agentId'])
+@Index(['tenantId', 'businessId', 'agentId'])
 export class AgentWorkflow {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -33,6 +37,13 @@ export class AgentWorkflow {
 
   @Column({ nullable: true })
   agentId: string;
+
+  @Column({ nullable: true })
+  businessId?: string;
+
+  @ManyToOne(() => Business, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'businessId' })
+  business?: Business;
 
   @Column()
   name: string;

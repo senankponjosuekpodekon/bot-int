@@ -5,10 +5,13 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Agent } from '../agents/agent.entity';
+import { Business } from '../business/business.entity';
 
 @Entity('agent_feedback')
+@Index(['tenantId', 'businessId', 'agentId'])
 export class AgentFeedback {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -22,6 +25,13 @@ export class AgentFeedback {
   @ManyToOne(() => Agent, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'agentId' })
   agent: Agent;
+
+  @Column({ nullable: true })
+  businessId?: string;
+
+  @ManyToOne(() => Business, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'businessId' })
+  business?: Business;
 
   @Column({ type: 'text' })
   userMessage: string;

@@ -5,7 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Business } from '../business/business.entity';
 
 export enum MemoryScope {
   VISITOR = 'visitor',
@@ -16,6 +19,7 @@ export enum MemoryScope {
 @Entity('agent_memories')
 @Index(['tenantId', 'scope', 'scopeId'])
 @Index(['tenantId', 'agentId'])
+@Index(['tenantId', 'businessId', 'agentId'])
 export class AgentMemory {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -25,6 +29,13 @@ export class AgentMemory {
 
   @Column({ nullable: true })
   agentId: string;
+
+  @Column({ nullable: true })
+  businessId?: string;
+
+  @ManyToOne(() => Business, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'businessId' })
+  business?: Business;
 
   @Column({ type: 'enum', enum: MemoryScope, default: MemoryScope.VISITOR })
   scope: MemoryScope;

@@ -8,6 +8,7 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
+import { Business } from '../business/business.entity';
 import { Agent } from '../agents/agent.entity';
 import { Lead } from '../leads/lead.entity';
 
@@ -66,6 +67,7 @@ export enum AcquisitionChannel {
 @Index(['tenantId', 'funnelStage'])
 @Index(['tenantId', 'acquisitionChannel'])
 @Index(['agentId', 'visitorId'])
+@Index(['tenantId', 'businessId', 'agentId'])
 export class Conversation {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -79,6 +81,13 @@ export class Conversation {
 
   @Column()
   tenantId: string;
+
+  @Column({ nullable: true })
+  businessId?: string;
+
+  @ManyToOne(() => Business, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'businessId' })
+  business?: Business;
 
   @Column({ nullable: true })
   visitorId: string;

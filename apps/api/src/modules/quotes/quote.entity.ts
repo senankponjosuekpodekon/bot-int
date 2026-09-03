@@ -4,17 +4,29 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Business } from '../business/business.entity';
 
 export type QuoteStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
 
 @Entity('quotes')
+@Index(['tenantId', 'businessId'])
 export class Quote {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column()
   tenantId: string;
+
+  @Column({ nullable: true })
+  businessId?: string;
+
+  @ManyToOne(() => Business, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'businessId' })
+  business?: Business;
 
   @Column({ nullable: true })
   leadId: string;

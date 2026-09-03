@@ -5,8 +5,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { ToolRiskLevel } from './agent-tools.service';
+import { Business } from '../business/business.entity';
 
 export enum PendingActionStatus {
   PENDING = 'pending',
@@ -19,6 +22,7 @@ export enum PendingActionStatus {
 @Entity('pending_actions')
 @Index(['tenantId', 'status'])
 @Index(['tenantId', 'conversationId'])
+@Index(['tenantId', 'businessId', 'agentId'])
 export class PendingAction {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -31,6 +35,13 @@ export class PendingAction {
 
   @Column({ nullable: true })
   agentId?: string;
+
+  @Column({ nullable: true })
+  businessId?: string;
+
+  @ManyToOne(() => Business, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'businessId' })
+  business?: Business;
 
   @Column()
   toolName: string;

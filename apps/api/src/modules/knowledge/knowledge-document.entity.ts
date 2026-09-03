@@ -5,8 +5,10 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Tenant } from '../tenants/tenant.entity';
+import { Business } from '../business/business.entity';
 
 export enum DocumentType {
   PDF = 'pdf',
@@ -15,7 +17,13 @@ export enum DocumentType {
   DOCX = 'docx',
 }
 
+export enum KnowledgeScope {
+  AGENT = 'agent',
+  BUSINESS = 'business',
+}
+
 @Entity('knowledge_documents')
+@Index(['tenantId', 'businessId', 'agentId'])
 export class KnowledgeDocument {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -47,6 +55,16 @@ export class KnowledgeDocument {
 
   @Column({ default: true })
   shared: boolean;
+
+  @Column({ nullable: true })
+  businessId?: string;
+
+  @ManyToOne(() => Business, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'businessId' })
+  business?: Business;
+
+  @Column({ type: 'enum', enum: KnowledgeScope, default: KnowledgeScope.AGENT })
+  scope: KnowledgeScope;
 
   @CreateDateColumn()
   createdAt: Date;

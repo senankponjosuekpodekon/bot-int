@@ -6,8 +6,10 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Tenant } from '../tenants/tenant.entity';
+import { Business } from '../business/business.entity';
 
 export enum LeadStatus {
   NEW = 'new',
@@ -19,6 +21,7 @@ export enum LeadStatus {
 }
 
 @Entity('leads')
+@Index(['tenantId', 'businessId', 'agentId'])
 export class Lead {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -50,6 +53,13 @@ export class Lead {
 
   @Column({ nullable: true })
   agentId: string;
+
+  @Column({ nullable: true })
+  businessId?: string;
+
+  @ManyToOne(() => Business, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'businessId' })
+  business?: Business;
 
   @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, any>;
