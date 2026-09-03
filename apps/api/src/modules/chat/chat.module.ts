@@ -15,6 +15,7 @@ import { ChatGateway } from './chat.gateway';
 import { OllamaService } from './ollama.service';
 import { OllamaProvider } from './providers/ollama.provider';
 import { OpenAIProvider } from './providers/openai.provider';
+import { FallbackLLMProvider } from './providers/fallback-llm.provider';
 import { LLMService } from './llm.service';
 import { IntentService } from './intent.service';
 import { FormService } from './form.service';
@@ -34,16 +35,10 @@ import { WebhooksModule } from '../webhooks/webhooks.module';
 @Module({
   imports: [TypeOrmModule.forFeature([Conversation, Message, AgentFeedback, Agent]), forwardRef(() => AgentsModule), forwardRef(() => LeadsModule), forwardRef(() => KnowledgeModule), forwardRef(() => ProductsModule), forwardRef(() => IntegrationsModule), forwardRef(() => FlowsModule), forwardRef(() => IntelligenceModule), forwardRef(() => BillingModule), forwardRef(() => RegionsModule), forwardRef(() => WebhooksModule)],
   providers: [
+    OpenAIProvider,
     {
       provide: LLM_PROVIDER,
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        const provider = config.get<string>('LLM_PROVIDER', 'ollama');
-        if (provider === 'openai') {
-          return new OpenAIProvider(config);
-        }
-        return new OllamaProvider(config);
-      },
+      useClass: FallbackLLMProvider,
     },
     LLMService,
     IntentService,
