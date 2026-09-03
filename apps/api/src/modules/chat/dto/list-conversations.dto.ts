@@ -20,6 +20,10 @@ export class ListConversationsDto {
   @IsOptional()
   agentId?: string;
 
+  @IsUUID()
+  @IsOptional()
+  businessId?: string;
+
   @IsEnum(ConversationStatus)
   @IsOptional()
   status?: ConversationStatus;

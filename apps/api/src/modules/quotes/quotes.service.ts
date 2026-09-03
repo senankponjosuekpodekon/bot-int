@@ -17,20 +17,24 @@ export class QuotesService {
     private readonly productsService: ProductsService,
   ) {}
 
-  async findAll(tenantId: string, status?: QuoteStatus): Promise<Quote[]> {
+  async findAll(tenantId: string, status?: QuoteStatus, businessId?: string): Promise<Quote[]> {
     const where: any = { tenantId };
     if (status) where.status = status;
+    if (businessId) where.businessId = businessId;
     return this.quoteRepo.find({ where, order: { createdAt: 'DESC' } });
   }
 
-  async findById(id: string, tenantId: string): Promise<Quote> {
-    const quote = await this.quoteRepo.findOne({ where: { id, tenantId } });
+  async findById(id: string, tenantId: string, businessId?: string): Promise<Quote> {
+    const where: any = { id, tenantId };
+    if (businessId) where.businessId = businessId;
+    const quote = await this.quoteRepo.findOne({ where });
     if (!quote) throw new NotFoundException('Quote not found');
     return quote;
   }
 
   async create(tenantId: string, data: {
     leadId?: string;
+    businessId?: string;
     customerName: string;
     customerEmail?: string;
     customerPhone?: string;
@@ -59,6 +63,7 @@ export class QuotesService {
 
     const quote = this.quoteRepo.create({
       tenantId,
+      businessId: data.businessId,
       leadId: data.leadId,
       quoteNumber,
       status: 'draft' as QuoteStatus,
@@ -85,11 +90,12 @@ export class QuotesService {
     tenantId: string,
     leadId: string,
     flowResponses: Record<string, string>,
+    businessId?: string,
   ): Promise<Quote> {
     const projectType = flowResponses.project || flowResponses.type || 'Service';
     const budget = flowResponses.budget || '';
 
-    const products = await this.productsService.searchRelevant(tenantId, projectType);
+    const products = await this.productsService.searchRelevant(tenantId, projectType, undefined, businessId);
 
     const items = products.length > 0
       ? products.map((p) => ({
@@ -106,6 +112,7 @@ export class QuotesService {
 
     return this.create(tenantId, {
       leadId,
+      businessId,
       customerName: flowResponses.name || 'Client',
       customerEmail: flowResponses.email,
       customerPhone: flowResponses.phone,
@@ -117,17 +124,21 @@ export class QuotesService {
     });
   }
 
-  async updateStatus(id: string, tenantId: string, status: QuoteStatus): Promise<Quote> {
-    await this.quoteRepo.update({ id, tenantId }, { status });
-    return this.findById(id, tenantId);
+  async updateStatus(id: string, tenantId: string, status: QuoteStatus, businessId?: string): Promise<Quote> {
+    const where: any = { id, tenantId };
+    if (businessId) where.businessId = businessId;
+    await this.quoteRepo.update(where, { status });
+    return this.findById(id, tenantId, businessId);
   }
 
-  async delete(id: string, tenantId: string): Promise<void> {
-    const quote = await this.findById(id, tenantId);
+  async delete(id: string, tenantId: string, businessId?: string): Promise<void> {
+    const quote = await this.findById(id, tenantId, businessId);
     if (quote.pdfPath && fs.existsSync(quote.pdfPath)) {
       fs.unlinkSync(quote.pdfPath);
     }
-    await this.quoteRepo.delete({ id, tenantId });
+    const where: any = { id, tenantId };
+    if (businessId) where.businessId = businessId;
+    await this.quoteRepo.delete(where);
   }
 
   async generatePdf(quote: Quote): Promise<string> {

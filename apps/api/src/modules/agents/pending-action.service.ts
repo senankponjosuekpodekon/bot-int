@@ -15,6 +15,7 @@ export class PendingActionService {
     tenantId: string;
     conversationId?: string;
     agentId?: string;
+    businessId?: string;
     toolName: string;
     args: Record<string, string>;
     riskLevel: ToolRiskLevel;
@@ -24,22 +25,29 @@ export class PendingActionService {
     return this.repo.save(action);
   }
 
-  async findById(id: string, tenantId: string): Promise<PendingAction> {
-    const action = await this.repo.findOne({ where: { id, tenantId } });
+  async findById(id: string, tenantId: string, businessId?: string): Promise<PendingAction> {
+    const where: any = { id, tenantId };
+    if (businessId) where.businessId = businessId;
+    const action = await this.repo.findOne({ where });
     if (!action) throw new NotFoundException('Pending action not found');
     return action;
   }
 
-  async findByTenant(tenantId: string, status?: PendingActionStatus): Promise<PendingAction[]> {
+  async findByTenant(tenantId: string, status?: PendingActionStatus, businessId?: string): Promise<PendingAction[]> {
+    const where: any = { tenantId };
+    if (status) where.status = status;
+    if (businessId) where.businessId = businessId;
     return this.repo.find({
-      where: status ? { tenantId, status } : { tenantId },
+      where,
       order: { createdAt: 'DESC' },
       take: 100,
     });
   }
 
-  async approve(id: string, tenantId: string, resolvedBy: string): Promise<PendingAction> {
-    const action = await this.repo.findOne({ where: { id, tenantId } });
+  async approve(id: string, tenantId: string, resolvedBy: string, businessId?: string): Promise<PendingAction> {
+    const where: any = { id, tenantId };
+    if (businessId) where.businessId = businessId;
+    const action = await this.repo.findOne({ where });
     if (!action) throw new NotFoundException('Pending action not found');
     if (action.status !== PendingActionStatus.PENDING) {
       throw new BadRequestException('This action has already been resolved');
@@ -50,8 +58,10 @@ export class PendingActionService {
     return this.repo.save(action);
   }
 
-  async reject(id: string, tenantId: string, resolvedBy: string): Promise<PendingAction> {
-    const action = await this.repo.findOne({ where: { id, tenantId } });
+  async reject(id: string, tenantId: string, resolvedBy: string, businessId?: string): Promise<PendingAction> {
+    const where: any = { id, tenantId };
+    if (businessId) where.businessId = businessId;
+    const action = await this.repo.findOne({ where });
     if (!action) throw new NotFoundException('Pending action not found');
     if (action.status !== PendingActionStatus.PENDING) {
       throw new BadRequestException('This action has already been resolved');

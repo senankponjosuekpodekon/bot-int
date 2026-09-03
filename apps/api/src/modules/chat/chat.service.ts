@@ -1239,6 +1239,10 @@ export class ChatService {
       .skip(skip)
       .take(limit);
 
+    if (params.businessId) {
+      qb.andWhere('conversation.businessId = :businessId', { businessId: params.businessId });
+    }
+
     if (params.agentId) {
       qb.andWhere('conversation.agentId = :agentId', { agentId: params.agentId });
     }
