@@ -16,16 +16,19 @@ for (const path of envCandidates) {
   }
 }
 
+const databaseUrl = process.env.DATABASE_URL;
+
 const dataSource = new DataSource({
   type: 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  port: Number(process.env.DB_PORT || 5432),
-  username: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-  database: process.env.DB_NAME || 'stiamond_agent',
+  ...(databaseUrl ? { url: databaseUrl } : {}),
+  host: databaseUrl ? undefined : (process.env.DB_HOST || 'localhost'),
+  port: databaseUrl ? undefined : Number(process.env.DB_PORT || 5432),
+  username: databaseUrl ? undefined : (process.env.DB_USER || 'postgres'),
+  password: databaseUrl ? undefined : (process.env.DB_PASSWORD || 'postgres'),
+  database: databaseUrl ? undefined : (process.env.DB_NAME || 'stiamond_agent'),
   entities: [join(__dirname, 'src/**/*.entity.{ts,js}')],
   migrations: [join(__dirname, 'src/migrations/*.{ts,js}')],
-  synchronize: process.env.DB_SYNC === 'true' || process.env.NODE_ENV !== 'production',
+  synchronize: databaseUrl ? false : (process.env.DB_SYNC === 'true' || process.env.NODE_ENV !== 'production'),
   logging: process.env.TYPEORM_LOGGING === 'true' || process.env.NODE_ENV === 'development',
 });
 

@@ -72,7 +72,7 @@ export class AddBusinessIsolation1788310000000 implements MigrationInterface {
       FROM "tenants" t
       WHERE NOT EXISTS (
         SELECT 1 FROM "businesses" b
-        WHERE b."tenantId" = t.id AND b."isDefault" = true
+        WHERE b."tenantId"::text = t.id::text AND b."isDefault" = true
       );
     `);
 
@@ -82,7 +82,7 @@ export class AddBusinessIsolation1788310000000 implements MigrationInterface {
       SET "businessId" = b.id
       FROM "businesses" b
       WHERE a."businessId" IS NULL
-        AND b."tenantId" = a."tenantId"
+        AND b."tenantId"::text = a."tenantId"::text
         AND b."isDefault" = true;
     `);
 
@@ -106,7 +106,7 @@ export class AddBusinessIsolation1788310000000 implements MigrationInterface {
         SET "businessId" = a."businessId"
         FROM "agents" a
         WHERE t."businessId" IS NULL
-          AND t."${fk}" = a.id
+          AND a.id::text = t."${fk}"::text
           AND a."businessId" IS NOT NULL;
       `);
     }
@@ -128,7 +128,7 @@ export class AddBusinessIsolation1788310000000 implements MigrationInterface {
         SET "businessId" = b.id
         FROM "businesses" b
         WHERE t."businessId" IS NULL
-          AND b."tenantId" = t."tenantId"
+          AND b."tenantId"::text = t."tenantId"::text
           AND b."isDefault" = true;
       `);
     }
@@ -139,7 +139,7 @@ export class AddBusinessIsolation1788310000000 implements MigrationInterface {
       SET "businessId" = l."businessId"
       FROM "leads" l
       WHERE q."businessId" IS NULL
-        AND q."leadId" = l.id
+        AND q."leadId"::text = l.id::text
         AND l."businessId" IS NOT NULL;
     `);
     await queryRunner.query(`
@@ -147,7 +147,7 @@ export class AddBusinessIsolation1788310000000 implements MigrationInterface {
       SET "businessId" = b.id
       FROM "businesses" b
       WHERE q."businessId" IS NULL
-        AND b."tenantId" = q."tenantId"
+        AND b."tenantId"::text = q."tenantId"::text
         AND b."isDefault" = true;
     `);
 
@@ -157,7 +157,7 @@ export class AddBusinessIsolation1788310000000 implements MigrationInterface {
       SET "businessId" = l."businessId"
       FROM "leads" l
       WHERE lc."businessId" IS NULL
-        AND lc."leadId" = l.id
+        AND lc."leadId"::text = l.id::text
         AND l."businessId" IS NOT NULL;
     `);
 
