@@ -75,6 +75,7 @@ export class Agent {
     audience?: 'all' | 'new_only' | 'returning_only';
     escalationTopics?: string[];
     forbiddenTopics?: string[];
+    allowedIntents?: string[];
     toolsEnabled?: boolean;
     memoryEnabled?: boolean;
     subAgents?: { agentId: string; name: string; keywords: string[] }[];

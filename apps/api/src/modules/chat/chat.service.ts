@@ -5,6 +5,7 @@ import { Conversation, ConversationStatus, ConversationState, FunnelStage, Acqui
 import { Message, MessageRole } from './message.entity';
 import { AgentFeedback } from './agent-feedback.entity';
 import { ChatEventsService } from './chat-events.service';
+import { Agent } from '../agents/agent.entity';
 import { AgentsService } from '../agents/agents.service';
 import { BusinessService } from '../business/business.service';
 import { Business } from '../business/business.entity';
@@ -967,7 +968,24 @@ export class ChatService {
     let usage: { prompt: number; completion: number; total: number };
     let discoveryRedirect = false;
 
-    if (priceSignal && (!discoveryFacts.industry || !discoveryFacts.problem)) {
+    const allowedIntents = this.resolveAllowedIntents(activeAgent, personalityConfig);
+    if (allowedIntents && !allowedIntents.includes(intentResult.intent)) {
+      conversation.status = ConversationStatus.HANDED_OFF;
+      conversation.state = ConversationState.ANSWERING;
+      finalReply = conversation.language === 'en'
+        ? "This question is outside my scope. I'm putting you in touch with a qualified human advisor."
+        : "Cette question sort de mon périmètre. Je vous mets en relation avec un conseiller humain qualifié.";
+      usage = { prompt: 0, completion: 0, total: 0 };
+      this.logger.log(
+        JSON.stringify({
+          debug: 'INTENT_ESCALATION',
+          industry: activeAgent.industry,
+          intent: intentResult.intent,
+          allowedIntents,
+          conversationId: conversation.id,
+        }),
+      );
+    } else if (priceSignal && (!discoveryFacts.industry || !discoveryFacts.problem)) {
       conversation.funnelStage = FunnelStage.AWARENESS;
       conversation.intentScore = Math.min(conversation.intentScore, 20);
       discoveryRedirect = true;
@@ -1413,6 +1431,17 @@ export class ChatService {
         throw new Error('Business context leak detected: product belongs to a different business');
       }
     }
+  }
+
+  private resolveAllowedIntents(agent: Agent, personalityConfig: Record<string, any>): string[] | null {
+    if (personalityConfig?.allowedIntents?.length) {
+      return personalityConfig.allowedIntents as string[];
+    }
+    const strict = ['health', 'medical', 'legal', 'finance'];
+    if (strict.includes(agent?.industry)) {
+      return ['greeting', 'goodbye', 'appointment', 'contact', 'unknown'];
+    }
+    return null;
   }
 
   private assertCriticalFactsGrounded(reply: string, products: any[]): void {
