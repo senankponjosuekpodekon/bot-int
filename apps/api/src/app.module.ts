@@ -28,6 +28,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { ChannelsModule } from './modules/channels/channels.module';
 import { GdprModule } from './modules/gdpr/gdpr.module';
 import { QueueModule } from './modules/queue/queue.module';
+import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { LoggingMiddleware } from './common/logging.middleware';
 import { CacheModule } from './common/cache.module';
 
@@ -94,6 +95,7 @@ import { CacheModule } from './common/cache.module';
     ChannelsModule,
     GdprModule,
     QueueModule,
+    MarketplaceModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
