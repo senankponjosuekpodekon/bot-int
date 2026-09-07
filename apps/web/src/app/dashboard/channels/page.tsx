@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { BarChart3, MessageSquare, Users, TrendingUp, Activity } from 'lucide-react';
-import { analyticsApi } from '@/lib/api';
+import { BarChart3, MessageSquare, Users, TrendingUp, Activity, Plus, Trash2, Webhook } from 'lucide-react';
+import { analyticsApi, webhooksApi } from '@/lib/api';
 
 const CHANNEL_LABELS: Record<string, string> = {
   web: 'Web Chat',
@@ -27,6 +27,11 @@ export default function ChannelAnalyticsPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
+  const [webhooks, setWebhooks] = useState<any[]>([]);
+  const [webhooksLoading, setWebhooksLoading] = useState(true);
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [webhookEvents, setWebhookEvents] = useState('message.replied,lead.created');
+  const [webhookSubmitting, setWebhookSubmitting] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -35,6 +40,51 @@ export default function ChannelAnalyticsPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [days]);
+
+  const loadWebhooks = async () => {
+    setWebhooksLoading(true);
+    try {
+      const res = await webhooksApi.list();
+      setWebhooks(Array.isArray(res) ? res : res?.data ?? []);
+    } catch {
+      // error
+    } finally {
+      setWebhooksLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadWebhooks();
+  }, []);
+
+  const handleAddWebhook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!webhookUrl.trim()) return;
+    setWebhookSubmitting(true);
+    try {
+      await webhooksApi.create({
+        url: webhookUrl.trim(),
+        events: webhookEvents.split(',').map((e) => e.trim()).filter(Boolean),
+      });
+      setWebhookUrl('');
+      setWebhookEvents('message.replied,lead.created');
+      await loadWebhooks();
+    } catch {
+      // error
+    } finally {
+      setWebhookSubmitting(false);
+    }
+  };
+
+  const handleDeleteWebhook = async (id: string) => {
+    if (!confirm('Supprimer ce webhook ?')) return;
+    try {
+      await webhooksApi.delete(id);
+      await loadWebhooks();
+    } catch {
+      // error
+    }
+  };
 
   if (loading) {
     return <div className="p-4 lg:p-6 text-center text-gray-400">Loading analytics...</div>;
@@ -61,6 +111,59 @@ export default function ChannelAnalyticsPage() {
           <option value={30}>Last 30 days</option>
           <option value={90}>Last 90 days</option>
         </select>
+      </div>
+
+      <div className="card p-4 lg:p-6 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Webhook className="w-5 h-5 text-primary-600" />
+          <h2 className="font-semibold text-gray-900">Webhooks sortants</h2>
+        </div>
+        <form onSubmit={handleAddWebhook} className="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-4">
+          <input
+            type="url"
+            value={webhookUrl}
+            onChange={(e) => setWebhookUrl(e.target.value)}
+            placeholder="https://example.com/webhook"
+            className="input lg:col-span-2"
+            required
+          />
+          <input
+            value={webhookEvents}
+            onChange={(e) => setWebhookEvents(e.target.value)}
+            placeholder="message.replied, lead.created"
+            className="input"
+          />
+          <button
+            type="submit"
+            disabled={webhookSubmitting}
+            className="btn-primary flex items-center justify-center gap-2"
+          >
+            {webhookSubmitting ? '...' : <><Plus className="w-4 h-4" /> Ajouter</>}
+          </button>
+        </form>
+        {webhooksLoading ? (
+          <p className="text-sm text-gray-400">Chargement...</p>
+        ) : webhooks.length === 0 ? (
+          <p className="text-sm text-gray-400">Aucun webhook enregistré.</p>
+        ) : (
+          <div className="space-y-2">
+            {webhooks.map((wh) => (
+              <div key={wh.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{wh.url}</p>
+                  <p className="text-xs text-gray-500 truncate">{Array.isArray(wh.events) ? wh.events.join(', ') : wh.events}</p>
+                </div>
+                <button
+                  onClick={() => handleDeleteWebhook(wh.id)}
+                  className="p-2 text-red-400 hover:text-red-600"
+                  title="Supprimer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

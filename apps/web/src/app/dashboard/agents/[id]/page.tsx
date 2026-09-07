@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { agentsApi } from '@/lib/api';
-import { ArrowLeft, Save, Trash2, Bot, Sparkles } from 'lucide-react';
+import { agentsApi, marketplaceApi } from '@/lib/api';
+import { ArrowLeft, Save, Trash2, Bot, Sparkles, Store } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AGENT_TYPES = [
@@ -28,6 +28,8 @@ export default function AgentDetailPage() {
     iceBreakers: [] as string[],
   });
   const [newIceBreaker, setNewIceBreaker] = useState('');
+  const [publishing, setPublishing] = useState(false);
+  const [published, setPublished] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -70,6 +72,27 @@ export default function AgentDetailPage() {
       router.push('/dashboard/agents');
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Suppression impossible');
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!confirm('Publier cet agent sur le Marketplace ?')) return;
+    setPublishing(true);
+    try {
+      await marketplaceApi.publish({
+        agentId: id as string,
+        name: form.name,
+        category: form.type,
+        industry: agent?.industry,
+        description: form.personality,
+        isPublic: true,
+      });
+      toast.success('Agent publié sur le Marketplace');
+      setPublished(true);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Publication impossible');
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -243,6 +266,15 @@ export default function AgentDetailPage() {
           <button type="submit" className="btn-primary flex items-center gap-2" disabled={saving}>
             <Save className="w-4 h-4" />
             {saving ? 'Enregistrement...' : 'Enregistrer'}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary flex items-center gap-2 text-indigo-600 hover:bg-indigo-50"
+            onClick={handlePublish}
+            disabled={publishing || published}
+          >
+            <Store className="w-4 h-4" />
+            {publishing ? 'Publication...' : published ? 'Publié' : 'Publier sur Marketplace'}
           </button>
           <button
             type="button"

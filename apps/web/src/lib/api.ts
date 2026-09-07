@@ -455,6 +455,15 @@ export const marketplaceApi = {
     api.post(`/marketplace/templates/${id}/install`, { businessId }).then((r) => r.data),
 };
 
+export const webhooksApi = {
+  list: () => api.get('/webhooks').then((r) => r.data),
+  create: (data: { url: string; events: string[]; secret?: string }) =>
+    api.post('/webhooks', data).then((r) => r.data),
+  update: (id: string, data: { url?: string; events?: string[]; isActive?: boolean }) =>
+    api.patch(`/webhooks/${id}`, data).then((r) => r.data),
+  delete: (id: string) => api.delete(`/webhooks/${id}`).then((r) => r.data),
+};
+
 export const adminApi = {
   stats: () => api.get('/admin/stats').then((r) => r.data),
   tenants: (page = 1, limit = 20, search?: string) =>
