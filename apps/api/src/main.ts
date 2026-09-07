@@ -3,6 +3,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/global-exception.filter';
 import { initSentry } from './common/sentry';
@@ -91,6 +92,18 @@ async function bootstrap() {
   // Global exception filter
   app.useGlobalFilters(new GlobalExceptionFilter());
 
+  // Request logging middleware
+  app.use((req: any, res: any, next: any) => {
+    const start = Date.now();
+    const userAgent = req.headers?.['user-agent'] ?? '-';
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      const status = res.statusCode;
+      logger.log(`${req.method} ${req.originalUrl} ${status} ${userAgent} +${duration}ms`);
+    });
+    next();
+  });
+
   app.setGlobalPrefix('api');
 
   // Swagger/OpenAPI — disabled in production
@@ -108,8 +121,20 @@ async function bootstrap() {
   }
 
   // Health check endpoint
-  const healthHandler = (req: any, res: any) => {
-    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  const healthHandler = async (req: any, res: any) => {
+    let database: 'ok' | 'down' = 'ok';
+    try {
+      const dataSource = app.get(DataSource) as DataSource;
+      await dataSource.query('SELECT 1');
+    } catch {
+      database = 'down';
+    }
+    const isHealthy = database === 'ok';
+    res.status(isHealthy ? 200 : 503).json({
+      status: isHealthy ? 'ok' : 'error',
+      database,
+      timestamp: new Date().toISOString(),
+    });
   };
   app.use('/health', healthHandler);
   app.use('/api/health', healthHandler);
