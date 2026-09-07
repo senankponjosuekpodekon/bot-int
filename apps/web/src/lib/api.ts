@@ -333,6 +333,10 @@ export const flowsApi = {
   delete: (id: string) => api.delete(`/flows/${id}`).then((r) => r.data),
   respond: (conversationId: string, flowId: string, responses: Record<string, string>) =>
     api.post('/flows/respond', { conversationId, flowId, responses }).then((r) => r.data),
+  executions: (params?: { page?: number; limit?: number; flowId?: string }) =>
+    api.get('/flows/executions', { params }).then((r) => r.data),
+  executionsByFlow: (flowId: string, params?: { page?: number; limit?: number }) =>
+    api.get(`/flows/${flowId}/executions`, { params }).then((r) => r.data),
 };
 
 export const intelligenceApi = {
@@ -439,6 +443,16 @@ export const channelsApi = {
 
 export const businessApi = {
   list: () => api.get('/business').then((r) => r.data as { id: string; name: string; isDefault: boolean }[]),
+};
+
+export const marketplaceApi = {
+  list: (params?: { page?: number; limit?: number; category?: string; industry?: string }) =>
+    api.get('/marketplace/templates', { params }).then((r) => r.data),
+  getById: (id: string) => api.get(`/marketplace/templates/${id}`).then((r) => r.data),
+  publish: (data: { agentId: string; name?: string; description?: string; category?: string; industry?: string; isPublic?: boolean }) =>
+    api.post('/marketplace/templates', data).then((r) => r.data),
+  install: (id: string, businessId?: string) =>
+    api.post(`/marketplace/templates/${id}/install`, { businessId }).then((r) => r.data),
 };
 
 export const adminApi = {

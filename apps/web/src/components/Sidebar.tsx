@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bot, MessageSquare, Users, BookOpen, LayoutDashboard, LogOut, Package, KanbanSquare, BarChart3, Settings, Brain, FileText, Headphones, Code2, Sparkles, ClipboardList, Globe, CreditCard, Crown, Menu, X, Workflow } from 'lucide-react';
+import { Bot, MessageSquare, Users, BookOpen, LayoutDashboard, LogOut, Package, KanbanSquare, BarChart3, Settings, Brain, FileText, Headphones, Code2, Sparkles, ClipboardList, Globe, CreditCard, Crown, Menu, X, Workflow, Store } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import BusinessSelector from '@/components/BusinessSelector';
@@ -27,6 +27,7 @@ const nav = [
   { href: '/dashboard/workflows', label: 'Workflows', icon: Workflow },
   { href: '/dashboard/widget', label: 'Widget & Intégration', icon: Code2 },
   { href: '/dashboard/site', label: 'Site & Landing', icon: Globe },
+  { href: '/dashboard/marketplace', label: 'Marketplace', icon: Store },
   { href: '/dashboard/billing', label: 'Facturation', icon: CreditCard },
   { href: '/dashboard/settings', label: 'Paramètres', icon: Settings },
 ];

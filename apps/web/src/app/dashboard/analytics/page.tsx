@@ -26,10 +26,69 @@ export default function AnalyticsPage() {
           analyticsApi.funnel(),
           analyticsApi.acquisition(),
         ]);
-        setData(d);
+
+        const mappedPerformance = d.agents.performance.map((agent: any) => ({
+          agentId: agent.agentId,
+          agentName: agent.name || 'Agent',
+          agentType: agent.agentType || '',
+          conversations: agent.conversations,
+          leads: agent.conversations,
+          conversions: agent.leads,
+          conversionRate: agent.conversionRate,
+        }));
+        setData({ ...d, agents: { ...d.agents, performance: mappedPerformance } });
         setTimeline(t);
-        setFunnel(f);
-        setAcquisition(a);
+
+        const stageLabels: Record<string, string> = {
+          awareness: 'Awareness',
+          consideration: 'Considération',
+          decision: 'Décision',
+          closed_won: 'Gagné',
+          closed_lost: 'Perdu',
+        };
+        const stageColors: Record<string, string> = {
+          awareness: '#3b82f6',
+          consideration: '#8b5cf6',
+          decision: '#f59e0b',
+          closed_won: '#10b981',
+          closed_lost: '#ef4444',
+        };
+        const mappedStages = f.stages?.map((s: any, i: number) => {
+          const prev = i > 0 ? f.stages[i - 1].count : null;
+          const dropoffRate = prev && prev > 0 ? Math.round(((prev - s.count) / prev) * 100) : 0;
+          return {
+            label: stageLabels[s.stage] || s.stage,
+            color: stageColors[s.stage] || '#9ca3af',
+            count: s.count,
+            avgIntentScore: s.avgIntentScore,
+            dropoffRate,
+          };
+        }) || [];
+        setFunnel({ ...f, stages: mappedStages });
+
+        const channelLabels: Record<string, string> = {
+          web: 'Web widget',
+          whatsapp: 'WhatsApp',
+          instagram: 'Instagram',
+          api: 'API',
+          unknown: 'Inconnu',
+        };
+        const channelColors: Record<string, string> = {
+          web: '#3b82f6',
+          whatsapp: '#10b981',
+          instagram: '#8b5cf6',
+          api: '#f59e0b',
+          unknown: '#9ca3af',
+        };
+        const mappedChannels = a.channels?.map((c: any) => ({
+          label: channelLabels[c.channel] || c.channel,
+          color: channelColors[c.channel] || '#9ca3af',
+          count: c.count,
+          conversions: c.leads,
+          conversionRate: c.conversionRate,
+          avgIntentScore: c.avgIntentScore,
+        })) || [];
+        setAcquisition({ ...a, channels: mappedChannels });
       } catch {
         // error
       } finally {

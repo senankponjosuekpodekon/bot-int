@@ -174,6 +174,23 @@ export default function BillingPage() {
             </div>
           )}
 
+          {/* Actual vs projected usage */}
+          {usage?.actualConversations != null && (
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <h3 className="text-sm font-medium text-gray-900 mb-4">Consommation réelle vs projetée</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="text-center p-4 rounded-xl bg-gray-50">
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">{usage.actualConversations.toLocaleString('fr-FR')}</p>
+                  <p className="text-xs text-gray-500 mt-1">Conversations réelles (mois en cours)</p>
+                </div>
+                <div className="text-center p-4 rounded-xl bg-indigo-50">
+                  <p className="text-2xl sm:text-3xl font-bold text-indigo-600">{usage.projectedConversationsThisMonth?.toLocaleString('fr-FR') || '—'}</p>
+                  <p className="text-xs text-indigo-600 mt-1">Projection fin de mois</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Token consumption */}
           {tokenData && (
             <div className="mt-6 pt-6 border-t border-gray-100">
