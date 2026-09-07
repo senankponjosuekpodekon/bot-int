@@ -8,4 +8,6 @@ export interface NormalizedMessage {
 export interface ChannelAdapter {
   readonly channel: string;
   normalize(tenantId: string, payload: any): Promise<NormalizedMessage | null>;
+  getChallengeResponse?(query: Record<string, any>): string | null;
+  verifySignature?(body: string, signature: string): boolean;
 }

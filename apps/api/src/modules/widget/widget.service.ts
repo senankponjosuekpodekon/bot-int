@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Agent } from '../agents/agent.entity';
 import { ChatService } from '../chat/chat.service';
-import { Conversation } from '../chat/conversation.entity';
+import { Conversation, ConversationChannel } from '../chat/conversation.entity';
 import { Message } from '../chat/message.entity';
 import { FlowsService } from '../flows/flows.service';
 
@@ -62,6 +62,9 @@ export class WidgetService {
       visitorId,
       true,
       { utmParams, referrerUrl, landingPageUrl },
+      undefined,
+      undefined,
+      ConversationChannel.WEB,
     );
   }
 

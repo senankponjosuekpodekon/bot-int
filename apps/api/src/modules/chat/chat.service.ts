@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, MoreThan, Between } from 'typeorm';
-import { Conversation, ConversationStatus, ConversationState, FunnelStage, AcquisitionChannel } from './conversation.entity';
+import { Conversation, ConversationStatus, ConversationState, FunnelStage, AcquisitionChannel, ConversationChannel } from './conversation.entity';
 import { Message, MessageRole } from './message.entity';
 import { AgentFeedback } from './agent-feedback.entity';
 import { ChatEventsService } from './chat-events.service';
@@ -41,6 +41,20 @@ const NAME_PATTERNS = [
   /mon nom est\s+([a-zA-ZÀ-ÿ'-]+)/i,
   /je suis\s+([a-zA-ZÀ-ÿ'-]+)/i,
 ];
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+const FORBIDDEN_BRAND_NAMES = (process.env.FORBIDDEN_BRAND_NAMES || 'stiamond,systeme.io')
+  .split(',')
+  .map((b) => b.trim())
+  .filter(Boolean);
+
+const FORBIDDEN_BRAND_REGEX =
+  FORBIDDEN_BRAND_NAMES.length > 0
+    ? new RegExp(FORBIDDEN_BRAND_NAMES.map(escapeRegExp).join('|'), 'i')
+    : null;
 
 const SLASH_COMMANDS: Record<string, string> = {
   '/help': `Voici les commandes disponibles:
@@ -178,6 +192,7 @@ export class ChatService {
       userSelectedRegion?: RegionCode;
     },
     clientInfo?: Record<string, any>,
+    channel?: ConversationChannel,
   ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: FlowData | null; products?: any[]; funnelStage?: FunnelStage; intentScore?: number; region?: RegionCode }> {
     const agent = await this.agentsService.findById(agentId, tenantId);
     const personalityConfig = agent.personalityConfig || {};
@@ -227,6 +242,7 @@ export class ChatService {
     }
 
     const activeBusinessId = activeAgent.businessId || agent.businessId || (await this.businessService.getDefaultForTenant(tenantId)).id;
+    const activeChannel = channel ?? ConversationChannel.WEB;
     let currentLead: Lead | null = null;
 
     // Detect region for regional adaptation
@@ -256,7 +272,7 @@ export class ChatService {
           if (!targetConv) throw new NotFoundException('Conversation not found');
         } else {
           targetConv = await this.convRepo.save(
-            this.convRepo.create({ agentId, tenantId, visitorId, businessId: activeBusinessId }),
+            this.convRepo.create({ agentId, tenantId, visitorId, businessId: activeBusinessId, channel: activeChannel }),
           );
         }
         await this.msgRepo.save(this.msgRepo.create({ conversationId: targetConv.id, role: MessageRole.USER, content: userMessage }));
@@ -282,7 +298,7 @@ export class ChatService {
           if (!targetConv) throw new NotFoundException('Conversation not found');
         } else {
           targetConv = await this.convRepo.save(
-            this.convRepo.create({ agentId, tenantId, visitorId, businessId: activeBusinessId }),
+            this.convRepo.create({ agentId, tenantId, visitorId, businessId: activeBusinessId, channel: activeChannel }),
           );
         }
         await this.msgRepo.save(this.msgRepo.create({ conversationId: targetConv.id, role: MessageRole.USER, content: userMessage }));
@@ -317,7 +333,7 @@ export class ChatService {
 
       conversation = await this.convRepo.save(
         this.convRepo.create({
-          agentId, tenantId, visitorId, businessId: activeBusinessId,
+          agentId, tenantId, visitorId, businessId: activeBusinessId, channel: activeChannel,
           utmParams: tracking?.utmParams || {},
           referrerUrl: tracking?.referrerUrl || null,
           landingPageUrl: tracking?.landingPageUrl || null,
@@ -339,7 +355,7 @@ export class ChatService {
         conversationId: conversation.id,
         agentId,
         visitorId,
-        channel: 'web',
+        channel: activeChannel,
       }).catch(() => {});
 
       if (captureLead !== false) {
@@ -347,7 +363,7 @@ export class ChatService {
           message: userMessage,
           source: 'chat',
           acquisitionChannel: conversation.acquisitionChannel,
-          channel: 'web',
+          channel: activeChannel,
           language: regionContext?.browserLanguage,
           agentType: agent.type,
         });
@@ -788,7 +804,9 @@ export class ChatService {
       });
     }
 
-    const contaminatedKnowledge = relevantContext.filter((ctx) => /stiamond|systeme\.io/i.test(ctx));
+    const contaminatedKnowledge = FORBIDDEN_BRAND_REGEX
+      ? relevantContext.filter((ctx) => FORBIDDEN_BRAND_REGEX.test(ctx))
+      : [];
     if (contaminatedKnowledge.length > 0) {
       this.logger.warn(
         JSON.stringify({

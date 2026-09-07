@@ -16,6 +16,7 @@ const CHUNK_OVERLAP = 100;
 const MAX_SEARCH_RESULTS = 3;
 const MAX_CRAWL_PAGES = 5;
 const EMBEDDING_DIMS = 3072;
+const SIMILARITY_THRESHOLD = Number(process.env.KNOWLEDGE_SIMILARITY_THRESHOLD) || 0.2;
 
 interface ScrapedPage {
   url: string;
@@ -507,26 +508,34 @@ export class KnowledgeService implements OnModuleInit {
 
       if (this.hasPgvector) {
         const embeddingStr = `[${queryEmbedding.join(',')}]`;
+        const maxDistance = 1 - SIMILARITY_THRESHOLD;
         let sql = `SELECT chunk.content, doc."sourceUrl", doc."createdAt"
            FROM knowledge_chunks chunk
            INNER JOIN knowledge_documents doc ON chunk."documentId" = doc.id
            WHERE doc."tenantId" = $1
-             AND chunk.embedding_vector IS NOT NULL`;
-        const params: (string | number)[] = [tenantId, embeddingStr, MAX_SEARCH_RESULTS];
+             AND chunk.embedding_vector IS NOT NULL
+             AND (chunk.embedding_vector <=> $2::vector) <= $3`;
+        const params: (string | number)[] = [tenantId, embeddingStr, maxDistance];
+        let paramIndex = 3;
         if (businessId) {
-          sql += ` AND doc."businessId" = $4`;
+          paramIndex += 1;
+          sql += ` AND doc."businessId" = $${paramIndex}`;
           params.push(businessId);
           if (agentId) {
-            sql += ` AND ((doc.scope = 'business') OR (doc.scope = 'agent' AND doc."agentId" = $5))`;
+            paramIndex += 1;
+            sql += ` AND ((doc.scope = 'business') OR (doc.scope = 'agent' AND doc."agentId" = $${paramIndex}))`;
             params.push(agentId);
           } else {
             sql += ` AND (doc.scope = 'business')`;
           }
         } else if (agentId) {
-          sql += ` AND doc."agentId" = $4`;
+          paramIndex += 1;
+          sql += ` AND doc."agentId" = $${paramIndex}`;
           params.push(agentId);
         }
-        sql += ` ORDER BY chunk.embedding_vector <=> $2::vector LIMIT $3`;
+        paramIndex += 1;
+        params.push(MAX_SEARCH_RESULTS);
+        sql += ` ORDER BY (chunk.embedding_vector <=> $2::vector) LIMIT $${paramIndex}`;
         const results = await this.dataSource.query(sql, params as any[]);
         if (results.length > 0) return results.map((r: any) => this.formatChunk(r.content, r.sourceUrl, r.createdAt));
       }
@@ -568,6 +577,7 @@ export class KnowledgeService implements OnModuleInit {
           }
           return { ...row, score: this.cosineSimilarity(queryEmbedding, embedding) };
         })
+        .filter((row: any) => row.score >= SIMILARITY_THRESHOLD)
         .sort((a: any, b: any) => b.score - a.score)
         .slice(0, MAX_SEARCH_RESULTS);
 

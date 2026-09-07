@@ -60,6 +60,8 @@ export class ChannelsController {
       true,
       undefined,
       undefined,
+      undefined,
+      channel,
     );
 
     this.webhookService
