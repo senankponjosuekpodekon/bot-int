@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, MessageSquare, Users, TrendingUp, Activity, Plus, Trash2, Webhook } from 'lucide-react';
 import { analyticsApi, webhooksApi } from '@/lib/api';
+import ChannelIntegrations from './ChannelIntegrations';
 
 const CHANNEL_LABELS: Record<string, string> = {
   web: 'Web Chat',
@@ -112,6 +113,8 @@ export default function ChannelAnalyticsPage() {
           <option value={90}>Last 90 days</option>
         </select>
       </div>
+
+      <ChannelIntegrations />
 
       <div className="card p-4 lg:p-6 mb-6">
         <div className="flex items-center gap-2 mb-4">
