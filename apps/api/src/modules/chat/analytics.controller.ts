@@ -52,6 +52,8 @@ export class AnalyticsController {
       this.agentRepo.count({ where: { tenantId, isActive: true } }),
     ]);
 
+    const agentPerformance = await this.getAgentPerformance(tenantId, start, end);
+
     return {
       conversations: {
         total,
@@ -81,9 +83,35 @@ export class AnalyticsController {
       agents: {
         total: agentsTotal,
         active: agentsActive,
-        performance: [],
+        performance: agentPerformance,
       },
     };
+  }
+
+  private async getAgentPerformance(tenantId: string, start: Date, end: Date): Promise<any[]> {
+    const rows = await this.convRepo
+      .createQueryBuilder('conv')
+      .leftJoin('conv.agent', 'agent')
+      .where('conv.tenantId = :tenantId', { tenantId })
+      .andWhere('conv.createdAt BETWEEN :start AND :end', { start, end })
+      .select('agent.id', 'agentId')
+      .addSelect('agent.name', 'agentName')
+      .addSelect('COUNT(*)', 'conversations')
+      .addSelect('SUM(CASE WHEN conv.leadId IS NOT NULL THEN 1 ELSE 0 END)', 'leads')
+      .addSelect("SUM(CASE WHEN conv.status = 'handed_off' THEN 1 ELSE 0 END)", 'handoffs')
+      .groupBy('agent.id, agent.name')
+      .getRawMany();
+
+    return rows.map((r: any) => ({
+      agentId: r.agentId,
+      name: r.agentName,
+      conversations: Number(r.conversations),
+      leads: Number(r.leads),
+      handoffs: Number(r.handoffs),
+      conversionRate: Number(r.conversations) > 0
+        ? Math.round((Number(r.leads) / Number(r.conversations)) * 100)
+        : 0,
+    }));
   }
 
   @Get('timeline')
@@ -160,14 +188,88 @@ export class AnalyticsController {
   @Get('funnel')
   @ApiOperation({ summary: 'Get funnel analytics' })
   @ApiResponse({ status: 200, description: 'Funnel stages' })
-  funnel() {
-    return { stages: [], summary: { conversionRate: 0, wonCount: 0, lostCount: 0, highIntentLeads: 0 } };
+  async funnel(@Request() req, @Query('days') days = '30') {
+    const tenantId = req.user.tenantId;
+    const daysNum = Math.min(parseInt(days, 10) || 30, 365);
+    const end = new Date();
+    const start = new Date(end.getTime() - daysNum * 24 * 60 * 60 * 1000);
+
+    const rows = await this.convRepo
+      .createQueryBuilder('conv')
+      .where('conv.tenantId = :tenantId', { tenantId })
+      .andWhere('conv.createdAt BETWEEN :start AND :end', { start, end })
+      .select('conv.funnelStage', 'stage')
+      .addSelect('COUNT(*)', 'count')
+      .addSelect('SUM(CASE WHEN conv.leadId IS NOT NULL THEN 1 ELSE 0 END)', 'leads')
+      .addSelect('AVG(conv.intentScore)', 'avgIntentScore')
+      .groupBy('conv.funnelStage')
+      .getRawMany();
+
+    const total = rows.reduce((s, r) => s + Number(r.count), 0);
+    const totalLeads = rows.reduce((s, r) => s + Number(r.leads), 0);
+    const won = rows.find((r) => r.stage === 'closed_won');
+    const lost = rows.find((r) => r.stage === 'closed_lost');
+    const wonCount = won ? Number(won.count) : 0;
+    const lostCount = lost ? Number(lost.count) : 0;
+    const highIntentStages = ['consideration', 'decision', 'closed_won'];
+    const highIntentLeads = rows
+      .filter((r) => highIntentStages.includes(r.stage))
+      .reduce((s, r) => s + Number(r.leads), 0);
+
+    return {
+      stages: rows.map((r) => ({
+        stage: r.stage,
+        count: Number(r.count),
+        leads: Number(r.leads),
+        avgIntentScore: Math.round(Number(r.avgIntentScore || 0) * 100) / 100,
+      })),
+      summary: {
+        conversionRate: total > 0 ? Math.round((totalLeads / total) * 100) : 0,
+        wonCount,
+        lostCount,
+        highIntentLeads,
+      },
+    };
   }
 
   @Get('acquisition')
   @ApiOperation({ summary: 'Get acquisition channel analytics' })
   @ApiResponse({ status: 200, description: 'Acquisition channels' })
-  acquisition() {
-    return { channels: [], topCampaigns: [], summary: { totalTracked: 0, totalUntracked: 0 } };
+  async acquisition(@Request() req, @Query('days') days = '30') {
+    const tenantId = req.user.tenantId;
+    const daysNum = Math.min(parseInt(days, 10) || 30, 365);
+    const end = new Date();
+    const start = new Date(end.getTime() - daysNum * 24 * 60 * 60 * 1000);
+
+    const rows = await this.convRepo
+      .createQueryBuilder('conv')
+      .where('conv.tenantId = :tenantId', { tenantId })
+      .andWhere('conv.createdAt BETWEEN :start AND :end', { start, end })
+      .select('conv.acquisitionChannel', 'channel')
+      .addSelect('COUNT(*)', 'count')
+      .addSelect('SUM(CASE WHEN conv.leadId IS NOT NULL THEN 1 ELSE 0 END)', 'leads')
+      .groupBy('conv.acquisitionChannel')
+      .getRawMany();
+
+    const channels = rows.map((r) => ({
+      channel: r.channel,
+      count: Number(r.count),
+      leads: Number(r.leads),
+      conversionRate: Number(r.count) > 0
+        ? Math.round((Number(r.leads) / Number(r.count)) * 100)
+        : 0,
+    }));
+
+    const totalTracked = channels
+      .filter((c) => c.channel !== 'unknown')
+      .reduce((s, c) => s + c.count, 0);
+    const untracked = channels.find((c) => c.channel === 'unknown');
+    const totalUntracked = untracked ? untracked.count : 0;
+
+    return {
+      channels,
+      topCampaigns: [],
+      summary: { totalTracked, totalUntracked },
+    };
   }
 }
