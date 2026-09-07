@@ -2,12 +2,17 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ChatFlow } from './chat-flow.entity';
+import { FlowExecution, FlowExecutionStatus, FlowExecutionTrigger } from './flow-execution.entity';
+import { FlowActionExecutor, FlowActionResult } from './flow-action-executor';
 
 @Injectable()
 export class FlowsService {
   constructor(
     @InjectRepository(ChatFlow)
     private readonly repo: Repository<ChatFlow>,
+    @InjectRepository(FlowExecution)
+    private readonly executionRepo: Repository<FlowExecution>,
+    private readonly actionExecutor: FlowActionExecutor,
   ) {}
 
   async findByAgent(tenantId: string, agentId: string): Promise<ChatFlow[]> {
@@ -57,27 +62,79 @@ export class FlowsService {
     conversationId: string,
     flowId: string,
     responses: Record<string, string>,
-  ): Promise<{ summary: string; extractedData: Record<string, string> }> {
+    triggeredBy: FlowExecutionTrigger = FlowExecutionTrigger.MANUAL,
+  ): Promise<{ summary: string; extractedData: Record<string, string>; actionResults: FlowActionResult[] }> {
     const flow = await this.repo.findOne({ where: { id: flowId, tenantId } });
     if (!flow) throw new NotFoundException('Flow not found');
 
     const summaryParts: string[] = [];
     const extractedData: Record<string, string> = {};
+    let status = FlowExecutionStatus.COMPLETED;
+    let errorMessage: string | undefined;
+    let actionResults: FlowActionResult[] = [];
 
-    for (const field of flow.fields) {
-      const value = responses[field.id];
-      if (value) {
-        summaryParts.push(`${field.label}: ${value}`);
-        extractedData[field.id] = value;
-        if (field.type === 'email') extractedData['email'] = value;
-        if (field.type === 'phone') extractedData['phone'] = value;
-        if (field.id === 'name' || field.label.toLowerCase().includes('nom')) extractedData['name'] = value;
+    try {
+      for (const field of flow.fields) {
+        const value = responses[field.id];
+        if (value) {
+          summaryParts.push(`${field.label}: ${value}`);
+          extractedData[field.id] = value;
+          if (field.type === 'email') extractedData['email'] = value;
+          if (field.type === 'phone') extractedData['phone'] = value;
+          if (field.id === 'name' || field.label.toLowerCase().includes('nom')) extractedData['name'] = value;
+        }
       }
+
+      const summary = summaryParts.join('\n');
+      actionResults = await this.actionExecutor.execute(flow.actions, {
+        tenantId,
+        agentId: flow.agentId,
+        flowId,
+        conversationId,
+        extractedData,
+        summary,
+      });
+    } catch (err: any) {
+      status = FlowExecutionStatus.FAILED;
+      errorMessage = err?.message;
+      throw err;
+    } finally {
+      await this.executionRepo.save(
+        this.executionRepo.create({
+          tenantId,
+          flowId,
+          agentId: flow.agentId,
+          conversationId,
+          status,
+          triggeredBy,
+          input: responses,
+          output: { summary: summaryParts.join('\n'), extractedData, actionResults },
+          errorMessage,
+        }),
+      );
     }
 
     return {
       summary: summaryParts.join('\n'),
       extractedData,
+      actionResults,
     };
+  }
+
+  async findExecutions(
+    tenantId: string,
+    flowId?: string,
+    page = 1,
+    limit = 20,
+  ): Promise<{ data: FlowExecution[]; total: number; page: number; limit: number; totalPages: number }> {
+    const where: any = { tenantId };
+    if (flowId) where.flowId = flowId;
+    const [data, total] = await this.executionRepo.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 }

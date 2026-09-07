@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { IsString, IsNotEmpty, IsArray, IsOptional, IsBoolean, IsObject } from 'class-validator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { FlowsService } from './flows.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UpdateFlowDto } from './dto/update-flow.dto';
+import { PaginationDto } from '../../common/pagination.dto';
 
 class FlowFieldDto {
   @IsString() id: string;
@@ -19,6 +20,8 @@ class CreateFlowDto {
   @IsString() @IsNotEmpty() title: string;
   @IsString() @IsOptional() description?: string;
   @IsArray() fields: any[];
+  @IsArray() @IsOptional()
+  actions?: { type: string; config?: Record<string, any> }[];
 }
 
 class FlowResponseDto {
@@ -81,5 +84,19 @@ export class FlowsController {
   @ApiResponse({ status: 200, description: 'Flow response processed' })
   respond(@Request() req, @Body() dto: FlowResponseDto) {
     return this.service.processFlowResponse(req.user.tenantId, dto.conversationId, dto.flowId, dto.responses);
+  }
+
+  @Get('executions')
+  @ApiOperation({ summary: 'List all flow executions for tenant' })
+  @ApiResponse({ status: 200, description: 'Paginated flow executions' })
+  findAllExecutions(@Request() req, @Query() query: PaginationDto) {
+    return this.service.findExecutions(req.user.tenantId, undefined, query.page, query.limit);
+  }
+
+  @Get(':id/executions')
+  @ApiOperation({ summary: 'List executions for a specific flow' })
+  @ApiResponse({ status: 200, description: 'Paginated flow executions' })
+  findFlowExecutions(@Request() req, @Param('id') id: string, @Query() query: PaginationDto) {
+    return this.service.findExecutions(req.user.tenantId, id, query.page, query.limit);
   }
 }

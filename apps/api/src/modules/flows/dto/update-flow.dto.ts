@@ -18,5 +18,7 @@ export class UpdateFlowDto {
   @IsString() @IsOptional() description?: string;
   @IsArray() @IsOptional() @ValidateNested({ each: true }) @Type(() => FlowFieldDto)
   fields?: FlowFieldDto[];
+  @IsArray() @IsOptional()
+  actions?: { type: string; config?: Record<string, any> }[];
   @IsBoolean() @IsOptional() isActive?: boolean;
 }

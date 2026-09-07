@@ -47,6 +47,12 @@ export class ChatFlow {
     required?: boolean;
   }[];
 
+  @Column({ type: 'jsonb', nullable: true, default: [] })
+  actions?: {
+    type: string;
+    config?: Record<string, any>;
+  }[];
+
   @Column({ default: true })
   isActive: boolean;
 
