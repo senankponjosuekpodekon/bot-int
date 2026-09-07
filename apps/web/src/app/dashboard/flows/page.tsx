@@ -1,15 +1,23 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { List, Play, Settings, Trash2, Plus, Loader2, Activity, ChevronDown, ChevronUp } from 'lucide-react';
+import { List, Play, Settings, Trash2, Plus, Loader2, Activity, X, Save } from 'lucide-react';
 import { flowsApi } from '@/lib/api';
+import { toast } from 'sonner';
+import FlowForm from './FlowForm';
 
 interface Flow {
   id: string;
   title: string;
   description?: string;
-  active: boolean;
+  isActive: boolean;
+  agentId?: string;
   fields?: any[];
   actions?: any[];
+}
+
+interface Agent {
+  id: string;
+  name: string;
 }
 
 interface FlowExecution {
@@ -27,7 +35,8 @@ export default function FlowsPage() {
   const [loading, setLoading] = useState(true);
   const [executions, setExecutions] = useState<Record<string, FlowExecution[]>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [executing, setExecuting] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<Flow | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -35,7 +44,7 @@ export default function FlowsPage() {
       const res = await flowsApi.list();
       setFlows(Array.isArray(res) ? res : res?.data ?? []);
     } catch {
-      // error
+      toast.error('Erreur lors du chargement des flux');
     } finally {
       setLoading(false);
     }
@@ -58,6 +67,39 @@ export default function FlowsPage() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Supprimer ce flux ?')) return;
+    try {
+      await flowsApi.delete(id);
+      toast.success('Flux supprimé');
+      load();
+    } catch {
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const handleEdit = (flow: Flow) => {
+    setEditing(flow);
+    setShowForm(true);
+  };
+
+  const handleSave = async (data: any) => {
+    try {
+      if (editing) {
+        await flowsApi.update(editing.id, data);
+        toast.success('Flux mis à jour');
+      } else {
+        await flowsApi.create(data);
+        toast.success('Flux créé');
+      }
+      setShowForm(false);
+      setEditing(null);
+      load();
+    } catch {
+      toast.error('Erreur lors de l\'enregistrement');
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-4 lg:p-6 text-center text-gray-500 flex items-center justify-center gap-2">
@@ -77,10 +119,14 @@ export default function FlowsPage() {
           </h1>
           <p className="text-gray-500 text-sm mt-1">Formulaires conversationnels et audit d'exécution</p>
         </div>
-        <button className="btn-primary flex items-center gap-2">
+        <button onClick={() => { setEditing(null); setShowForm(true); }} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" /> New Flow
         </button>
       </div>
+
+      {showForm && (
+        <FlowForm flow={editing} onSave={handleSave} onCancel={() => { setShowForm(false); setEditing(null); }} />
+      )}
 
       {flows.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
@@ -95,8 +141,8 @@ export default function FlowsPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="font-medium text-gray-900">{flow.title}</h3>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${flow.active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {flow.active ? 'Actif' : 'Inactif'}
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${flow.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {flow.isActive ? 'Actif' : 'Inactif'}
                     </span>
                   </div>
                   {flow.description && <p className="text-gray-500 text-sm mt-1">{flow.description}</p>}
@@ -113,10 +159,18 @@ export default function FlowsPage() {
                   >
                     <Activity className="w-4 h-4" />
                   </button>
-                  <button className="p-2 text-gray-400 hover:text-gray-600" title="Edit">
+                  <button
+                    onClick={() => handleEdit(flow)}
+                    className="p-2 text-gray-400 hover:text-gray-600"
+                    title="Edit"
+                  >
                     <Settings className="w-4 h-4" />
                   </button>
-                  <button className="p-2 text-red-400 hover:text-red-600" title="Delete">
+                  <button
+                    onClick={() => handleDelete(flow.id)}
+                    className="p-2 text-red-400 hover:text-red-600"
+                    title="Delete"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
