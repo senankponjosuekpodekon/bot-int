@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThanOrEqual } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Subscription, SubscriptionStatus, PlanType, PLAN_LIMITS } from './subscription.entity';
 import { Conversation } from '../chat/conversation.entity';
@@ -313,14 +313,17 @@ export class BillingService {
     const sub = await this.getSubscription(tenantId);
     const limits = PLAN_LIMITS[sub.plan];
 
-    // Count actual conversations this month
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
+    // Count actual conversations this month and project month-end volume
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const elapsedDays = Math.max(1, now.getDate());
 
     const actualConversations = await this.convRepo.count({
-      where: { tenantId },
+      where: { tenantId, createdAt: MoreThanOrEqual(monthStart) },
     });
+
+    const projectedConversationsThisMonth = Math.round((actualConversations / elapsedDays) * daysInMonth);
 
     const trialDaysLeft = sub.trialEndsAt
       ? Math.max(0, Math.ceil((new Date(sub.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
@@ -332,6 +335,8 @@ export class BillingService {
       conversationsUsed: sub.conversationsThisMonth,
       conversationsLimit: limits.conversationsPerMonth,
       conversationsRemaining: Math.max(0, limits.conversationsPerMonth - sub.conversationsThisMonth),
+      actualConversations,
+      projectedConversationsThisMonth,
       maxAgents: limits.maxAgents,
       channels: limits.channels,
       customDomain: limits.customDomain,
@@ -345,7 +350,6 @@ export class BillingService {
       trialEndsAt: sub.trialEndsAt,
       trialDaysLeft,
       currentPeriodEnd: sub.currentPeriodEnd,
-      actualConversations,
     };
   }
 

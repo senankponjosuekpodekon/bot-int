@@ -191,4 +191,31 @@ describe('BillingService', () => {
       expect(sub.overageConversations).toBe(0);
     });
   });
+
+  describe('getUsageStats', () => {
+    it('should return monthly actual and projected conversations', async () => {
+      const sub = {
+        tenantId: 't1',
+        plan: PlanType.STARTER,
+        status: SubscriptionStatus.ACTIVE,
+        conversationsThisMonth: 100,
+        overageConversations: 0,
+        trialEndsAt: null,
+      } as any;
+      mockSubRepo.findOne.mockResolvedValue(sub);
+      mockSubRepo.save.mockResolvedValue(sub);
+      mockConvRepo.count.mockResolvedValue(10);
+
+      const result = await service.getUsageStats('t1');
+
+      expect(mockConvRepo.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ tenantId: 't1' }),
+        }),
+      );
+      expect(result.actualConversations).toBe(10);
+      expect(result.projectedConversationsThisMonth).toBeGreaterThanOrEqual(10);
+      expect(result.conversationsUsed).toBe(100);
+    });
+  });
 });
