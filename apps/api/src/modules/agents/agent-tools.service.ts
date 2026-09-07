@@ -20,6 +20,7 @@ export interface AgentTool {
   description: string;
   riskLevel: ToolRiskLevel;
   parameters: { name: string; type: string; description: string; required: boolean }[];
+  allowedIndustries?: string[];
   execute: (args: Record<string, string>, tenantId: string) => Promise<string>;
 }
 
@@ -52,12 +53,18 @@ export class AgentToolsService {
     this.tools.set(tool.name, tool);
   }
 
-  getAvailableTools(): AgentTool[] {
-    return Array.from(this.tools.values());
+  private isToolAllowed(tool: AgentTool, agent?: { industry?: string }): boolean {
+    if (!agent || !agent.industry) return true;
+    if (!tool.allowedIndustries || tool.allowedIndustries.length === 0) return true;
+    return tool.allowedIndustries.map((i) => i.toLowerCase()).includes(agent.industry.toLowerCase());
   }
 
-  getToolsDescription(): string {
-    return this.getAvailableTools()
+  getAvailableTools(agent?: { industry?: string }): AgentTool[] {
+    return Array.from(this.tools.values()).filter((t) => this.isToolAllowed(t, agent));
+  }
+
+  getToolsDescription(agent?: { industry?: string }): string {
+    return this.getAvailableTools(agent)
       .map((t) => `- ${t.name}: ${t.description}. Parameters: ${t.parameters.map((p) => `${p.name}(${p.type}${p.required ? ', required' : ''})`).join(', ')}`)
       .join('\n');
   }
@@ -67,10 +74,11 @@ export class AgentToolsService {
     tenantId: string,
     availableToolNames?: string[],
     businessId?: string,
+    agent?: { id?: string; industry?: string },
   ): Promise<ToolCallResult[]> {
-    const tools = availableToolNames
-      ? this.getAvailableTools().filter((t) => availableToolNames.includes(t.name))
-      : this.getAvailableTools();
+    const tools = this.getAvailableTools(agent).filter((t) =>
+      !availableToolNames || availableToolNames.includes(t.name),
+    );
 
     if (tools.length === 0) return [];
 
@@ -111,7 +119,20 @@ If no tool is needed, respond: {"calls": []}`;
         }
 
         try {
-          const mergedArgs = { ...(call.args || {}), ...(businessId ? { businessId } : {}) };
+          const mergedArgs: Record<string, string> = {
+            ...(call.args || {}),
+            tenantId,
+            ...(businessId ? { businessId } : {}),
+          };
+          this.logger.log(
+            JSON.stringify({
+              audit: 'TOOL_EXECUTION',
+              tool: tool.name,
+              tenantId,
+              businessId,
+              agentId: agent?.id,
+            }),
+          );
           const result = await tool.execute(mergedArgs, tenantId);
           results.push({ toolName: call.tool, result, riskLevel: tool.riskLevel, requiresApproval: false });
         } catch (err: any) {
@@ -129,7 +150,7 @@ If no tool is needed, respond: {"calls": []}`;
   private webSearchTool(): AgentTool {
     return {
       name: 'web_search',
-      description: 'Search the web for current information using DuckDuckGo',
+      description: 'Search the web for current information',
       riskLevel: ToolRiskLevel.READ,
       parameters: [
         { name: 'query', type: 'string', description: 'Search query', required: true },
@@ -221,6 +242,7 @@ If no tool is needed, respond: {"calls": []}`;
       name: 'get_product_price',
       description: 'Get the real price and stock of a product by its name. Returns the matching product only if it belongs to the active business.',
       riskLevel: ToolRiskLevel.READ,
+      allowedIndustries: ['ecommerce', 'retail', 'general'],
       parameters: [
         { name: 'product', type: 'string', description: 'Product name to look up', required: true },
       ],
@@ -249,6 +271,7 @@ If no tool is needed, respond: {"calls": []}`;
       name: 'check_availability',
       description: 'Check real-time availability for an appointment or service.',
       riskLevel: ToolRiskLevel.READ,
+      allowedIndustries: ['service', 'medical', 'restaurant', 'general'],
       parameters: [
         { name: 'service', type: 'string', description: 'Service or appointment type', required: false },
       ],

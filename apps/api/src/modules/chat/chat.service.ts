@@ -687,7 +687,7 @@ export class ChatService {
     // Tools (web search, calculator, calendar) are enabled by default and can be disabled explicitly.
     if (personalityConfig.toolsEnabled !== false && userMessage.length > 15) {
       try {
-        const toolResults = await this.agentToolsService.detectAndExecuteTools(userMessage, tenantId);
+        const toolResults = await this.agentToolsService.detectAndExecuteTools(userMessage, tenantId, undefined, undefined, activeAgent);
         if (toolResults.length > 0) {
           const toolContext = toolResults
             .map((r) => `[Tool: ${r.toolName}] ${r.result}`)
@@ -1039,6 +1039,7 @@ export class ChatService {
           tenantId,
           ['get_product_price', 'check_availability'],
           activeBusinessId,
+          activeAgent,
         );
         if (toolResults.length > 0) {
           messages.push({
