@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Store, Loader2, Plus, Check, ArrowRight } from 'lucide-react';
+import { Store, Loader2, Plus, Check, ArrowRight, Sparkles } from 'lucide-react';
 import { marketplaceApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import Link from 'next/link';
@@ -55,28 +55,40 @@ export default function MarketplacePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 lg:px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
-              <Store className="w-5 h-5 text-indigo-600" />
+      <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Marketplace</h1>
-              <p className="text-sm text-gray-500">Agents spécialisés prêts à l'emploi</p>
-            </div>
+            <span className="font-bold text-lg text-gray-900 hidden sm:block">Stiamond Agents</span>
+          </Link>
+          <div className="hidden md:flex items-center gap-4 lg:p-8 text-sm text-gray-600">
+            <Link href="/" className="hover:text-gray-900 transition-colors">Accueil</Link>
+            <Link href="/#pricing" className="hover:text-gray-900 transition-colors">Tarifs</Link>
+            <Link href="/marketplace" className="text-indigo-600 font-medium transition-colors">Marketplace</Link>
+            <Link href="/#faq" className="hover:text-gray-900 transition-colors">FAQ</Link>
           </div>
-          {authenticated ? (
-            <Link href="/dashboard" className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
-              Dashboard →
-            </Link>
-          ) : (
-            <Link href="/login" className="btn-primary text-sm">
-              Se connecter
-            </Link>
-          )}
+          <div className="flex items-center gap-3">
+            {authenticated ? (
+              <Link href="/dashboard" className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                Dashboard →
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className="text-sm font-medium text-gray-600 hover:text-gray-900">
+                  Se connecter
+                </Link>
+                <Link href="/register" className="text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors">
+                  Essai gratuit
+                </Link>
+              </>
+            )}
+          </div>
         </div>
-      </header>
+      </nav>
+
+      <div className="h-16" />
 
       <main className="max-w-6xl mx-auto px-4 lg:px-6 py-8">
         {loading ? (
@@ -140,6 +152,24 @@ export default function MarketplacePage() {
           </div>
         )}
       </main>
+
+      <footer className="border-t border-gray-200 bg-white py-10 px-6">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <Sparkles className="w-3 h-3 text-white" />
+            </div>
+            <span className="font-semibold text-gray-900">Stiamond Agents</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="hover:text-gray-900">Accueil</Link>
+            <Link href="/marketplace" className="hover:text-gray-900">Marketplace</Link>
+            <Link href="/login" className="hover:text-gray-900">Se connecter</Link>
+            <Link href="/register" className="hover:text-gray-900">S'inscrire</Link>
+          </div>
+          <p>© {new Date().getFullYear()} Stiamond Agents</p>
+        </div>
+      </footer>
     </div>
   );
 }

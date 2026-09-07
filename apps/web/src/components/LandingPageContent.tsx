@@ -81,6 +81,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
             <a href="#pricing" className="hover:text-gray-900 transition-colors">{t('nav.pricing')}</a>
             <a href="#how" className="hover:text-gray-900 transition-colors">{t('nav.how')}</a>
             <a href="#faq" className="hover:text-gray-900 transition-colors">{t('nav.faq')}</a>
+            <a href="/marketplace" className="hover:text-indigo-600 transition-colors font-medium">Marketplace</a>
           </div>
           <div className="flex items-center gap-3">
             <LocaleSwitcher currentLocale={locale} />
@@ -466,6 +467,7 @@ export default function LandingPageContent({ locale }: { locale: 'en' | 'fr' | '
                 <li><a href="#features" className="hover:text-gray-900">{t('footer.features')}</a></li>
                 <li><a href="#pricing" className="hover:text-gray-900">{t('footer.pricing')}</a></li>
                 <li><a href="#how" className="hover:text-gray-900">{t('footer.how')}</a></li>
+                <li><a href="/marketplace" className="hover:text-gray-900">Marketplace</a></li>
               </ul>
             </div>
             <div>
