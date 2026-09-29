@@ -1,39 +1,15 @@
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, Index } from 'typeorm';
 import axios from 'axios';
 import { createHmac } from 'crypto';
 import { CryptoService } from '../../common/crypto.service';
 import { assertPublicHttpUrl } from '../../common/ssrf-guard';
 import { QueueService } from '../queue/queue.service';
+import { MetricsService } from '../../common/metrics.service';
+import { WebhookEndpoint } from './webhook-endpoint.entity';
 
 export type WebhookEvent = 'lead.created' | 'lead.updated' | 'conversation.created' | 'conversation.closed' | 'message.replied';
-
-@Entity('webhook_endpoints')
-@Index(['tenantId', 'isActive'])
-export class WebhookEndpoint {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Column({ type: 'uuid' })
-  tenantId: string;
-
-  @Column()
-  url: string;
-
-  @Column({ type: 'text', array: true })
-  events: string[];
-
-  @Column({ type: 'text', nullable: true })
-  secret: string | null;
-
-  @Column({ default: true })
-  isActive: boolean;
-
-  @CreateDateColumn()
-  createdAt: Date;
-}
 
 @Injectable()
 export class WebhookService {
@@ -45,6 +21,7 @@ export class WebhookService {
     private readonly crypto: CryptoService,
     @Inject(forwardRef(() => QueueService))
     private readonly queueService: QueueService,
+    private readonly metrics: MetricsService,
   ) {}
 
   async create(tenantId: string, url: string, events: string[], secret?: string): Promise<WebhookEndpoint> {
@@ -125,8 +102,10 @@ export class WebhookService {
 
     try {
       await axios.post(endpoint.url, body, { headers, timeout: 10000 });
+      this.metrics.incCounter('webhook_deliveries_total', { event, result: 'success' });
       this.logger.log(`Webhook ${event} delivered to ${endpoint.url}`);
     } catch (err: any) {
+      this.metrics.incCounter('webhook_deliveries_total', { event, result: 'failed' });
       this.logger.warn(`Webhook ${event} failed for ${endpoint.url}: ${err?.message}`);
       throw err;
     }

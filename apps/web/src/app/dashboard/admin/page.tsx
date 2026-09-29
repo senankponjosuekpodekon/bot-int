@@ -220,8 +220,8 @@ export default function AdminPage() {
             </button>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden overflow-x-auto">
+            <table className="w-full min-w-[560px] text-sm">
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
                 <tr>
                   <th className="text-left px-4 py-3">Tenant</th>
@@ -282,8 +282,8 @@ export default function AdminPage() {
 
       {/* Users */}
       {tab === 'users' && (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden overflow-x-auto">
+          <table className="w-full min-w-[560px] text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>
                 <th className="text-left px-4 py-3">Utilisateur</th>
@@ -338,8 +338,8 @@ export default function AdminPage() {
 
       {/* Conversations */}
       {tab === 'conversations' && (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden overflow-x-auto">
+          <table className="w-full min-w-[560px] text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>
                 <th className="text-left px-4 py-3">ID</th>

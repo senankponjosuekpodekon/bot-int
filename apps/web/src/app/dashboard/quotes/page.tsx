@@ -148,8 +148,8 @@ export default function QuotesPage() {
           <p className="text-gray-500">Aucun devis. Créez-en un ou laissez le flow "Demande de devis" en générer automatiquement.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden overflow-x-auto">
+          <table className="w-full min-w-[560px] text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>
                 <th className="text-left px-4 py-3">N°</th>

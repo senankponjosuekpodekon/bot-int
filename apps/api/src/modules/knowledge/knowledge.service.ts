@@ -16,7 +16,9 @@ const CHUNK_SIZE = 800;
 const CHUNK_OVERLAP = 100;
 const MAX_SEARCH_RESULTS = 3;
 const MAX_CRAWL_PAGES = 5;
-const EMBEDDING_DIMS = 3072;
+// Must match the embedding model's output size (text-embedding-3-small=1536,
+// jina-embeddings-v3=1024, llama3.2=3072). Override via env when switching models.
+const EMBEDDING_DIMS = Number(process.env.EMBEDDING_DIMS) || 1536;
 const SIMILARITY_THRESHOLD = Number(process.env.KNOWLEDGE_SIMILARITY_THRESHOLD) || 0.2;
 
 interface ScrapedPage {

@@ -6,6 +6,7 @@ import { ChatService } from '../chat/chat.service';
 import { Conversation, ConversationChannel } from '../chat/conversation.entity';
 import { Message } from '../chat/message.entity';
 import { FlowsService } from '../flows/flows.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class WidgetService {
@@ -20,6 +21,7 @@ export class WidgetService {
     private readonly msgRepo: Repository<Message>,
     private readonly chatService: ChatService,
     private readonly flowsService: FlowsService,
+    private readonly config: ConfigService,
   ) {}
 
   private static readonly UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -38,6 +40,7 @@ export class WidgetService {
     name: string;
     personality: string;
     iceBreakers: string[];
+    turnstileSiteKey?: string;
   }> {
     const agent = await this.loadAgent(agentId);
     return {
@@ -45,6 +48,7 @@ export class WidgetService {
       name: agent.name,
       personality: agent.personality || '',
       iceBreakers: agent.iceBreakers || [],
+      turnstileSiteKey: this.config.get<string>('TURNSTILE_SITE_KEY') || undefined,
     };
   }
 

@@ -12,6 +12,8 @@ export class OpenAIProvider implements LLMProvider {
   private readonly baseUrl: string;
   private readonly embedBaseUrl: string;
   private readonly embedApiKey: string;
+  private readonly timeoutMs: number;
+  private readonly embedTimeoutMs: number;
 
   constructor(private readonly config: ConfigService) {
     this.apiKey = config.get('OPENAI_API_KEY', '');
@@ -20,6 +22,8 @@ export class OpenAIProvider implements LLMProvider {
     this.baseUrl = config.get('OPENAI_BASE_URL', 'https://api.openai.com/v1');
     this.embedBaseUrl = config.get('OPENAI_EMBED_BASE_URL', this.baseUrl);
     this.embedApiKey = config.get('OPENAI_EMBED_API_KEY', this.apiKey);
+    this.timeoutMs = Number(config.get('LLM_TIMEOUT_MS', 30000));
+    this.embedTimeoutMs = Number(config.get('LLM_EMBED_TIMEOUT_MS', 15000));
   }
 
   getProviderName(): string {
@@ -45,6 +49,7 @@ export class OpenAIProvider implements LLMProvider {
             Authorization: `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json',
           },
+          timeout: this.timeoutMs,
         },
       );
       const data = response.data || {};
@@ -77,6 +82,7 @@ export class OpenAIProvider implements LLMProvider {
             'Content-Type': 'application/json',
           },
           responseType: 'stream',
+          timeout: this.timeoutMs,
         },
       );
 
@@ -129,6 +135,7 @@ export class OpenAIProvider implements LLMProvider {
             Authorization: `Bearer ${this.embedApiKey}`,
             'Content-Type': 'application/json',
           },
+          timeout: this.embedTimeoutMs,
         },
       );
       return response.data.data[0].embedding;

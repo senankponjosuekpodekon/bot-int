@@ -7,6 +7,7 @@ import { ChatEventsService } from '../chat/chat-events.service';
 import { IsNotEmpty, IsOptional, IsString, IsArray, MaxLength } from 'class-validator';
 import { Request, Response } from 'express';
 import { EMBED_SCRIPT } from './embed-script';
+import { TurnstileService } from '../../common/turnstile.service';
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -20,6 +21,7 @@ class PublicSendMessageDto {
   @IsOptional() utmParams?: { source?: string; medium?: string; campaign?: string; term?: string; content?: string };
   @IsString() @IsOptional() referrerUrl?: string;
   @IsString() @IsOptional() landingPageUrl?: string;
+  @IsString() @IsOptional() turnstileToken?: string;
 }
 
 class PublicFlowResponseDto {
@@ -28,6 +30,7 @@ class PublicFlowResponseDto {
   @IsString() @IsNotEmpty() flowId: string;
   @IsString() @IsNotEmpty() visitorId: string;
   responses: Record<string, string>;
+  @IsString() @IsOptional() turnstileToken?: string;
 }
 
 class PublicSurveySubmitDto {
@@ -37,6 +40,7 @@ class PublicSurveySubmitDto {
   @IsArray() answers: { questionId: string; value: string | string[] | number }[];
   @IsString() @IsOptional() conversationId?: string;
   @IsString() @IsOptional() leadId?: string;
+  @IsString() @IsOptional() turnstileToken?: string;
 }
 
 @Controller('widget')
@@ -45,6 +49,7 @@ export class WidgetController {
     private readonly service: WidgetService,
     private readonly surveysService: SurveysService,
     private readonly chatEvents: ChatEventsService,
+    private readonly turnstile: TurnstileService,
   ) {}
 
   @Get('config/:agentId')
@@ -54,7 +59,8 @@ export class WidgetController {
 
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @Post('send')
-  send(@Body() dto: PublicSendMessageDto) {
+  async send(@Body() dto: PublicSendMessageDto, @Req() req: Request) {
+    await this.turnstile.verify(dto.turnstileToken, req.ip);
     return this.service.sendPublicMessage(dto.agentId, dto.message, dto.visitorId, dto.conversationId, dto.utmParams, dto.referrerUrl, dto.landingPageUrl);
   }
 
@@ -171,7 +177,8 @@ export class WidgetController {
 
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('flow-response')
-  flowResponse(@Body() dto: PublicFlowResponseDto) {
+  async flowResponse(@Body() dto: PublicFlowResponseDto, @Req() req: Request) {
+    await this.turnstile.verify(dto.turnstileToken, req.ip);
     return this.service.submitFlowResponse(dto.agentId, dto.conversationId, dto.flowId, dto.responses, dto.visitorId);
   }
 
@@ -191,7 +198,8 @@ export class WidgetController {
 
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('survey/submit')
-  async submitSurvey(@Body() dto: PublicSurveySubmitDto) {
+  async submitSurvey(@Body() dto: PublicSurveySubmitDto, @Req() req: Request) {
+    await this.turnstile.verify(dto.turnstileToken, req.ip);
     const config = await this.service.getAgentConfig(dto.agentId || '');
     return this.surveysService.submit(config.tenantId, dto.surveyId, dto.answers, {
       visitorId: dto.visitorId,

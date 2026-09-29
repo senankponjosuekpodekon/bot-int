@@ -35,6 +35,48 @@ export const EMBED_SCRIPT = `
   var referrerUrl = document.referrer || '';
   var landingPageUrl = window.location.href || '';
 
+  // Turnstile bot-protection: site key comes from GET /widget/config; when absent
+  // (feature disabled server-side) verification is skipped entirely.
+  var tsSiteKey = null;
+  var tsLoading = false;
+  function loadTurnstile(cb) {
+    if (!tsSiteKey) return cb(null);
+    if (window.turnstile) return cb(window.turnstile);
+    if (tsLoading) { var iv = setInterval(function(){ if (window.turnstile) { clearInterval(iv); cb(window.turnstile); } }, 100); return; }
+    tsLoading = true;
+    var s = document.createElement('script');
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    s.async = true;
+    s.onload = function() { cb(window.turnstile); };
+    s.onerror = function() { cb(null); };
+    document.head.appendChild(s);
+  }
+  // Runs an invisible Turnstile challenge, then calls done(token|null).
+  function runTurnstile(done) {
+    loadTurnstile(function(ts) {
+      if (!ts) return done(null);
+      var holder = document.createElement('div');
+      holder.style.display = 'none';
+      document.body.appendChild(holder);
+      var finished = false;
+      function finish(t) { if (finished) return; finished = true; try { ts.remove(holder); } catch(e) {} done(t); }
+      try {
+        var wid = ts.render(holder, {
+          sitekey: tsSiteKey,
+          size: 'invisible',
+          callback: function(t) { finish(t); },
+          'error-callback': function() { finish(null); },
+          'timeout-callback': function() { finish(null); }
+        });
+        ts.execute(wid);
+      } catch(e) { finish(null); }
+    });
+  }
+  fetch(apiUrl + '/widget/config/' + agentId)
+    .then(function(r) { return r.json(); })
+    .then(function(cfg) { if (cfg && cfg.turnstileSiteKey) tsSiteKey = cfg.turnstileSiteKey; })
+    .catch(function() {});
+
   function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
   function createBubble() {
@@ -289,10 +331,11 @@ export const EMBED_SCRIPT = `
     var typing = document.getElementById('stiamond-typing');
     if (typing) typing.style.display = 'block';
 
+    runTurnstile(function(tsToken) {
     fetch(apiUrl + '/widget/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agentId: agentId, message: text, visitorId: visitorId, conversationId: conversationId, utmParams: utmParams, referrerUrl: referrerUrl, landingPageUrl: landingPageUrl })
+      body: JSON.stringify({ agentId: agentId, message: text, visitorId: visitorId, conversationId: conversationId, utmParams: utmParams, referrerUrl: referrerUrl, landingPageUrl: landingPageUrl, turnstileToken: tsToken || undefined })
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -306,6 +349,7 @@ export const EMBED_SCRIPT = `
     .catch(function() {
       if (typing) typing.style.display = 'none';
       addMessage('agent', 'Desole, une erreur est survenue. Reessayez dans un instant.');
+    });
     });
   }
 
@@ -478,6 +522,7 @@ export const EMBED_SCRIPT = `
       submitBtn.textContent = 'Envoi...';
       submitBtn.disabled = true;
 
+      runTurnstile(function(tsToken) {
       fetch(apiUrl + '/widget/survey/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -487,6 +532,7 @@ export const EMBED_SCRIPT = `
           visitorId: visitorId,
           conversationId: conversationId,
           answers: answerArray,
+          turnstileToken: tsToken || undefined,
         })
       })
       .then(function(r) { return r.json(); })
@@ -498,6 +544,7 @@ export const EMBED_SCRIPT = `
       .catch(function() {
         submitBtn.textContent = 'Reessayer';
         submitBtn.disabled = false;
+      });
       });
     };
     surveyDiv.appendChild(submitBtn);

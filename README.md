@@ -342,7 +342,12 @@ npm run test:e2e -w apps/web    # Playwright (login, widget, agent-to-lead)
 - **Outbound webhooks**: delivered via the job queue (retries) and signed `t=<ts>,v1=<hmac>` in `X-Webhook-Signature`.
 - **SSRF**: all user-supplied fetch URLs (webhooks, product imports, URL scraping) are validated against private/internal addresses (`common/ssrf-guard.ts`).
 - **Rate limiting**: app-level `@nestjs/throttler` (strict on `/api/auth/*`) + nginx `limit_req` zones; client IP relies on `TRUST_PROXY`.
-- **Schema**: TypeORM `synchronize` is disabled in production — schema changes go through `src/migrations/`.
+- **Bot protection**: Cloudflare Turnstile on public widget endpoints (`/widget/send`, `/widget/flow-response`, `/widget/survey/submit`) — enabled only when `TURNSTILE_SECRET_KEY` + `TURNSTILE_SITE_KEY` are set.
+- **LLM resilience**: per-request timeouts (`LLM_TIMEOUT_MS`), circuit breaker + fallback between providers (`LLM_BREAKER_*`), and a cached health check instead of a `/models` call per message.
+- **Observability**: `GET /api/metrics` (Prometheus format, `Authorization: Bearer $METRICS_TOKEN`) exposes queue backlog/jobs, LLM latency/errors/breaker state, and webhook delivery counters.
+- **Schema**: TypeORM `synchronize` is disabled in production — schema changes go through `src/migrations/`. A full baseline (`1720000000000-baseline-schema.ts`) bootstraps fresh databases.
+
+> **Row-Level Security note**: PostgreSQL RLS is intentionally *not* enabled. Effective RLS requires a per-request DB transaction bound to a shared EntityManager plus session-pooling — which conflicts with the current PgBouncer transaction-mode setup. Tenant isolation is enforced at the service layer (every query carries `tenantId`); revisit RLS only together with a request-scoped transaction refactor and PgBouncer session mode.
 
 ### Production checklist
 

@@ -10,11 +10,15 @@ export class OllamaProvider implements LLMProvider {
   private readonly model: string;
   private readonly embedModel: string;
   private readonly authHeaders: Record<string, string> = {};
+  private readonly timeoutMs: number;
+  private readonly embedTimeoutMs: number;
 
   constructor(private readonly config: ConfigService) {
     this.baseUrl = config.get('OLLAMA_URL', 'http://localhost:11434');
     this.model = config.get('OLLAMA_MODEL', 'llama3.2');
     this.embedModel = config.get('OLLAMA_EMBED_MODEL', this.model);
+    this.timeoutMs = Number(config.get('LLM_TIMEOUT_MS', 30000));
+    this.embedTimeoutMs = Number(config.get('LLM_EMBED_TIMEOUT_MS', 15000));
 
     const clientId = this.config.get<string>('OLLAMA_CF_ACCESS_CLIENT_ID', '');
     const clientSecret = this.config.get<string>('OLLAMA_CF_ACCESS_CLIENT_SECRET', '');
@@ -40,7 +44,7 @@ export class OllamaProvider implements LLMProvider {
         messages,
         stream: false,
         options: { num_ctx: 4096 },
-      }, { headers: this.authHeaders });
+      }, { headers: this.authHeaders, timeout: this.timeoutMs });
       const data = response.data || {};
       const content = data.message?.content || '';
       const prompt = data.prompt_eval_count || 0;
@@ -62,7 +66,7 @@ export class OllamaProvider implements LLMProvider {
         messages,
         stream: true,
         options: { num_ctx: 4096 },
-      }, { headers: this.authHeaders, responseType: 'stream' });
+      }, { headers: this.authHeaders, responseType: 'stream', timeout: this.timeoutMs });
 
       const stream = response.data;
       let buffer = '';
@@ -94,7 +98,7 @@ export class OllamaProvider implements LLMProvider {
       const response = await axios.post(`${this.baseUrl}/api/embeddings`, {
         model: this.embedModel,
         prompt: text,
-      }, { headers: this.authHeaders });
+      }, { headers: this.authHeaders, timeout: this.embedTimeoutMs });
       return response.data.embedding;
     } catch (error: any) {
       this.logger.error('Ollama embedding failed', error?.message);
@@ -104,7 +108,7 @@ export class OllamaProvider implements LLMProvider {
 
   async isAvailable(): Promise<boolean> {
     try {
-      await axios.get(`${this.baseUrl}/api/tags`, { headers: this.authHeaders });
+      await axios.get(`${this.baseUrl}/api/tags`, { headers: this.authHeaders, timeout: 5000 });
       return true;
     } catch {
       return false;

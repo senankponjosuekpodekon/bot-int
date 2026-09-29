@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { MetricsService } from '../../common/metrics.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, DataSource } from 'typeorm';
 import { JobEntity, JobStatus } from './job.entity';
@@ -23,6 +24,7 @@ export class QueueService {
     private readonly jobRepo: Repository<JobEntity>,
     private readonly dataSource: DataSource,
     private readonly crypto: CryptoService,
+    private readonly metrics: MetricsService,
   ) {}
 
   registerHandler(handler: JobHandler): void {
@@ -115,18 +117,31 @@ export class QueueService {
       if (!handler) {
         this.logger.warn(`No handler for queue ${job.queue}, marking job ${job.id} as failed`);
         await this.markFailed(job, `No handler registered for queue: ${job.queue}`);
+        this.metrics.incCounter('queue_jobs_total', { queue: job.queue, result: 'failed' });
         continue;
       }
 
+      const start = Date.now();
       try {
         await handler.handle(job.data);
         await this.markCompleted(job);
+        this.metrics.incCounter('queue_jobs_total', { queue: job.queue, result: 'completed' });
+        this.metrics.observeDuration('queue_job_duration_ms', Date.now() - start, { queue: job.queue });
       } catch (err: any) {
         this.logger.error(`Job ${job.id} (${job.queue}) failed: ${err?.message}`);
         await this.handleFailure(job, err?.message || 'Unknown error');
+        this.metrics.incCounter('queue_jobs_total', { queue: job.queue, result: 'failed' });
       }
     }
+    if (!didWork) this.recordBacklog().catch(() => undefined);
     return didWork;
+  }
+
+  private async recordBacklog(): Promise<void> {
+    const rows: { queue: string; count: string }[] = await this.jobRepo.query(
+      `SELECT "queue", COUNT(*)::int AS count FROM "jobs" WHERE "status" = 'pending' GROUP BY "queue"`,
+    );
+    for (const r of rows) this.metrics.setGauge('queue_backlog', Number(r.count), { queue: r.queue });
   }
 
   private async claimNextJob(): Promise<JobEntity | null> {

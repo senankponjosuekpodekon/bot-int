@@ -4,12 +4,12 @@
 -- Create extension if not already present
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Add vector column (3072 dims for llama3.2, adjust for your embed model)
-ALTER TABLE knowledge_chunks ADD COLUMN IF NOT EXISTS embedding_vector vector(3072);
+-- Add vector column (1536 dims = text-embedding-3-small default; adjust to your embed model, see EMBEDDING_DIMS)
+ALTER TABLE knowledge_chunks ADD COLUMN IF NOT EXISTS embedding_vector vector(1536);
 
 -- Backfill from existing JSON embeddings
 UPDATE knowledge_chunks
-SET embedding_vector = embedding::vector(3072)
+SET embedding_vector = embedding::vector(1536)
 WHERE embedding IS NOT NULL AND embedding_vector IS NULL;
 
 -- Create IVFFLAT index for fast cosine similarity search

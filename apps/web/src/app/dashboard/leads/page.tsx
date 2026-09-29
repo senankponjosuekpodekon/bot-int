@@ -187,7 +187,7 @@ export default function LeadsPage() {
           <div className="p-4 lg:p-8 text-center text-gray-400">Aucun lead pour ce filtre.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="text-left border-b border-gray-100 text-gray-500">
                   <th className="p-4 font-medium">Lead</th>

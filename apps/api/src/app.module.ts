@@ -31,6 +31,7 @@ import { QueueModule } from './modules/queue/queue.module';
 import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { LoggingMiddleware } from './common/logging.middleware';
 import { CacheModule } from './common/cache.module';
+import { MetricsModule } from './common/metrics.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { CacheModule } from './common/cache.module';
       },
     }),
     CacheModule,
+    MetricsModule,
     AuthModule,
     TenantsModule,
     BusinessModule,
