@@ -14,6 +14,9 @@ export class QueueService {
   private readonly logger = new Logger(QueueService.name);
   private handlers = new Map<string, JobHandler>();
   private pollTimer: NodeJS.Timeout | null = null;
+  private baseIntervalMs = 5000;
+  private maxIntervalMs = Number(process.env.QUEUE_POLL_MAX_INTERVAL_MS || 60000);
+  private currentDelayMs = 0;
 
   constructor(
     @InjectRepository(JobEntity)
@@ -29,10 +32,29 @@ export class QueueService {
 
   startWorker(intervalMs = 5000): void {
     if (this.pollTimer) return;
-    this.pollTimer = setInterval(() => this.poll().catch((err) => {
-      this.logger.error(`Queue poll error: ${err?.message}`);
-    }), intervalMs);
-    this.logger.log(`Queue worker started (interval: ${intervalMs}ms)`);
+    this.baseIntervalMs = intervalMs;
+    this.currentDelayMs = intervalMs;
+
+    // Adaptive backoff: poll at base rate while jobs flow, slow exponentially
+    // (up to QUEUE_POLL_MAX_INTERVAL_MS) when the queue is empty. This is what
+    // lets an idle API stop hammering the DB every 5s.
+    const tick = async () => {
+      let didWork = false;
+      try {
+        didWork = await this.poll();
+      } catch (err: any) {
+        this.logger.error(`Queue poll error: ${err?.message}`);
+      }
+      this.currentDelayMs = didWork
+        ? this.baseIntervalMs
+        : Math.min(this.currentDelayMs * 2, this.maxIntervalMs);
+      this.pollTimer = setTimeout(tick, this.currentDelayMs);
+      this.pollTimer.unref();
+    };
+
+    this.pollTimer = setTimeout(tick, this.currentDelayMs);
+    this.pollTimer.unref();
+    this.logger.log(`Queue worker started (base: ${intervalMs}ms, max backoff: ${this.maxIntervalMs}ms)`);
   }
 
   stopWorker(): void {
@@ -77,15 +99,17 @@ export class QueueService {
     return this.jobRepo.save(job);
   }
 
-  private async poll(): Promise<void> {
-    if (this.handlers.size === 0) return;
+  private async poll(): Promise<boolean> {
+    if (this.handlers.size === 0) return false;
 
     // Drain up to batchSize jobs per tick instead of a single job — keeps webhooks
     // flowing even when a slower queue (e.g. shopify imports) has backlog.
     const batchSize = Number(process.env.QUEUE_BATCH_SIZE || 5);
+    let didWork = false;
     for (let i = 0; i < batchSize; i++) {
       const job = await this.claimNextJob();
-      if (!job) return;
+      if (!job) break;
+      didWork = true;
 
       const handler = this.handlers.get(job.queue);
       if (!handler) {
@@ -102,6 +126,7 @@ export class QueueService {
         await this.handleFailure(job, err?.message || 'Unknown error');
       }
     }
+    return didWork;
   }
 
   private async claimNextJob(): Promise<JobEntity | null> {

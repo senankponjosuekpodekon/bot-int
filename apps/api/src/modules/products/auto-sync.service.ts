@@ -56,7 +56,7 @@ export class AutoSyncService {
     this.logger.log(`Auto-sync complete: ${totalSynced} products synced, ${totalErrors} errors`);
   }
 
-  @Cron('*/5 * * * *')
+  @Cron('*/15 * * * *')
   async autoSyncSources(): Promise<void> {
     this.logger.log('Starting scheduled source sync...');
     let totalSynced = 0;

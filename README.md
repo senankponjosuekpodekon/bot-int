@@ -241,8 +241,10 @@ INSTAGRAM_WEBHOOK_SECRET=
 # Redis (cache, rate-limit storage)
 REDIS_URL=redis://localhost:6379
 
-# Queue
+# Queue — poll interval backs off exponentially to the max when idle
 QUEUE_BATCH_SIZE=5
+QUEUE_POLL_INTERVAL_MS=5000
+QUEUE_POLL_MAX_INTERVAL_MS=60000
 
 # Frontend
 NEXT_PUBLIC_API_URL=https://api.your-app.com/api

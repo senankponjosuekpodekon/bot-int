@@ -70,9 +70,9 @@ import { CacheModule } from './common/cache.module';
           // synchronize must NEVER be possible in production — schema drift/drops risk.
           synchronize: config.get('NODE_ENV') !== 'production' && config.get('DB_SYNC') !== 'false',
           logging: config.get('NODE_ENV') === 'development',
-          poolSize: config.get<number>('DB_POOL_SIZE', 20),
+          poolSize: config.get<number>('DB_POOL_SIZE', 10),
           extra: {
-            max: config.get<number>('DB_POOL_SIZE', 20),
+            max: config.get<number>('DB_POOL_SIZE', 10),
             connectionTimeoutMillis: 10000,
           },
         };
