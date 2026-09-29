@@ -22,7 +22,11 @@ export class WidgetService {
     private readonly flowsService: FlowsService,
   ) {}
 
+  private static readonly UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
   private async loadAgent(agentId: string): Promise<Agent> {
+    // Reject non-UUID ids up-front — Postgres would throw a QueryFailedError (500).
+    if (!WidgetService.UUID_RE.test(agentId)) throw new NotFoundException('Agent not found');
     const agent = await this.agentRepo.findOne({ where: { id: agentId, isActive: true } });
     if (!agent) throw new NotFoundException('Agent not found');
     return agent;
@@ -63,6 +67,9 @@ export class WidgetService {
 
   // A public client may only access a conversation it owns (matching visitorId).
   async assertPublicConversation(conversationId: string, visitorId?: string): Promise<Conversation> {
+    if (!WidgetService.UUID_RE.test(conversationId)) {
+      throw new NotFoundException('Conversation not found');
+    }
     const conversation = await this.convRepo.findOne({ where: { id: conversationId } });
     if (!conversation) throw new NotFoundException('Conversation not found');
     if (conversation.visitorId && conversation.visitorId !== visitorId) {
