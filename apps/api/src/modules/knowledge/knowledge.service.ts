@@ -10,6 +10,7 @@ import * as mammoth from 'mammoth';
 import * as cheerio from 'cheerio';
 import axios from 'axios';
 import puppeteer, { Browser } from 'puppeteer';
+import { assertPublicHttpUrl } from '../../common/ssrf-guard';
 
 const CHUNK_SIZE = 800;
 const CHUNK_OVERLAP = 100;
@@ -124,7 +125,7 @@ export class KnowledgeService implements OnModuleInit {
   }
 
   async addUrl(tenantId: string, url: string, agentId?: string, shared?: boolean): Promise<KnowledgeDocument> {
-    const baseUrl = new URL(url);
+    const baseUrl = await assertPublicHttpUrl(url);
     const pages = await this.scrapeWithPuppeteer(url, baseUrl.origin, MAX_CRAWL_PAGES);
 
     if (pages.length === 0) throw new Error('Impossible de scraper la page');
@@ -148,7 +149,7 @@ export class KnowledgeService implements OnModuleInit {
   }
 
   async addUrlAsync(tenantId: string, url: string, agentId?: string, shared?: boolean): Promise<{ docId: string; status: string }> {
-    const baseUrl = new URL(url);
+    const baseUrl = await assertPublicHttpUrl(url);
     const doc = this.docRepo.create({
       tenantId,
       type: DocumentType.URL,
@@ -219,6 +220,7 @@ export class KnowledgeService implements OnModuleInit {
 
     if (result.website) {
       try {
+        await assertPublicHttpUrl(result.website);
         const pages = await this.scrapeWithPuppeteer(result.website, new URL(result.website).origin, 3);
         if (pages.length > 0) {
           result.description = pages[0].content.slice(0, 500);
@@ -243,6 +245,7 @@ export class KnowledgeService implements OnModuleInit {
 
     for (const social of result.socials.slice(0, 2)) {
       try {
+        await assertPublicHttpUrl(social.url);
         const pages = await this.scrapeWithPuppeteer(social.url, new URL(social.url).origin, 1);
         if (pages.length > 0 && pages[0].content.length > 50) {
           const content = pages[0].content.slice(0, 5000);

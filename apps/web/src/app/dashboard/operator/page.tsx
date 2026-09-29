@@ -156,31 +156,53 @@ export default function OperatorPage() {
     if (!selected) return;
     const token = useAuthStore.getState().accessToken;
     if (!token) return;
-    const es = new EventSource(`${API_BASE}/chat/${selected.id}/events?token=${token}`);
-    es.onmessage = (e) => {
+    const controller = new AbortController();
+    const handleEvent = (data: any) => {
+      if (data.event === 'new-message') {
+        setMessages((prev) => {
+          if (prev.some((m) => m.role === data.role && m.content === data.content)) return prev;
+          return [...prev, {
+            id: data.id || `sse-${Date.now()}`,
+            role: data.role,
+            content: data.content,
+            metadata: data.metadata,
+            createdAt: data.createdAt || new Date().toISOString(),
+          } as Message];
+        });
+      }
+      if (data.event === 'typing' && data.who === 'visitor') {
+        setVisitorTyping(true);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => setVisitorTyping(false), 3000);
+      }
+    };
+    (async () => {
       try {
-        const data = JSON.parse(e.data);
-        if (data.event === 'new-message') {
-          setMessages((prev) => {
-            if (prev.some((m) => m.role === data.role && m.content === data.content)) return prev;
-            return [...prev, {
-              id: data.id || `sse-${Date.now()}`,
-              role: data.role,
-              content: data.content,
-              metadata: data.metadata,
-              createdAt: data.createdAt || new Date().toISOString(),
-            } as Message];
-          });
-        }
-        if (data.event === 'typing' && data.who === 'visitor') {
-          setVisitorTyping(true);
-          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-          typingTimeoutRef.current = setTimeout(() => setVisitorTyping(false), 3000);
+        const res = await fetch(`${API_BASE}/chat/${selected.id}/events`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+        if (!res.ok || !res.body) return;
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const frames = buffer.split('\n\n');
+          buffer = frames.pop() || '';
+          for (const frame of frames) {
+            const line = frame.split('\n').find((l) => l.startsWith('data:'));
+            if (!line) continue;
+            try {
+              handleEvent(JSON.parse(line.slice(5).trim()));
+            } catch {}
+          }
         }
       } catch {}
-    };
-    es.onerror = () => { es.close(); };
-    return () => { es.close(); };
+    })();
+    return () => { controller.abort(); };
   }, [selected]);
 
   const handleSend = async () => {

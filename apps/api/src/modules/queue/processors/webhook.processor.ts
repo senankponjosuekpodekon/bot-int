@@ -12,6 +12,6 @@ export class WebhookProcessor implements JobHandler {
   async handle(data: Record<string, any>): Promise<void> {
     const { tenantId, event, payload } = data;
     this.logger.log(`Delivering webhook ${event} for tenant ${tenantId}`);
-    await this.webhookService.trigger(event, tenantId, payload);
+    await this.webhookService.deliverAll(tenantId, event, payload);
   }
 }

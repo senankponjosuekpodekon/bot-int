@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, DataSource } from 'typeorm';
 import { JobEntity, JobStatus } from './job.entity';
+import { CryptoService } from '../../common/crypto.service';
 
 export interface JobHandler {
   queue: string;
@@ -18,6 +19,7 @@ export class QueueService {
     @InjectRepository(JobEntity)
     private readonly jobRepo: Repository<JobEntity>,
     private readonly dataSource: DataSource,
+    private readonly crypto: CryptoService,
   ) {}
 
   registerHandler(handler: JobHandler): void {
@@ -50,7 +52,9 @@ export class QueueService {
     accessToken: string,
     integrationType: 'shopify' | 'public_feed' = 'shopify',
   ): Promise<JobEntity> {
-    return this.enqueue('shopify-imports', 'shopify.import', { tenantId, shopDomain, accessToken, integrationType }, tenantId);
+    // Never persist plaintext credentials in jobs.data
+    const encryptedToken = this.crypto.encrypt(accessToken);
+    return this.enqueue('shopify-imports', 'shopify.import', { tenantId, shopDomain, accessToken: encryptedToken, integrationType }, tenantId);
   }
 
   async enqueue(
@@ -76,22 +80,27 @@ export class QueueService {
   private async poll(): Promise<void> {
     if (this.handlers.size === 0) return;
 
-    const job = await this.claimNextJob();
-    if (!job) return;
+    // Drain up to batchSize jobs per tick instead of a single job — keeps webhooks
+    // flowing even when a slower queue (e.g. shopify imports) has backlog.
+    const batchSize = Number(process.env.QUEUE_BATCH_SIZE || 5);
+    for (let i = 0; i < batchSize; i++) {
+      const job = await this.claimNextJob();
+      if (!job) return;
 
-    const handler = this.handlers.get(job.queue);
-    if (!handler) {
-      this.logger.warn(`No handler for queue ${job.queue}, marking job ${job.id} as failed`);
-      await this.markFailed(job, `No handler registered for queue: ${job.queue}`);
-      return;
-    }
+      const handler = this.handlers.get(job.queue);
+      if (!handler) {
+        this.logger.warn(`No handler for queue ${job.queue}, marking job ${job.id} as failed`);
+        await this.markFailed(job, `No handler registered for queue: ${job.queue}`);
+        continue;
+      }
 
-    try {
-      await handler.handle(job.data);
-      await this.markCompleted(job);
-    } catch (err: any) {
-      this.logger.error(`Job ${job.id} (${job.queue}) failed: ${err?.message}`);
-      await this.handleFailure(job, err?.message || 'Unknown error');
+      try {
+        await handler.handle(job.data);
+        await this.markCompleted(job);
+      } catch (err: any) {
+        this.logger.error(`Job ${job.id} (${job.queue}) failed: ${err?.message}`);
+        await this.handleFailure(job, err?.message || 'Unknown error');
+      }
     }
   }
 

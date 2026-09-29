@@ -60,7 +60,9 @@ export class BillingWebhookController {
       .update(`${timestamp}.${payload}`)
       .digest('hex');
 
-    if (providedSignature !== expectedSignature) {
+    const provided = Buffer.from(providedSignature, 'utf8');
+    const expected = Buffer.from(expectedSignature, 'utf8');
+    if (provided.length !== expected.length || !crypto.timingSafeEqual(provided, expected)) {
       throw new Error('Invalid signature');
     }
 

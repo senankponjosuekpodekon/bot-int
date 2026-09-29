@@ -59,8 +59,10 @@ export class ChannelAdapterService {
     const adapter = this.getAdapter(channel);
     if (!adapter) throw new BadRequestException(`Unsupported channel ${channel}`);
 
-    if (signature && adapter.verifySignature && rawBody && !adapter.verifySignature(rawBody, signature)) {
-      throw new UnauthorizedException('Invalid webhook signature');
+    if (adapter.verifySignature) {
+      if (!signature || !rawBody || !adapter.verifySignature(rawBody, signature)) {
+        throw new UnauthorizedException('Invalid or missing webhook signature');
+      }
     }
 
     const normalized = await adapter.normalize('', payload);

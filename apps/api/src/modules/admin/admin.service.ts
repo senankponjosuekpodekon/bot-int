@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, DataSource } from 'typeorm';
 import { User, UserRole } from '../auth/user.entity';
 import { Tenant } from '../tenants/tenant.entity';
 import { Subscription, PlanType, SubscriptionStatus } from '../billing/subscription.entity';
@@ -24,6 +24,7 @@ export class AdminService {
     private readonly agentRepo: Repository<Agent>,
     @InjectRepository(Lead)
     private readonly leadRepo: Repository<Lead>,
+    private readonly dataSource: DataSource,
   ) {}
 
   // ─── Platform Stats ───
@@ -188,8 +189,61 @@ export class AdminService {
     const tenant = await this.tenantRepo.findOne({ where: { id } });
     if (!tenant) throw new NotFoundException('Tenant not found');
 
-    // Cascade will handle users, agents, conversations etc.
-    await this.tenantRepo.delete(id);
+    // Only a subset of entities have onDelete CASCADE to tenants. Delete
+    // tenant-scoped rows explicitly, children first, inside one transaction.
+    await this.dataSource.transaction(async (em) => {
+      // Child rows keyed by a tenant-owned FK (no tenantId column of their own)
+      await em.query(`DELETE FROM messages WHERE "conversationId" IN (SELECT id FROM conversations WHERE "tenantId" = $1)`, [id]);
+      await em.query(`DELETE FROM knowledge_chunks WHERE "documentId" IN (SELECT id FROM knowledge_documents WHERE "tenantId" = $1)`, [id]);
+      await em.query(`DELETE FROM lead_comments WHERE "leadId" IN (SELECT id FROM leads WHERE "tenantId" = $1)`, [id]);
+
+      // Tables with their own tenantId column
+      const tenantScoped = [
+        'conversation_analytics',
+        'flow_executions',
+        'survey_responses',
+        'pending_actions',
+        'agent_memories',
+        'agent_workflows',
+        'agent_feedback',
+        'conversations',
+        'leads',
+        'agent_leads',
+        'product_imports',
+        'product_import_sources',
+        'products',
+        'quotes',
+        'surveys',
+        'knowledge_documents',
+        'webhook_endpoints',
+        'integrations',
+        'jobs',
+        'api_keys',
+        'subscriptions',
+        'sessions',
+        'refresh_tokens',
+        'audit_logs',
+        'insights',
+        'platform_insights',
+        'chat_flows',
+        'site_configs',
+        'marketplace_installs',
+        'agents',
+        'users',
+        'businesses',
+      ];
+      for (const table of tenantScoped) {
+        try {
+          await em.query(`DELETE FROM "${table}" WHERE "tenantId" = $1`, [id]);
+        } catch (err: any) {
+          // Table may not exist yet on older schemas — surface it, don't swallow.
+          if (err?.code === '42P01') continue; // undefined_table
+          throw err;
+        }
+      }
+
+      await em.getRepository(Tenant).delete(id);
+    });
   }
 
   // ─── User Management ───

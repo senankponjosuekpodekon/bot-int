@@ -19,6 +19,7 @@ export class MemoryRateLimitStorage implements RateLimitStorage {
 export class RedisRateLimitStorage implements RateLimitStorage {
   private client: any;
   private enabled = false;
+  private readonly memoryFallback = new MemoryRateLimitStorage();
 
   constructor(url: string) {
     try {
@@ -39,7 +40,7 @@ export class RedisRateLimitStorage implements RateLimitStorage {
 
   async isAllowed(key: string, limit: number, windowMs: number): Promise<boolean> {
     if (!this.enabled) {
-      return new MemoryRateLimitStorage().isAllowed(key, limit, windowMs);
+      return this.memoryFallback.isAllowed(key, limit, windowMs);
     }
     const now = Date.now();
     const windowStart = now - windowMs;
@@ -59,7 +60,7 @@ export class RedisRateLimitStorage implements RateLimitStorage {
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn('Redis rate limit failed, falling back to memory', err);
-      return new MemoryRateLimitStorage().isAllowed(key, limit, windowMs);
+      return this.memoryFallback.isAllowed(key, limit, windowMs);
     }
   }
 }

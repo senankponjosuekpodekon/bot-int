@@ -1,6 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -47,20 +47,28 @@ import { CacheModule } from './common/cache.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
+      useFactory: (config: ConfigService): TypeOrmModuleOptions => {
         const databaseUrl = config.get<string>('DATABASE_URL');
         return {
           type: 'postgres',
-          ...(databaseUrl ? { url: databaseUrl } : {}),
-          host: config.get('DB_HOST', 'localhost'),
-          port: config.get<number>('DB_PORT', 5432),
-          username: config.get('DB_USER', 'postgres'),
-          password: config.get('DB_PASSWORD', 'postgres'),
-          database: config.get('DB_NAME', 'stiamond_agent'),
+          // DATABASE_URL (e.g. Neon) takes precedence over individual DB_* vars.
+          ...(databaseUrl
+            ? {
+                url: databaseUrl,
+                ssl: databaseUrl.includes('sslmode=require') ? { rejectUnauthorized: false } : undefined,
+              }
+            : {
+                host: config.get<string>('DB_HOST', 'localhost'),
+                port: config.get<number>('DB_PORT', 5432),
+                username: config.get<string>('DB_USER', 'postgres'),
+                password: config.get<string>('DB_PASSWORD', 'postgres'),
+                database: config.get<string>('DB_NAME', 'stiamond_agent'),
+              }),
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
           migrationsRun: config.get('NODE_ENV') === 'production' && config.get('DB_SYNC') !== 'true',
-          synchronize: config.get('DB_SYNC') === 'true' || config.get('NODE_ENV') !== 'production',
+          // synchronize must NEVER be possible in production — schema drift/drops risk.
+          synchronize: config.get('NODE_ENV') !== 'production' && config.get('DB_SYNC') !== 'false',
           logging: config.get('NODE_ENV') === 'development',
           poolSize: config.get<number>('DB_POOL_SIZE', 20),
           extra: {

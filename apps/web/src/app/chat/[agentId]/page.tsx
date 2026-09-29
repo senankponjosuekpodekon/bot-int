@@ -75,7 +75,7 @@ export default function PublicChatPage() {
             localStorage.setItem(`stiamond_conversation_${agentId}`, saved);
           }
           setConversationId(saved);
-          fetch(`${API_BASE}/widget/history/${saved}`)
+          fetch(`${API_BASE}/widget/history/${saved}?visitorId=${visitorId}`)
             .then((r) => r.json())
             .then((history: any[]) => {
               const historyMessages = (history || [])
@@ -102,7 +102,7 @@ export default function PublicChatPage() {
 
   useEffect(() => {
     if (!conversationId) return;
-    const es = new EventSource(`${API_BASE}/widget/events/${conversationId}`);
+    const es = new EventSource(`${API_BASE}/widget/events/${conversationId}?visitorId=${visitorId}`);
     es.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
@@ -125,7 +125,7 @@ export default function PublicChatPage() {
   useEffect(() => {
     if (!conversationId || sending) return;
     const load = () => {
-      fetch(`${API_BASE}/widget/history/${conversationId}`)
+      fetch(`${API_BASE}/widget/history/${conversationId}?visitorId=${visitorId}`)
         .then((r) => r.json())
         .then((history: any[]) => {
           const newMessages = (history || [])
@@ -274,7 +274,7 @@ export default function PublicChatPage() {
                 fetch(`${API_BASE}/widget/typing/${conversationId}`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ who: 'visitor' }),
+                  body: JSON.stringify({ who: 'visitor', visitorId }),
                 }).catch(() => {});
               }, 300);
             }}

@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Conversation } from './conversation.entity';
 
@@ -15,6 +16,7 @@ export enum MessageRole {
 }
 
 @Entity('messages')
+@Index('IDX_messages_conversationId_createdAt', ['conversationId', 'createdAt'])
 export class Message {
   @PrimaryGeneratedColumn('uuid')
   id: string;

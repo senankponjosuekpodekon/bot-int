@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { createHmac } from 'crypto';
 import { ChannelAdapterService } from './channel-adapter.service';
 import { ConversationChannel } from '../chat/conversation.entity';
 
@@ -130,7 +131,11 @@ describe('ChannelAdapterService', () => {
         }],
       };
 
-      await service.handleInbound('instagram', 'agent-1', payload);
+      mockConfig.get.mockImplementation((key: string) => (key === 'INSTAGRAM_WEBHOOK_SECRET' ? 'ig-secret' : undefined));
+      const rawBody = JSON.stringify(payload);
+      const signature = 'sha256=' + createHmac('sha256', 'ig-secret').update(rawBody).digest('hex');
+
+      await service.handleInbound('instagram', 'agent-1', payload, signature, rawBody);
 
       expect(mockChatService.sendMessage).toHaveBeenCalledWith(
         't-1',

@@ -7,7 +7,6 @@ import { AgentFeedback } from './agent-feedback.entity';
 import { Agent } from '../agents/agent.entity';
 import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
-import { WidgetController } from './widget.controller';
 import { PublicController } from './public.controller';
 import { AnalyticsController } from './analytics.controller';
 import { ChatEventsService } from './chat-events.service';
@@ -51,7 +50,7 @@ import { BusinessModule } from '../business/business.module';
     ChatEventsService,
     ChatGateway,
   ],
-  controllers: [ChatController, WidgetController, PublicController, AnalyticsController],
+  controllers: [ChatController, PublicController, AnalyticsController],
   exports: [ChatService, ChatEventsService, OllamaService, LLMService, IntentService],
 })
 export class ChatModule {}

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { KnowledgeService } from '../knowledge/knowledge.service';
+import { assertPublicHttpUrl } from '../../common/ssrf-guard';
 
 export interface ScrapedInfo {
   emails: string[];
@@ -28,7 +29,7 @@ export class SiteScraperService {
   ): Promise<{ scraped: ScrapedInfo; knowledgeEntries: number }> {
     this.logger.log(`Scraping site: ${siteUrl}`);
 
-    const baseUrl = new URL(siteUrl);
+    const baseUrl = await assertPublicHttpUrl(siteUrl, 'siteUrl');
     const rootUrl = `${baseUrl.protocol}//${baseUrl.host}`;
 
     // Scrape homepage

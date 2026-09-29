@@ -60,14 +60,17 @@ Bot-Int lets businesses create AI agents with custom personalities and knowledge
 | Layer | Technology |
 |---|---|
 | Monorepo | Turborepo + npm workspaces |
-| Backend | NestJS 10, TypeORM, Passport JWT |
-| Database | PostgreSQL 16 |
-| AI / LLM | Ollama (llama3.2 by default) |
-| Frontend | Next.js 14, React, Tailwind CSS |
+| Backend | NestJS 11, TypeORM 0.3, Passport JWT |
+| Database | PostgreSQL 16 + pgvector (Neon-compatible via `DATABASE_URL`) |
+| Cache / Queue | Redis (ioredis) + internal job table (`FOR UPDATE SKIP LOCKED`) |
+| AI / LLM | Fallback provider: OpenAI-compatible (Groq…) → Ollama, Jina embeddings |
+| Realtime | Socket.IO (authenticated) + SSE |
+| Frontend | Next.js 16, React 19, Tailwind CSS, next-intl |
 | State | Zustand |
 | HTTP Client | Axios |
-| Auth | JWT + bcrypt |
-| Containerization | Docker + Docker Compose |
+| Auth | JWT (Bearer) + refresh-token rotation (bcrypt-hashed) |
+| Payments | Stripe (+ pluggable providers via `payment-sdk`) |
+| Containerization | Docker + Docker Compose + nginx |
 
 ---
 
@@ -76,17 +79,26 @@ Bot-Int lets businesses create AI agents with custom personalities and knowledge
 ```
 bot_int/
 ├── apps/
-│   ├── api/                        # NestJS backend
+│   ├── api/                        # NestJS backend (~25 modules)
 │   │   ├── src/
-│   │   │   ├── main.ts
+│   │   │   ├── main.ts             # Bootstrap (rawBody, trust proxy, health)
 │   │   │   ├── app.module.ts
+│   │   │   ├── common/             # crypto, cache, SSRF guard, exception filter
+│   │   │   ├── migrations/         # TypeORM migrations (run in prod on boot)
 │   │   │   └── modules/
-│   │   │       ├── auth/           # Register, Login, JWT strategy
+│   │   │       ├── auth/           # JWT, refresh rotation, sessions
 │   │   │       ├── tenants/        # Multi-tenant management
 │   │   │       ├── agents/         # AI agent CRUD
-│   │   │       ├── chat/           # Conversations + Ollama integration
-│   │   │       ├── knowledge/      # Document ingestion & search
-│   │   │       └── leads/          # Lead capture & CRM
+│   │   │       ├── chat/           # Conversations, LLM, SSE, Socket.IO gateway
+│   │   │       ├── widget/         # Public embeddable widget (embed.js)
+│   │   │       ├── channels/       # WhatsApp / Instagram inbound webhooks
+│   │   │       ├── billing/        # Plans, quotas, Stripe webhooks
+│   │   │       ├── integrations/   # External commerce/messaging integrations
+│   │   │       ├── webhooks/       # Outbound webhooks (HMAC-signed, queued)
+│   │   │       ├── queue/          # DB-backed job queue + processors
+│   │   │       ├── knowledge/      # Documents, chunks, vector search, scraping
+│   │   │       ├── leads/          # Lead capture & CRM
+│   │   │       └── …               # products, flows, surveys, admin, site…
 │   │   ├── Dockerfile
 │   │   ├── nest-cli.json
 │   │   ├── package.json
@@ -121,9 +133,9 @@ bot_int/
 
 ### Prerequisites
 
-- Node.js >= 20 (recommended: v24 via nvm)
-- PostgreSQL running locally (or via Docker)
-- [Ollama](https://ollama.ai) installed and running
+- Node.js >= 20 (recommended: v22/v24 via nvm)
+- PostgreSQL 16 with pgvector — local, Docker, or managed (e.g. Neon via `DATABASE_URL`)
+- [Ollama](https://ollama.ai) installed and running (or an OpenAI-compatible API key)
 
 ### 1. Clone the repository
 
@@ -184,24 +196,59 @@ This starts both API (`http://localhost:3001/api`) and Web (`http://localhost:30
 
 ## Environment Variables
 
-`apps/api/.env`:
+Copy `.env.example` → `.env` at the repo root (the API loads it). Key variables:
 
 ```env
-PORT=3001
-NODE_ENV=development
+# Database — prefer a single URL in production (Neon, RDS, …)
+DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
+# …or individual vars for local dev:
+# DB_HOST=localhost  DB_PORT=5432  DB_USER=stiamond  DB_PASSWORD=…  DB_NAME=stiamond_agent
 
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=stiamond
-DB_PASSWORD=stiamond123
-DB_NAME=stiamond_agent
-
+# Required in production — app refuses to boot without them
 JWT_SECRET=your_very_long_random_secret_here
-REFRESH_TOKEN_TTL_MINUTES=10080 # 7 days
+ENCRYPTION_KEY=exactly-32-char-secret-for-aes256-gcm
 
-OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.2
+JWT_EXPIRES_IN=15m
+REFRESH_TOKEN_TTL_MINUTES=10080  # 7 days
+
+# Security / runtime
+NODE_ENV=production
+TRUST_PROXY=1                    # hops to trust for client IP (rate-limit)
+CORS_ORIGINS=https://your-app.com
+ENABLE_DEBUG_PAGES=false         # /api/admin, /api/operator, /api/widget-demo pages
+
+# LLM
+LLM_PROVIDER=openai              # falls back to Ollama
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4o-mini
+OLLAMA_URL=https://ollama.example.com
+OLLAMA_MODEL=llama3.1:latest
+OLLAMA_CF_ACCESS_CLIENT_ID=      # Cloudflare Access service token (if used)
+OLLAMA_CF_ACCESS_CLIENT_SECRET=
+
+# Billing (Stripe)
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=           # required for webhook signature verification
+STRIPE_PRICE_STARTER=
+STRIPE_PRICE_GROWTH=
+STRIPE_PRICE_SCALE=
+BILLING_BYPASS_QUOTA=false       # never true in production
+
+# Channel webhooks (inbound signature verification — fail closed if unset)
+WHATSAPP_WEBHOOK_SECRET=
+INSTAGRAM_WEBHOOK_SECRET=
+
+# Redis (cache, rate-limit storage)
+REDIS_URL=redis://localhost:6379
+
+# Queue
+QUEUE_BATCH_SIZE=5
+
+# Frontend
+NEXT_PUBLIC_API_URL=https://api.your-app.com/api
 ```
+
+> **Secrets**: never commit `.env` or `pgbouncer/userlist.txt` (gitignored; generated from `DB_USER`/`DB_PASSWORD` at container start).
 
 ---
 
@@ -270,6 +317,47 @@ OLLAMA_MODEL=llama3.2
 | PATCH | `/api/leads/:id` | Update lead status |
 
 ---
+
+## Testing & Quality
+
+```bash
+# API
+npm run lint -w apps/api        # ESLint
+npm run build -w apps/api       # TypeScript compile
+npm test -w apps/api            # Jest unit tests
+
+# Web
+npm run build -w apps/web       # Next.js production build
+npm run test:e2e -w apps/web    # Playwright (login, widget, agent-to-lead)
+```
+
+## Security Notes
+
+- **Multi-tenancy**: every query is scoped by `tenantId` at the service layer; public widget access is bound to a `visitorId`.
+- **Auth**: JWT in `Authorization: Bearer` header only (query-string tokens rejected); refresh tokens are hashed (bcrypt), rotated atomically, and revocable per-session.
+- **Secrets at rest**: integration credentials are AES-256-GCM encrypted (`enc:v1:` ciphertext) via `ENCRYPTION_KEY` and masked in API responses.
+- **Inbound webhooks**: HMAC verified against the raw request body — missing secrets fail closed.
+- **Outbound webhooks**: delivered via the job queue (retries) and signed `t=<ts>,v1=<hmac>` in `X-Webhook-Signature`.
+- **SSRF**: all user-supplied fetch URLs (webhooks, product imports, URL scraping) are validated against private/internal addresses (`common/ssrf-guard.ts`).
+- **Rate limiting**: app-level `@nestjs/throttler` (strict on `/api/auth/*`) + nginx `limit_req` zones; client IP relies on `TRUST_PROXY`.
+- **Schema**: TypeORM `synchronize` is disabled in production — schema changes go through `src/migrations/`.
+
+### Production checklist
+
+- [ ] Set `DATABASE_URL` (Neon/managed) or `DB_*`, `JWT_SECRET`, `ENCRYPTION_KEY`, `STRIPE_*`, `CORS_ORIGINS`
+- [ ] `NODE_ENV=production` (migrations run automatically on boot)
+- [ ] Set `TRUST_PROXY` to the real number of proxy hops
+- [ ] Rotate any credential that was ever committed (DB passwords, CF Access tokens)
+- [ ] Keep `BILLING_BYPASS_QUOTA=false`, `ENABLE_DEBUG_PAGES` unset
+
+## Docker
+
+```bash
+docker compose up -d                    # postgres + redis + pgbouncer + api + web
+docker compose --profile production up  # adds nginx (TLS on :443)
+```
+
+PgBouncer credentials are generated at container start from `DB_USER`/`DB_PASSWORD` — no secrets in `pgbouncer/` (see `entrypoint-userlist.sh`). DB/Redis/API/Web ports bind to `127.0.0.1`; nginx terminates TLS and proxies `/api/` (WebSocket + SSE) and the web app.
 
 ## Roadmap
 

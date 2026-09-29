@@ -15,6 +15,13 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 
+  // Trust the first proxy hop (nginx / Render LB) so req.ip is the real client IP —
+  // required for per-IP rate limiting to work correctly.
+  const trustProxy = config.get<string>('TRUST_PROXY', '1');
+  if (trustProxy !== 'false' && trustProxy !== '0') {
+    app.getHttpAdapter().getInstance().set('trust proxy', trustProxy === 'true' ? 1 : trustProxy);
+  }
+
   const databaseUrl = config.get<string>('DATABASE_URL');
   const dbHost = config.get<string>('DB_HOST');
   if (!databaseUrl && !dbHost) {

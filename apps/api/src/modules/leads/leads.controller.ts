@@ -4,6 +4,8 @@ import { Response } from 'express';
 import { Type } from 'class-transformer';
 import { LeadsService } from './leads.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard, Roles } from '../auth/guards/roles.guard';
+import { UserRole } from '../auth/user.entity';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { LeadStatus } from './lead.entity';
@@ -27,7 +29,7 @@ class ListLeadsDto {
 
 @ApiTags('leads')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('leads')
 export class LeadsController {
   constructor(private readonly leadsService: LeadsService) {}
@@ -47,6 +49,7 @@ export class LeadsController {
   }
 
   @Get('export/csv')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
   @ApiOperation({ summary: 'Export leads as CSV' })
   @ApiResponse({ status: 200, description: 'CSV file download' })
   async exportCsv(@Request() req, @Res() res: Response) {
@@ -65,6 +68,7 @@ export class LeadsController {
   }
 
   @Post()
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR)
   @ApiOperation({ summary: 'Create a new lead' })
   @ApiResponse({ status: 201, description: 'Lead created' })
   create(@Request() req, @Body() dto: CreateLeadDto) {
@@ -72,6 +76,7 @@ export class LeadsController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR)
   @ApiOperation({ summary: 'Update lead by ID' })
   @ApiResponse({ status: 200, description: 'Lead updated' })
   update(@Request() req, @Param('id') id: string, @Body() dto: UpdateLeadDto) {
@@ -79,6 +84,7 @@ export class LeadsController {
   }
 
   @Post(':id/tags')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR)
   @ApiOperation({ summary: 'Add tag to lead' })
   @ApiResponse({ status: 200, description: 'Tag added' })
   addTag(@Request() req, @Param('id') id: string, @Body() dto: TagDto) {
@@ -86,6 +92,7 @@ export class LeadsController {
   }
 
   @Delete(':id/tags/:tag')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR)
   @ApiOperation({ summary: 'Remove tag from lead' })
   @ApiResponse({ status: 200, description: 'Tag removed' })
   removeTag(@Request() req, @Param('id') id: string, @Param('tag') tag: string) {
@@ -100,6 +107,7 @@ export class LeadsController {
   }
 
   @Post(':id/comments')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR)
   @ApiOperation({ summary: 'Add comment to lead' })
   @ApiResponse({ status: 201, description: 'Comment added' })
   addComment(@Request() req, @Param('id') id: string, @Body() dto: CommentDto) {
@@ -113,6 +121,7 @@ export class LeadsController {
   }
 
   @Delete(':id/comments/:commentId')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR)
   @ApiOperation({ summary: 'Delete lead comment' })
   @ApiResponse({ status: 200, description: 'Comment deleted' })
   deleteComment(@Request() req, @Param('commentId') commentId: string) {

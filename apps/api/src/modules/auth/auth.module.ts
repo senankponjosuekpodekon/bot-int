@@ -20,6 +20,7 @@ import { SessionEntity } from './session.entity';
     TypeOrmModule.forFeature([User, RefreshToken, SessionEntity]),
     PassportModule,
     JwtModule.registerAsync({
+      global: true,
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

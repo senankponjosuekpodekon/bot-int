@@ -11,7 +11,7 @@ import { ProductsModule } from '../products/products.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([JobEntity]),
-    WebhooksModule,
+    forwardRef(() => WebhooksModule),
     forwardRef(() => ProductsModule),
   ],
   providers: [QueueService, WebhookProcessor, ShopifyImportProcessor],

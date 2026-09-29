@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { EntityManager, Repository, LessThan } from 'typeorm';
 import { SessionEntity } from './session.entity';
 
 export interface Session {
@@ -17,9 +17,10 @@ export class SessionService {
     private readonly repo: Repository<SessionEntity>,
   ) {}
 
-  async create(userId: string, tenantId: string, tokenId: string, ttlSeconds: number): Promise<void> {
+  async create(userId: string, tenantId: string, tokenId: string, ttlSeconds: number, em?: EntityManager): Promise<void> {
+    const repo = em ? em.getRepository(SessionEntity) : this.repo;
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
-    await this.repo.save(this.repo.create({ userId, tenantId, tokenId, expiresAt }));
+    await repo.save(repo.create({ userId, tenantId, tokenId, expiresAt }));
   }
 
   async findByUser(userId: string): Promise<Session[]> {

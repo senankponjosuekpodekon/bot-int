@@ -7,10 +7,11 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThan, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
-import { User } from './user.entity';
+import { User, UserRole } from './user.entity';
+import { Tenant } from '../tenants/tenant.entity';
 import { TenantsService } from '../tenants/tenants.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -29,28 +30,38 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly sessionService: SessionService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async register(dto: RegisterDto) {
     const existingTenant = await this.tenantsService.findByEmail(dto.email);
     if (existingTenant) throw new ConflictException('Email already registered');
 
-    const tenant = await this.tenantsService.create({
-      name: dto.companyName,
-      email: dto.email,
-      language: dto.language,
-      timezone: dto.timezone,
-      location: dto.location,
-    });
-
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const user = this.userRepo.create({
-      name: dto.name,
-      email: dto.email,
-      password: hashedPassword,
-      tenantId: tenant.id,
+
+    // Tenant + owner user must be created atomically — an orphaned tenant with no
+    // user would be an unmanageable record that still consumes a unique email.
+    const { tenant, user } = await this.dataSource.transaction(async (em) => {
+      const tenant = await em.getRepository(Tenant).save(
+        em.getRepository(Tenant).create({
+          name: dto.companyName,
+          email: dto.email,
+          language: dto.language,
+          timezone: dto.timezone,
+          location: dto.location,
+        }),
+      );
+      const user = await em.getRepository(User).save(
+        em.getRepository(User).create({
+          name: dto.name,
+          email: dto.email,
+          password: hashedPassword,
+          tenantId: tenant.id,
+          role: UserRole.ADMIN,
+        }),
+      );
+      return { tenant, user };
     });
-    await this.userRepo.save(user);
 
     return this.issueTokens(user.id, tenant.id);
   }
@@ -86,10 +97,12 @@ export class AuthService {
     const hashedToken = await bcrypt.hash(secret, 12);
 
     const expiresAt = new Date(Date.now() + refreshTtlMinutes * 60 * 1000);
-    await this.refreshRepo.save(
-      this.refreshRepo.create({ userId, tenantId, tokenId, hashedToken, expiresAt }),
-    );
-    await this.sessionService.create(userId, tenantId, tokenId, refreshTtlMinutes * 60);
+    await this.dataSource.transaction(async (em) => {
+      await em.getRepository(RefreshToken).save(
+        em.getRepository(RefreshToken).create({ userId, tenantId, tokenId, hashedToken, expiresAt }),
+      );
+      await this.sessionService.create(userId, tenantId, tokenId, refreshTtlMinutes * 60, em);
+    });
 
     return {
       access_token: this.jwtService.sign(payload, { expiresIn }),
@@ -113,30 +126,21 @@ export class AuthService {
     if (!refreshToken) throw new ForbiddenException('Invalid refresh token');
     const parts = refreshToken.split('.');
 
-    if (parts.length === 1) {
-      const secret = parts[0];
-      if (!secret) throw new ForbiddenException('Invalid refresh token');
-      return { tokenId: null, secret };
+    // Legacy single-segment tokens are rejected: resolving them required an O(n)
+    // bcrypt scan over every active refresh token (DoS amplification). Users holding
+    // one must log in again.
+    if (parts.length !== 2) {
+      throw new ForbiddenException('Invalid refresh token');
     }
 
-    if (parts.length === 2) {
-      const [tokenId, secret] = parts;
-      if (!tokenId || !secret) throw new ForbiddenException('Invalid refresh token');
-      return { tokenId, secret };
-    }
-
-    throw new ForbiddenException('Invalid refresh token');
+    const [tokenId, secret] = parts;
+    if (!tokenId || !secret) throw new ForbiddenException('Invalid refresh token');
+    return { tokenId, secret };
   }
 
   private async validateRefreshToken(refreshToken: string) {
     const { tokenId, secret } = this.parseRefreshToken(refreshToken);
-    let token: RefreshToken | null = null;
-
-    if (tokenId) {
-      token = await this.refreshRepo.findOne({ where: { tokenId } });
-    } else {
-      token = await this.findLegacyToken(secret);
-    }
+    const token = await this.refreshRepo.findOne({ where: { tokenId } });
 
     if (!token) throw new ForbiddenException('Invalid refresh token');
     if (token.isRevoked || token.expiresAt < new Date()) {
@@ -149,26 +153,14 @@ export class AuthService {
   }
 
   private async revokeToken(token: RefreshToken) {
-    token.isRevoked = true;
-    token.revokedAt = new Date();
-    await this.refreshRepo.save(token);
-    await this.sessionService.remove(token.userId, token.tokenId);
-  }
-
-  private async findLegacyToken(secret: string) {
-    const candidates = await this.refreshRepo.find({
-      where: {
-        isRevoked: false,
-        expiresAt: MoreThan(new Date()),
-      },
-    });
-
-    for (const candidate of candidates) {
-      if (await bcrypt.compare(secret, candidate.hashedToken)) {
-        return candidate;
-      }
+    // Atomic revoke — safe against concurrent refresh of the same token.
+    const res = await this.refreshRepo.update(
+      { id: token.id, isRevoked: false },
+      { isRevoked: true, revokedAt: new Date() },
+    );
+    if (res.affected === 0) {
+      throw new ForbiddenException('Refresh token already used');
     }
-
-    return null;
+    await this.sessionService.remove(token.userId, token.tokenId);
   }
 }

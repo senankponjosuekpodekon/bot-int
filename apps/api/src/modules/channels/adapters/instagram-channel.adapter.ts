@@ -34,7 +34,7 @@ export class InstagramChannelAdapter implements ChannelAdapter {
 
   verifySignature(body: string, signature: string): boolean {
     const secret = this.config?.get('INSTAGRAM_WEBHOOK_SECRET');
-    if (!secret) return true;
+    if (!secret) return false;
     if (!signature) return false;
 
     const expected = `sha256=${createHmac('sha256', secret).update(body, 'utf8').digest('hex')}`;

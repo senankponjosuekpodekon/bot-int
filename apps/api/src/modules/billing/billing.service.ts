@@ -125,6 +125,7 @@ export class BillingService {
       successUrl: `${appUrl}/dashboard/billing?success=1`,
       cancelUrl: `${appUrl}/dashboard/billing?canceled=1`,
       mode: 'subscription',
+      metadata: { tenantId },
     });
 
     return { url: session.url };
@@ -232,30 +233,32 @@ export class BillingService {
     return map[status] || SubscriptionStatus.ACTIVE;
   }
 
-  // ─── Metering: increment conversation count with overage ───
+  // ─── Metering: increment conversation count with overage (atomic to survive concurrent messages) ───
   async incrementUsage(tenantId: string): Promise<void> {
     const sub = await this.getSubscription(tenantId);
-    const now = new Date();
     const limits = PLAN_LIMITS[sub.plan];
+    const limit = limits.conversationsPerMonth;
+    const overRate = limits.overagePerConversation ?? 0;
 
-    // Reset monthly counter
-    if (sub.meteringResetAt) {
-      const resetDate = new Date(sub.meteringResetAt);
-      if (now.getMonth() !== resetDate.getMonth() || now.getFullYear() !== resetDate.getFullYear()) {
-        sub.conversationsThisMonth = 0;
-        sub.overageConversations = 0;
-        sub.meteringResetAt = now;
-      }
-    }
-
-    sub.conversationsThisMonth += 1;
-
-    // Track overage if above limit and plan supports it
-    if (sub.conversationsThisMonth > limits.conversationsPerMonth && limits.overagePerConversation > 0) {
-      sub.overageConversations += 1;
-    }
-
-    await this.subRepo.save(sub);
+    // needsReset := meteringResetAt IS NULL OR month(meteringResetAt) < month(now)
+    await this.subRepo
+      .createQueryBuilder()
+      .update(Subscription)
+      .set({
+        meteringResetAt: () =>
+          `CASE WHEN ("meteringResetAt" IS NULL OR date_trunc('month', "meteringResetAt") < date_trunc('month', now())) THEN now() ELSE "meteringResetAt" END`,
+        conversationsThisMonth: () =>
+          `CASE WHEN ("meteringResetAt" IS NULL OR date_trunc('month', "meteringResetAt") < date_trunc('month', now())) THEN 1 ELSE "conversationsThisMonth" + 1 END`,
+        overageConversations: () =>
+          `CASE
+             WHEN ("meteringResetAt" IS NULL OR date_trunc('month', "meteringResetAt") < date_trunc('month', now()))
+               THEN CASE WHEN 1 > :limit AND :overRate > 0 THEN 1 ELSE 0 END
+             ELSE CASE WHEN "conversationsThisMonth" + 1 > :limit AND :overRate > 0 THEN "overageConversations" + 1 ELSE "overageConversations" END
+           END`,
+      })
+      .where('"tenantId" = :tenantId', { tenantId })
+      .setParameters({ limit, overRate })
+      .execute();
   }
 
   // ─── Check if tenant can send messages ───

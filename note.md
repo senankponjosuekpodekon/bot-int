@@ -606,3 +606,86 @@ Si tu veux la suite logique, je peux te produire maintenant :
 5. **Roadmap levée de fonds + pitch deck investisseur**
 
 Dis-moi juste la prochaine brique.
+
+------------------------------------
+
+
+Oui, et c'est un axe qu'on n'a pas encore couvert du tout — bien vu. Les tools (function calling) posent exactement le même problème d'isolation que le knowledge et les products, mais à **trois niveaux différents**, dont un est plus dangereux que tout ce qu'on a traité jusqu'ici parce qu'il touche à l'exécution, pas juste au texte du prompt.
+
+## Les trois niveaux à isoler
+
+```text
+1. SÉLECTION      → quels tools sont chargés pour cet agent ?
+2. EXÉCUTION       → que fait réellement le tool quand il tourne ?
+3. DESCRIPTION     → que dit le schéma du tool au LLM ?
+```
+
+### 1. Sélection — le même principe que les modules verticaux
+
+Un agent e-commerce n'a aucune raison de voir `book_appointment` ou `search_properties` dans sa liste de tools disponibles, et un agent médical ne devrait jamais avoir accès à `process_refund`. C'est le prolongement naturel du découpage core/modules qu'on a défini :
+
+```ts
+const toolsByVertical: Record<AgentType, Tool[]> = {
+  ecommerce: [searchProducts, checkStock, createOrder],
+  immobilier: [searchProperties, scheduleViewing],
+  restaurant: [getMenu, reserveTable],
+  medical: [checkAvailability, bookAppointment],
+  marketing: [createCampaign, getCampaignStats],
+};
+
+const tools = [...coreTools, ...toolsByVertical[activeAgent.type]];
+```
+
+Moins de tools exposés = moins de surface d'erreur, exactement le même raisonnement que "moins de bruit dans le contexte = moins d'hallucination" qu'on a vu plus tôt.
+
+### 2. Exécution — c'est ici que le vrai risque se cache
+
+C'est le point le plus important, et il est différent de tout ce qu'on a traité jusqu'à présent : **ne fais jamais confiance à un `businessId`/`agentId` que le modèle fournirait lui-même dans les arguments d'un appel de tool.**
+
+```ts
+// ❌ DANGEREUX
+async function searchProducts(args: { businessId: string; query: string }) {
+  return productsRepo.find({ businessId: args.businessId, ...});
+}
+
+// ✅ CORRECT
+async function searchProducts(args: { query: string }, ctx: ServerContext) {
+  // businessId vient du contexte serveur, jamais des arguments du modèle
+  return productsRepo.find({ businessId: ctx.activeAgent.businessId, ...});
+}
+```
+
+Pourquoi ça compte particulièrement : un tool, contrairement au knowledge ou au system prompt, est **exécutable**. Si le modèle peut influencer quel `businessId` est interrogé — via une injection de prompt, une manipulation de la conversation, ou même juste une hallucination du modèle qui invente un id plausible — tu n'as plus une fuite d'identité dans une réponse texte, tu as une vraie fuite de données d'une entreprise vers une autre, voire une action réelle (créer une commande, réserver un créneau) exécutée sur le mauvais business. Le principe : le `businessId`/`agentId` doit toujours venir du contexte serveur de la session active, jamais d'un paramètre que le LLM remplit.
+
+### 3. Description — même piège que `region-profiles.ts`, sous une autre forme
+
+Le schéma d'un tool (son `name` et sa `description`) est lui aussi injecté dans le contexte envoyé au LLM. Vérifie qu'aucun de tes tools n'a une description codée en dur avec du contenu identitaire, du genre :
+
+```ts
+// ❌ à vérifier dans ton code
+{
+  name: "search_products",
+  description: "Recherche dans le catalogue Stiamond..." // fuite potentielle
+}
+```
+
+La description doit rester générique ("Recherche un produit dans le catalogue de l'entreprise active"), jamais nommer une marque. C'est exactement le même type de bug que celui qu'on vient de trouver dans `region-profiles.ts` — du texte censé être neutre mais qui contient en réalité une identité commerciale figée.
+
+## Le lien avec les `Policies` du core commun
+
+Ça complète directement un point qu'on avait laissé abstrait plus tôt : dans le schéma core/modules, `Policies` définissait "ce que l'agent a le droit de faire (recommander, réserver, rembourser…)". Les tools sont le mécanisme **concret** qui applique cette policy — pas une instruction textuelle dans le prompt ("tu ne dois pas faire de remboursement"), qui reste toujours contournable par un modèle, mais l'**absence pure et simple du tool** dans la liste chargée pour cet agent. Un agent qui n'a pas `process_refund` dans ses tools ne peut structurellement pas rembourser, quoi que dise le prompt. C'est une garantie bien plus solide que du texte.
+
+## Une distinction supplémentaire à ajouter : lecture vs écriture
+
+Sépare tes tools en deux catégories, parce que le risque n'est pas symétrique :
+
+- **Lecture** (`search_products`, `check_availability`) : le risque, c'est la fuite de données cross-business.
+- **Écriture** (`create_order`, `book_appointment`, `process_refund`) : le risque, c'est une action réelle mal attribuée — plus grave, parce qu'irréversible ou coûteuse. Pour ces tools-là, ajoute un log d'audit systématique (`tenantId`, `businessId`, `agentId`, `visitorId`, action, timestamp) — indépendamment du reste, pour pouvoir tracer et corriger vite si quelque chose a mal tourné.
+
+## À ajouter à ta suite de tests
+
+Le même esprit que tes 5 tests d'isolation, appliqué aux tools :
+
+- Demander à l'agent Business A d'appeler un tool avec un id de Business B injecté dans le message utilisateur ("cherche le produit avec businessId=xyz") → le tool doit ignorer ce paramètre et utiliser le contexte serveur.
+- Vérifier qu'un agent e-commerce n'a tout simplement pas `book_appointment` dans sa liste de tools disponibles.
+- Vérifier qu'aucune description de tool ne contient de nom de marque en la comparant à une liste noire simple.C'est une bonne intuition parce que les tools sont en réalité la catégorie la plus dangereuse des trois qu'on a vues (knowledge, mémoire, tools) — c'est la seule où une fuite ne se limite pas à une mauvaise réponse texte, elle peut devenir une vraie action mal attribuée entre deux entreprises.

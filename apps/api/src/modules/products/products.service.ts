@@ -7,6 +7,7 @@ import { ProductImportSource, ImportSourceType } from './product-import-source.e
 import { Agent } from '../agents/agent.entity';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { assertPublicHttpUrl, isPrivateHostname } from '../../common/ssrf-guard';
 
 @Injectable()
 export class ProductsService {
@@ -159,6 +160,9 @@ export class ProductsService {
   }
 
   async importFromShopify(tenantId: string, shopDomain: string, accessToken: string): Promise<{ imported: number; errors: number; created: number; updated: number }> {
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9.-]*$/.test(shopDomain) || isPrivateHostname(shopDomain)) {
+      throw new BadRequestException('Invalid shop domain');
+    }
     let created = 0;
     let updated = 0;
     let errors = 0;
@@ -226,7 +230,7 @@ export class ProductsService {
     let errors = 0;
     let page = 1;
     let hasMore = true;
-    const baseUrl = siteUrl.replace(/\/$/, '');
+    const baseUrl = (await assertPublicHttpUrl(siteUrl, 'siteUrl')).toString().replace(/\/$/, '');
 
     while (hasMore) {
       try {
@@ -376,6 +380,9 @@ export class ProductsService {
     let updated = 0;
     let errors = 0;
     const cleanDomain = shopUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9.-]*$/.test(cleanDomain) || isPrivateHostname(cleanDomain)) {
+      throw new BadRequestException('Invalid shop domain');
+    }
     const url = `https://${cleanDomain}/products.json?limit=250`;
 
     try {
@@ -647,6 +654,7 @@ export class ProductsService {
     storeDomain?: string,
     agentId?: string,
   ): Promise<{ imported: number; errors: number; details: string[]; created: number; updated: number }> {
+    await assertPublicHttpUrl(csvUrl, 'csvUrl');
     const response = await this.fetchWithRetry(csvUrl, { timeout: 30000, responseType: 'text' });
     const csvContent = typeof response.data === 'string' ? response.data : String(response.data);
     const result = await this.importFromCsv(tenantId, csvContent, format, storeDomain, agentId, 'csv_url', { csvUrl });
@@ -714,6 +722,7 @@ export class ProductsService {
   }
 
   async importFromSitemap(tenantId: string, sitemapUrl: string, agentId?: string, maxPages?: number): Promise<{ imported: number; errors: number; scanned: number; created: number; updated: number }> {
+    await assertPublicHttpUrl(sitemapUrl, 'sitemapUrl');
     if (agentId) await this.ensureAgentInTenant(tenantId, agentId);
     let created = 0;
     let updated = 0;

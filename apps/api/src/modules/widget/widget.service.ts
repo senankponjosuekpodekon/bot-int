@@ -22,24 +22,77 @@ export class WidgetService {
     private readonly flowsService: FlowsService,
   ) {}
 
+  private async loadAgent(agentId: string): Promise<Agent> {
+    const agent = await this.agentRepo.findOne({ where: { id: agentId, isActive: true } });
+    if (!agent) throw new NotFoundException('Agent not found');
+    return agent;
+  }
+
+  // Public-facing widget config — never expose systemPrompt or tenant internals.
+  async getPublicConfig(agentId: string): Promise<{
+    id: string;
+    name: string;
+    personality: string;
+    iceBreakers: string[];
+  }> {
+    const agent = await this.loadAgent(agentId);
+    return {
+      id: agent.id,
+      name: agent.name,
+      personality: agent.personality || '',
+      iceBreakers: agent.iceBreakers || [],
+    };
+  }
+
   async getAgentConfig(agentId: string): Promise<{
     id: string;
     name: string;
     tenantId: string;
     personality: string;
     iceBreakers: string[];
-    systemPrompt: string;
   }> {
-    const agent = await this.agentRepo.findOne({ where: { id: agentId, isActive: true } });
-    if (!agent) throw new NotFoundException('Agent not found');
+    const agent = await this.loadAgent(agentId);
     return {
       id: agent.id,
       name: agent.name,
       tenantId: agent.tenantId,
       personality: agent.personality || '',
       iceBreakers: agent.iceBreakers || [],
-      systemPrompt: agent.systemPrompt,
     };
+  }
+
+  // A public client may only access a conversation it owns (matching visitorId).
+  async assertPublicConversation(conversationId: string, visitorId?: string): Promise<Conversation> {
+    const conversation = await this.convRepo.findOne({ where: { id: conversationId } });
+    if (!conversation) throw new NotFoundException('Conversation not found');
+    if (conversation.visitorId && conversation.visitorId !== visitorId) {
+      throw new NotFoundException('Conversation not found');
+    }
+    return conversation;
+  }
+
+  async getConversationHistory(conversationId: string, visitorId?: string): Promise<any[]> {
+    const conversation = await this.assertPublicConversation(conversationId, visitorId);
+    return this.msgRepo.find({
+      where: { conversationId: conversation.id },
+      order: { createdAt: 'ASC' },
+      take: 500,
+    });
+  }
+
+  // Resolves /widget/history/:id where :id may be a conversationId or an agentId.
+  async resolvePublicHistory(id: string, visitorId?: string): Promise<any[]> {
+    if (visitorId) {
+      const conversation = await this.convRepo.findOne({ where: { id, visitorId } });
+      if (conversation) {
+        return this.msgRepo.find({
+          where: { conversationId: conversation.id },
+          order: { createdAt: 'ASC' },
+          take: 500,
+        });
+      }
+    }
+    return this.getPublicHistory(id, visitorId || '');
   }
 
   async sendPublicMessage(

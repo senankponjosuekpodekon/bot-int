@@ -1,4 +1,5 @@
-import { Controller, Get, Res } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Res } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 
 const ADMIN_HTML = `<!doctype html>
@@ -57,7 +58,7 @@ const ADMIN_HTML = `<!doctype html>
       const from = document.getElementById('from').value;
       const to = document.getElementById('to').value;
       const qs = (from ? '&from=' + from : '') + (to ? '&to=' + to : '');
-      const res = await fetch('/chat/analytics?' + qs.replace(/^&/, '?'), { headers: { Authorization: 'Bearer ' + token } });
+      const res = await fetch('/api/chat/analytics?' + qs.replace(/^&/, '?'), { headers: { Authorization: 'Bearer ' + token } });
       if (!res.ok) return alert('Erreur ' + res.status);
       const d = await res.json();
       document.getElementById('period').textContent = new Date(d.period.start).toLocaleDateString('fr-FR') + ' – ' + new Date(d.period.end).toLocaleDateString('fr-FR');
@@ -120,16 +121,17 @@ const OPERATOR_HTML = `<!doctype html>
     const token = localStorage.getItem('botint_token');
     if (token) { document.getElementById('login').classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); loadInbox(); }
     function saveToken() { localStorage.setItem('botint_token', document.getElementById('token').value); location.reload(); }
+    function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
     async function get(path) { const r = await fetch(path, { headers: { Authorization: 'Bearer ' + token } }); return r.json(); }
     async function post(path, body) { const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(body) }); return r.json(); }
     async function loadInbox() {
-      const d = await get('/chat/operator/inbox?limit=50');
+      const d = await get('/api/chat/operator/inbox?limit=50');
       const box = document.getElementById('inbox');
-      if (!d.data.length) { box.innerHTML = '<p>Aucune conversation en attente.</p>'; return; }
+      if (!d.data || !d.data.length) { box.innerHTML = '<p>Aucune conversation en attente.</p>'; return; }
       box.innerHTML = d.data.map(c => \`
         <div class="conversation" id="conv-\${c.id}">
-          <h4>\${c.visitorId || 'Anonyme'}</h4>
-          <p>\${c.channel || 'web'} • \${new Date(c.updatedAt || c.createdAt).toLocaleString('fr-FR')}</p>
+          <h4>\${esc(c.visitorId || 'Anonyme')}</h4>
+          <p>\${esc(c.channel || 'web')} • \${new Date(c.updatedAt || c.createdAt).toLocaleString('fr-FR')}</p>
           <button onclick="take('\${c.id}')">Prendre en charge</button>
           <button onclick="loadHistory('\${c.id}')">Voir</button>
           <div class="chat hidden" id="chat-\${c.id}"></div>
@@ -140,19 +142,20 @@ const OPERATOR_HTML = `<!doctype html>
         </div>
       \`).join('');
     }
-    async function take(id) { await post('/chat/operator/' + id + '/take', {}); alert('Pris en charge'); }
+    async function take(id) { await post('/api/chat/operator/' + id + '/take', {}); alert('Pris en charge'); }
     async function loadHistory(id) {
-      const data = await get('/chat/history/' + id);
+      const data = await get('/api/chat/history/' + id);
       const chat = document.getElementById('chat-' + id);
       chat.classList.remove('hidden');
       document.getElementById('reply-' + id).classList.remove('hidden');
-      chat.innerHTML = (data.messages || []).map(m => '<div class="msg ' + (m.role === 'user' ? 'user' : (m.metadata && m.metadata.isOperator ? 'operator' : 'bot')) + '">' + (m.content || '').replace(/</g, '&lt;') + '</div>').join('');
+      const msgs = Array.isArray(data) ? data : (data.messages || []);
+      chat.innerHTML = msgs.map(m => '<div class="msg ' + (m.role === 'user' ? 'user' : (m.metadata && m.metadata.isOperator ? 'operator' : 'bot')) + '">' + esc(m.content || '') + '</div>').join('');
     }
     async function reply(e, id) {
       e.preventDefault();
       const content = document.getElementById('input-' + id).value;
       if (!content) return;
-      await post('/chat/' + id + '/operator', { content });
+      await post('/api/chat/' + id + '/operator', { message: content });
       document.getElementById('input-' + id).value = '';
       loadHistory(id);
     }
@@ -171,35 +174,46 @@ const WIDGET_DEMO_HTML = `<!doctype html>
 <body>
   <div class="box">
     <h1>Widget demo</h1>
-    <p>Collez votre script <code>widget.js</code> n'importe où sur une page. Vous avez besoin d'une <a href="/api-key">clé API</a> et d'un <code>agentId</code>.</p>
+    <p>Collez le script <code>embed.js</code> n'importe où sur une page. Vous avez besoin de votre <code>agentId</code> (dashboard → Widget).</p>
     <pre><code id="code"></code></pre>
   </div>
   <script>
     const agentId = new URLSearchParams(location.search).get('agentId') || 'YOUR_AGENT_ID';
-    const apiKey = new URLSearchParams(location.search).get('apiKey') || 'stia_YOUR_API_KEY';
-    const snippet = '<script src="' + location.origin + '/widget/widget.js" data-api-key="' + apiKey + '" data-agent-id="' + agentId + '" data-position="right"><\/script>';
+    const apiBase = location.origin + '/api';
+    const snippet = '<script src="' + apiBase + '/widget/embed.js" data-agent="' + agentId + '" data-api="' + apiBase + '" data-position="bottom-right"><\/script>';
     document.getElementById('code').textContent = snippet;
   </script>
-  <script src="/widget/widget.js" data-api-key="stia_demo" data-agent-id="demo_agent" data-position="right"></script>
 </body>
 </html>`;
 
 @Controller()
 export class PublicController {
+  constructor(private readonly config: ConfigService) {}
+
+  // These are dev/ops helper pages — disabled in production unless explicitly enabled.
+  private assertDebugPagesEnabled() {
+    const isProd = this.config.get<string>('NODE_ENV') === 'production';
+    const enabled = this.config.get<string>('ENABLE_DEBUG_PAGES') === 'true';
+    if (isProd && !enabled) throw new NotFoundException();
+  }
+
   @Get('admin')
   admin(@Res() res: Response) {
+    this.assertDebugPagesEnabled();
     res.setHeader('Content-Type', 'text/html');
     res.send(ADMIN_HTML);
   }
 
   @Get('operator')
   operator(@Res() res: Response) {
+    this.assertDebugPagesEnabled();
     res.setHeader('Content-Type', 'text/html');
     res.send(OPERATOR_HTML);
   }
 
   @Get('widget-demo')
   widgetDemo(@Res() res: Response) {
+    this.assertDebugPagesEnabled();
     res.setHeader('Content-Type', 'text/html');
     res.send(WIDGET_DEMO_HTML);
   }

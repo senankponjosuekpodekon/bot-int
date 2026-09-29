@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { WebhookService, WebhookEndpoint } from './webhook.service';
 import { CryptoService } from '../../common/crypto.service';
+import { QueueService } from '../queue/queue.service';
 
 describe('WebhookService', () => {
   let service: WebhookService;
@@ -27,6 +28,7 @@ describe('WebhookService', () => {
         WebhookService,
         { provide: getRepositoryToken(WebhookEndpoint), useValue: repo },
         { provide: CryptoService, useValue: crypto },
+        { provide: QueueService, useValue: { addWebhook: jest.fn().mockResolvedValue({}) } },
       ],
     }).compile();
 

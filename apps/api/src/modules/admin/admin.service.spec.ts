@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { Repository } from 'typeorm';
 import { AdminService } from './admin.service';
 import { User, UserRole } from '../auth/user.entity';
@@ -29,6 +30,7 @@ describe('AdminService', () => {
         { provide: getRepositoryToken(Conversation), useValue: mockConvRepo },
         { provide: getRepositoryToken(Agent), useValue: mockAgentRepo },
         { provide: getRepositoryToken(Lead), useValue: mockLeadRepo },
+        { provide: DataSource, useValue: { transaction: jest.fn(async (cb: any) => cb({ getRepository: () => ({}), query: jest.fn() })) } },
       ],
     }).compile();
 

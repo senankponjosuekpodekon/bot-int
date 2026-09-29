@@ -1,16 +1,15 @@
-version: '3.9'
-
 services:
   postgres:
     image: pgvector/pg16:pg16
     container_name: stiamond_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER:-stiamond}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-stiamond123}
+      POSTGRES_USER: ${DB_USER:?Set DB_USER in .env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
       POSTGRES_DB: ${DB_NAME:-stiamond_agent}
     ports:
-      - '5432:5432'
+      # Loopback only — DB must not be reachable from the LAN
+      - '127.0.0.1:5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -24,7 +23,7 @@ services:
     container_name: stiamond_redis
     restart: unless-stopped
     ports:
-      - '6379:6379'
+      - '127.0.0.1:6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:
@@ -48,11 +47,15 @@ services:
       MAX_CLIENT_CONN: 1000
       DEFAULT_POOL_SIZE: 25
       AUTH_TYPE: md5
-      AUTH_FILE: /etc/pgbouncer/userlist.txt
+      # userlist.txt is generated at container start from env — no secrets in the repo.
+      PGBOUNCER_USER: ${DB_USER:?Set DB_USER in .env}
+      PGBOUNCER_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    entrypoint: ['/entrypoint-userlist.sh']
     ports:
-      - '6432:6432'
+      - '127.0.0.1:6432:6432'
     volumes:
-      - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./pgbouncer/entrypoint-userlist.sh:/entrypoint-userlist.sh:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -h localhost -p 6432 -U ${DB_USER:-stiamond}']
       interval: 10s
@@ -80,7 +83,7 @@ services:
       OLLAMA_URL: http://host.docker.internal:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
     ports:
-      - '3001:3001'
+      - '127.0.0.1:3001:3001'
     healthcheck:
       test: ['CMD', 'node', '-e', "require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
       interval: 30s
@@ -100,7 +103,7 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
       NODE_ENV: production
     ports:
-      - '3000:3000'
+      - '127.0.0.1:3000:3000'
 
   nginx:
     image: nginx:alpine

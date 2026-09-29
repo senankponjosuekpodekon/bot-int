@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
 import { Agent } from '../agents/agent.entity';
 import { Conversation } from '../chat/conversation.entity';
 import { Message } from '../chat/message.entity';
@@ -14,7 +12,6 @@ import { SurveysModule } from '../surveys/surveys.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Agent, Conversation, Message]),
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
     ChatModule,
     FlowsModule,
     SurveysModule,

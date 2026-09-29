@@ -70,7 +70,7 @@ export class Agent {
     pacingEnabled?: boolean;
     minDelayMs?: number;
     maxDelayMs?: number;
-    businessHours?: { start: string; end: string; days: number[] };
+    businessHours?: { start: string; end: string; days: number[]; timezone?: string };
     autoReplyMode?: 'always' | 'business_hours' | 'off_hours_only';
     audience?: 'all' | 'new_only' | 'returning_only';
     escalationTopics?: string[];

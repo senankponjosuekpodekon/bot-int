@@ -99,8 +99,8 @@ export class BillingController {
   }
 
   @Post('change-plan')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Change subscription plan' })
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Change subscription plan (platform admin only — upgrades must go through checkout)' })
   @ApiResponse({ status: 200, description: 'Plan changed' })
   async changePlan(@Request() req, @Body() dto: ChangePlanDto) {
     await this.cacheService.delPattern(`billing:${req.user.tenantId}:*`);
@@ -117,8 +117,8 @@ export class BillingController {
   }
 
   @Post('manual')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Record a manual payment and activate plan' })
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Record a manual payment and activate plan (platform admin only, after payment verification)' })
   @ApiResponse({ status: 200, description: 'Manual payment recorded' })
   async manual(@Request() req, @Body() dto: ManualPaymentDto) {
     await this.cacheService.delPattern(`billing:${req.user.tenantId}:*`);

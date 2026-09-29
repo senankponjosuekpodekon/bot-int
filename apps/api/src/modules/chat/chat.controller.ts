@@ -1,10 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, Res, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Query, Request, Res, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
+import { existsSync, promises as fs } from 'fs';
+import { extname, join, resolve } from 'path';
+import { randomUUID } from 'crypto';
 import { ChatService } from './chat.service';
 import { ChatEventsService } from './chat-events.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AttachLeadDto } from './dto/attach-lead.dto';
@@ -13,9 +16,23 @@ import { UpdateConversationStatusDto } from './dto/update-conversation-status.dt
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 import { OperatorReplyDto } from './dto/operator-reply.dto';
 
+const UPLOAD_DIR = resolve(process.cwd(), 'uploads');
+const ALLOWED_UPLOAD_MIME = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+  'application/pdf',
+  'text/plain',
+  'text/csv',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]);
+const ALLOWED_UPLOAD_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.pdf', '.txt', '.csv', '.doc', '.docx']);
+
 class SendMessageDto {
   @IsString() @IsNotEmpty() agentId: string;
-  @IsString() @IsNotEmpty() message: string;
+  @IsString() @IsNotEmpty() @MaxLength(4000) message: string;
   @IsString() @IsOptional() conversationId?: string;
   @IsString() @IsOptional() visitorId?: string;
   @Type(() => Boolean)
@@ -124,15 +141,38 @@ export class ChatController {
   @ApiResponse({ status: 200, description: 'File uploaded' })
   @UseInterceptors(FileInterceptor('file', {
     limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      if (!ALLOWED_UPLOAD_MIME.has(file.mimetype)) {
+        return cb(new BadRequestException('Unsupported file type'), false);
+      }
+      cb(null, true);
+    },
   }))
-  uploadFile(@UploadedFile() file: any) {
-    if (!file) return { error: 'No file provided' };
+  async uploadFile(@UploadedFile() file: any) {
+    if (!file) throw new BadRequestException('No file provided');
+    const ext = (extname(file.originalname || '') || '').toLowerCase();
+    const safeName = `${randomUUID()}${ALLOWED_UPLOAD_EXT.has(ext) ? ext : '.bin'}`;
+    await fs.mkdir(UPLOAD_DIR, { recursive: true });
+    await fs.writeFile(join(UPLOAD_DIR, safeName), file.buffer);
     return {
       filename: file.originalname,
       size: file.size,
       mimetype: file.mimetype,
-      url: `/uploads/${file.filename}`,
+      url: `/api/chat/files/${safeName}`,
     };
+  }
+
+  @Get('files/:name')
+  @ApiOperation({ summary: 'Download an uploaded file' })
+  @ApiResponse({ status: 200, description: 'File content' })
+  async downloadFile(@Param('name') name: string, @Res() res: Response) {
+    if (!/^[a-zA-Z0-9._-]+$/.test(name) || name.includes('..')) {
+      throw new BadRequestException('Invalid file name');
+    }
+    const filePath = join(UPLOAD_DIR, name);
+    if (!existsSync(filePath)) throw new NotFoundException('File not found');
+    res.setHeader('Content-Disposition', 'attachment');
+    res.sendFile(filePath);
   }
 
   @Post('feedback')
@@ -201,7 +241,8 @@ export class ChatController {
   @Get(':id/events')
   @ApiOperation({ summary: 'Server-sent events for a conversation' })
   @ApiResponse({ status: 200, description: 'SSE stream of messages and typing events' })
-  streamEvents(@Param('id') id: string, @Res() res: Response) {
+  async streamEvents(@Request() req, @Param('id') id: string, @Res() res: Response) {
+    await this.chatService.getConversationForTenant(id, req.user.tenantId);
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');

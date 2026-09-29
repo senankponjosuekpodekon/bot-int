@@ -5,7 +5,8 @@ import { Integration } from './integration.entity';
 import axios from 'axios';
 import { CryptoService } from '../../common/crypto.service';
 
-const SENSITIVE_CONFIG_KEYS = ['secretKey', 'accessToken', 'apiKey', 'botToken', 'authToken', 'verifyToken'];
+const SENSITIVE_CONFIG_KEYS = ['secretKey', 'accessToken', 'apiKey', 'botToken', 'authToken', 'verifyToken', 'appSecret', 'webhookSecret', 'inboundSecret'];
+const MASKED_VALUE = '********';
 
 @Injectable()
 export class IntegrationsService {
@@ -22,7 +23,7 @@ export class IntegrationsService {
     const encrypted: Record<string, any> = {};
     for (const [key, value] of Object.entries(config)) {
       if (SENSITIVE_CONFIG_KEYS.includes(key) && typeof value === 'string') {
-        encrypted[key] = this.crypto.encrypt(value);
+        encrypted[key] = this.crypto.isEncrypted(value) || value === MASKED_VALUE ? value : this.crypto.encrypt(value);
       } else if (typeof value === 'object' && value !== null) {
         encrypted[key] = this.encryptConfig(value);
       } else {
@@ -36,10 +37,11 @@ export class IntegrationsService {
     if (!config || typeof config !== 'object') return config;
     const decrypted: Record<string, any> = {};
     for (const [key, value] of Object.entries(config)) {
-      if (SENSITIVE_CONFIG_KEYS.includes(key) && typeof value === 'string') {
+      if (SENSITIVE_CONFIG_KEYS.includes(key) && typeof value === 'string' && this.crypto.isEncrypted(value)) {
         try {
           decrypted[key] = this.crypto.decrypt(value);
-        } catch {
+        } catch (err) {
+          this.logger.warn(`Failed to decrypt config key "${key}" — keeping ciphertext untouched`);
           decrypted[key] = value;
         }
       } else if (typeof value === 'object' && value !== null) {
@@ -59,9 +61,33 @@ export class IntegrationsService {
     return integration;
   }
 
+  private maskConfig(config: Record<string, any>): Record<string, any> {
+    if (!config || typeof config !== 'object') return config;
+    const masked: Record<string, any> = {};
+    for (const [key, value] of Object.entries(config)) {
+      if (SENSITIVE_CONFIG_KEYS.includes(key) && typeof value === 'string' && value) {
+        masked[key] = MASKED_VALUE;
+      } else if (typeof value === 'object' && value !== null) {
+        masked[key] = this.maskConfig(value);
+      } else {
+        masked[key] = value;
+      }
+    }
+    return masked;
+  }
+
+  private withMaskedConfig(integration: Integration | null): Integration | null {
+    if (!integration) return null;
+    return { ...integration, config: this.maskConfig(integration.config) } as Integration;
+  }
+
   async findAll(tenantId: string): Promise<Integration[]> {
     const results = await this.repo.find({ where: { tenantId } });
-    return results.map((i) => this.withDecryptedConfig(i) as Integration);
+    return results.map((i) => this.withMaskedConfig(i) as Integration);
+  }
+
+  async findDecrypted(tenantId: string, type: string): Promise<Integration | null> {
+    return this.findByType(tenantId, type);
   }
 
   async findByType(tenantId: string, type: string): Promise<Integration | null> {
@@ -69,14 +95,27 @@ export class IntegrationsService {
     return this.withDecryptedConfig(result);
   }
 
+  private stripMaskedConfig(config: Record<string, any>): Record<string, any> {
+    if (!config || typeof config !== 'object') return config;
+    const cleaned: Record<string, any> = {};
+    for (const [key, value] of Object.entries(config)) {
+      if (SENSITIVE_CONFIG_KEYS.includes(key) && value === MASKED_VALUE) {
+        continue; // client sent back the masked placeholder — keep the stored secret
+      }
+      cleaned[key] = typeof value === 'object' && value !== null ? this.stripMaskedConfig(value) : value;
+    }
+    return cleaned;
+  }
+
   async upsert(tenantId: string, type: string, config: Record<string, any>): Promise<Integration> {
+    const cleaned = this.stripMaskedConfig(config);
     let existing = await this.findByType(tenantId, type);
     if (existing) {
-      existing.config = this.encryptConfig({ ...existing.config, ...config });
+      existing.config = this.encryptConfig({ ...existing.config, ...cleaned });
       existing.enabled = true;
       return this.repo.save(existing);
     }
-    const integration = this.repo.create({ tenantId, type, config: this.encryptConfig(config), enabled: true });
+    const integration = this.repo.create({ tenantId, type, config: this.encryptConfig(cleaned), enabled: true });
     return this.repo.save(integration);
   }
 

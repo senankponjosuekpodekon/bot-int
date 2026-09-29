@@ -31,13 +31,14 @@ describe('ChannelsWebhookController', () => {
 
     it('processes inbound message on POST', async () => {
       const body = { object: 'whatsapp_business_account', entry: [] };
-      const result = await controller.whatsappWebhook('agent-1', body, 'signature');
+      const req = { rawBody: Buffer.from(JSON.stringify(body)) } as any;
+      const result = await controller.whatsappWebhook('agent-1', body, 'signature', req);
       expect(mockAdapterService.handleInbound).toHaveBeenCalledWith('whatsapp', 'agent-1', body, 'signature', JSON.stringify(body));
       expect(result).toEqual({ reply: 'ok', conversationId: 'c-1' });
     });
 
     it('requires agentId', async () => {
-      await expect(controller.whatsappWebhook('', {}, undefined)).rejects.toThrow(BadRequestException);
+      await expect(controller.whatsappWebhook('', {}, undefined, {} as any)).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -50,13 +51,14 @@ describe('ChannelsWebhookController', () => {
 
     it('processes inbound message on POST', async () => {
       const body = { object: 'instagram', entry: [] };
-      const result = await controller.instagramWebhook('agent-2', body, 'signature');
+      const req = { rawBody: Buffer.from(JSON.stringify(body)) } as any;
+      const result = await controller.instagramWebhook('agent-2', body, 'signature', req);
       expect(mockAdapterService.handleInbound).toHaveBeenCalledWith('instagram', 'agent-2', body, 'signature', JSON.stringify(body));
       expect(result).toEqual({ reply: 'ok', conversationId: 'c-1' });
     });
 
     it('requires agentId', async () => {
-      await expect(controller.instagramWebhook('', {}, undefined)).rejects.toThrow(BadRequestException);
+      await expect(controller.instagramWebhook('', {}, undefined, {} as any)).rejects.toThrow(BadRequestException);
     });
   });
 

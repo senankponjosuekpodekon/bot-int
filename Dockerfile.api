@@ -9,6 +9,9 @@ COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 COPY packages/payment-sdk/package.json ./packages/payment-sdk/
 
+# Skip bundled Chromium download — production uses the system package below.
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
 RUN npm ci --silent
 COPY packages/payment-sdk ./packages/payment-sdk
 RUN npm run build -w @stiamond/payment-sdk
@@ -22,6 +25,15 @@ RUN cd apps/api && npx nest build
 
 # --- Production stage ---
 FROM node:22-slim AS production
+
+# System Chromium for Puppeteer (knowledge URL scraping) — puppeteer-core connects
+# to it via PUPPETEER_EXECUTABLE_PATH; the bundled download is skipped in the builder.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends chromium fonts-liberation \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 

@@ -138,6 +138,19 @@ interface ExtractedData {
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
+  private readonly conversationLocks = new Map<string, Promise<unknown>>();
+
+  private runConversationExclusive<T>(key: string, fn: () => Promise<T>): Promise<T> {
+    const prev = this.conversationLocks.get(key) || Promise.resolve();
+    const next = prev.catch(() => undefined).then(fn);
+    this.conversationLocks.set(key, next);
+    void next
+      .catch(() => undefined)
+      .finally(() => {
+        if (this.conversationLocks.get(key) === next) this.conversationLocks.delete(key);
+      });
+    return next;
+  }
 
   constructor(
     @InjectRepository(Conversation)
@@ -194,6 +207,37 @@ export class ChatService {
     clientInfo?: Record<string, any>,
     channel?: ConversationChannel,
   ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: FlowData | null; products?: any[]; funnelStage?: FunnelStage; intentScore?: number; region?: RegionCode }> {
+    // Serialize messages per conversation (or per agent+visitor for new ones) so that
+    // concurrent sends don't corrupt conversation state (formState, funnelStage, counters).
+    const lockKey = conversationId || `new:${agentId}:${visitorId || 'anon'}`;
+    return this.runConversationExclusive(lockKey, () =>
+      this.sendMessageLocked(tenantId, agentId, userMessage, conversationId, visitorId, captureLead, tracking, regionContext, clientInfo, channel),
+    );
+  }
+
+  private async sendMessageLocked(
+    tenantId: string,
+    agentId: string,
+    userMessage: string,
+    conversationId?: string,
+    visitorId?: string,
+    captureLead = true,
+    tracking?: {
+      utmParams?: { source?: string; medium?: string; campaign?: string; term?: string; content?: string };
+      referrerUrl?: string;
+      landingPageUrl?: string;
+      acquisitionChannel?: AcquisitionChannel;
+    },
+    regionContext?: {
+      ip?: string;
+      phone?: string;
+      browserLanguage?: string;
+      timezone?: string;
+      userSelectedRegion?: RegionCode;
+    },
+    clientInfo?: Record<string, any>,
+    channel?: ConversationChannel,
+  ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: FlowData | null; products?: any[]; funnelStage?: FunnelStage; intentScore?: number; region?: RegionCode }> {
     const agent = await this.agentsService.findById(agentId, tenantId);
     const personalityConfig = agent.personalityConfig || {};
 
@@ -210,7 +254,6 @@ export class ChatService {
         requestedAgentId: agentId,
         resolvedAgentId: activeAgent.id,
         resolvedAgentName: activeAgent.name,
-        resolvedSystemPromptPreview: (activeAgent.systemPrompt || '').slice(0, 500),
         requestedAgentSubAgents: (agent.personalityConfig?.subAgents || []).map((s: any) => s.agentId),
       }),
     );
@@ -602,18 +645,24 @@ export class ChatService {
       }
     }
 
+    // Load the 20 most recent messages (DESC) then restore chronological order.
+    // With ASC+take:20, conversations older than 20 messages lost all recent context.
     let history = await this.msgRepo.find({
       where: { conversationId: conversation.id },
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'DESC' },
       take: 20,
     });
+    history.reverse();
 
     if (history.length >= 20) {
-      const olderSlice = history.slice(0, -10);
+      // Summarize the oldest 10 of the recent window into contextSummary (bounded —
+      // previous implementation appended indefinitely, growing the prompt linearly).
+      const olderSlice = history.slice(0, 10);
       const summary = await this.summarizationService.summarize(olderSlice, conversation.language);
-      conversation.contextSummary = conversation.contextSummary
+      const merged = conversation.contextSummary
         ? `${conversation.contextSummary}\n---\n${summary}`
         : summary;
+      conversation.contextSummary = merged.slice(-4000);
       await this.convRepo.save(conversation);
       history = history.slice(-10);
     }
@@ -1036,18 +1085,20 @@ export class ChatService {
         throw new Error('Context leak detected: external identity found in LLM context');
       }
 
-      this.logger.log(
-        JSON.stringify({
-          debug: 'LLM_CONTEXT',
-          conversationId: conversation.id,
-          requestedAgentId: agentId,
-          resolvedAgentId: activeAgent.id,
-          resolvedAgentName: activeAgent.name,
-          knowledgeCount: relevantContext.length,
-          productCount: carouselProducts.length,
-          messagePreviews: messages.map((m) => ({ role: m.role, preview: (m.content || '').slice(0, 180) })),
-        }),
-      );
+      if (process.env.LOG_LLM_CONTEXT === 'true') {
+        this.logger.log(
+          JSON.stringify({
+            debug: 'LLM_CONTEXT',
+            conversationId: conversation.id,
+            requestedAgentId: agentId,
+            resolvedAgentId: activeAgent.id,
+            resolvedAgentName: activeAgent.name,
+            knowledgeCount: relevantContext.length,
+            productCount: carouselProducts.length,
+            messagePreviews: messages.map((m) => ({ role: m.role, preview: (m.content || '').slice(0, 180) })),
+          }),
+        );
+      }
       this.assertContextScope(activeBusinessId, currentLead, carouselProducts);
 
       const needsTooling = /\b(prix|tarif|combien|co[uû]t|stock|disponible|créneau|rdv|réserver|book)\b/i.test(userMessage);
@@ -1266,26 +1317,26 @@ export class ChatService {
       // Intelligence recording is optional
     }
 
-    // Billing metering: increment usage
-    try {
-      await this.billingService.incrementUsage(tenantId);
-    } catch (err: any) {
-      this.logger.warn(`Billing metering skipped: ${err?.message}`);
-    }
-
     return { reply: finalReply, conversationId: conversation.id, leadId: responseLeadId, flow: flowData, products: carouselProducts.length > 0 ? carouselProducts : undefined, funnelStage: conversation.funnelStage, intentScore: conversation.intentScore, region: detectedRegion };
   }
 
-  async getHistory(conversationId: string, tenantId: string) {
+  async getConversationForTenant(conversationId: string, tenantId: string): Promise<Conversation> {
     const conversation = await this.convRepo.findOne({
       where: { id: conversationId, tenantId },
     });
     if (!conversation) throw new NotFoundException('Conversation not found');
+    return conversation;
+  }
 
-    return this.msgRepo.find({
-      where: { conversationId },
-      order: { createdAt: 'ASC' },
+  async getHistory(conversationId: string, tenantId: string, limit = 500) {
+    const conversation = await this.getConversationForTenant(conversationId, tenantId);
+
+    const messages = await this.msgRepo.find({
+      where: { conversationId: conversation.id },
+      order: { createdAt: 'DESC' },
+      take: limit,
     });
+    return messages.reverse();
   }
 
   async exportTranscript(conversationId: string, tenantId: string): Promise<{ conversation: Conversation; messages: Message[] }> {
@@ -1557,14 +1608,33 @@ export class ChatService {
     return summaries.length > 0 ? summaries.join('\n') : null;
   }
 
-  // ─── Business hours check ───
-  private isWithinBusinessHours(hours?: { start: string; end: string; days: number[] }): boolean {
+  // ─── Business hours check (in the configured timezone when provided) ───
+  private isWithinBusinessHours(hours?: { start: string; end: string; days: number[]; timezone?: string }): boolean {
     if (!hours || !hours.start || !hours.end) return true;
     const now = new Date();
-    const day = now.getDay();
+    let day = now.getDay();
+    let currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    if (hours.timezone) {
+      try {
+        const parts = new Intl.DateTimeFormat('en-GB', {
+          timeZone: hours.timezone,
+          weekday: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+          hourCycle: 'h23',
+        }).formatToParts(now);
+        const get = (type: string) => parts.find((p) => p.type === type)?.value;
+        const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+        day = dayMap[get('weekday') || ''] ?? day;
+        currentMinutes = (parseInt(get('hour') || '0', 10) % 24) * 60 + parseInt(get('minute') || '0', 10);
+      } catch {
+        // Invalid timezone — fall back to server time
+      }
+    }
+
     if (hours.days && hours.days.length > 0 && !hours.days.includes(day)) return false;
 
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const [startH, startM] = hours.start.split(':').map(Number);
     const [endH, endM] = hours.end.split(':').map(Number);
     const startMinutes = startH * 60 + startM;
@@ -1797,11 +1867,13 @@ export class ChatService {
     if (!conversation) throw new NotFoundException('Conversation not found');
 
     const agent = await this.agentsService.findById(conversation.agentId, tenantId);
-    const history = await this.msgRepo.find({
-      where: { conversationId },
-      order: { createdAt: 'ASC' },
-      take: 20,
-    });
+    const history = (
+      await this.msgRepo.find({
+        where: { conversationId },
+        order: { createdAt: 'DESC' },
+        take: 20,
+      })
+    ).reverse();
 
     const systemPrompt =
       conversation.language === 'en'

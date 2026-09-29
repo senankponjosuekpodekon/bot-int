@@ -6,8 +6,11 @@ import {
   Headers,
   Post,
   Query,
+  RawBodyRequest,
+  Req,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ChannelAdapterService } from './channel-adapter.service';
 
@@ -31,10 +34,11 @@ export class ChannelsWebhookController {
   async whatsappWebhook(
     @Query('agentId') agentId: string,
     @Body() body: any,
-    @Headers('x-hub-signature-256') signature?: string,
+    @Headers('x-hub-signature-256') signature: string | undefined,
+    @Req() req: RawBodyRequest<Request>,
   ) {
     if (!agentId) throw new BadRequestException('agentId is required');
-    return this.adapterService.handleInbound('whatsapp', agentId, body, signature, JSON.stringify(body));
+    return this.adapterService.handleInbound('whatsapp', agentId, body, signature, req.rawBody?.toString());
   }
 
   @Get('instagram')
@@ -52,10 +56,11 @@ export class ChannelsWebhookController {
   async instagramWebhook(
     @Query('agentId') agentId: string,
     @Body() body: any,
-    @Headers('x-hub-signature-256') signature?: string,
+    @Headers('x-hub-signature-256') signature: string | undefined,
+    @Req() req: RawBodyRequest<Request>,
   ) {
     if (!agentId) throw new BadRequestException('agentId is required');
-    return this.adapterService.handleInbound('instagram', agentId, body, signature, JSON.stringify(body));
+    return this.adapterService.handleInbound('instagram', agentId, body, signature, req.rawBody?.toString());
   }
 
   @Post('widget')

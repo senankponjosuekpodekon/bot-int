@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ObjectLiteral, Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service';
+import { Tenant } from '../tenants/tenant.entity';
 import { User } from './user.entity';
 import { RefreshToken } from './refresh-token.entity';
 import { TenantsService } from '../tenants/tenants.service';
@@ -22,6 +23,7 @@ const createRepositoryMock = <T extends ObjectLiteral>(): RepositoryMock<T> => (
   save: jest.fn(),
   findOne: jest.fn(),
   find: jest.fn(),
+  update: jest.fn().mockResolvedValue({ affected: 1 }),
 });
 
 describe('AuthService', () => {
@@ -32,6 +34,8 @@ describe('AuthService', () => {
   let jwtService: { sign: jest.Mock };
   let configService: { get: jest.Mock };
   let sessionService: { create: jest.Mock; remove: jest.Mock };
+  let dataSource: { transaction: jest.Mock };
+  let tenantRepo: RepositoryMock<Tenant>;
 
   beforeEach(() => {
     userRepo = createRepositoryMock<User>();
@@ -55,6 +59,17 @@ describe('AuthService', () => {
       remove: jest.fn().mockResolvedValue(undefined),
     };
 
+    tenantRepo = createRepositoryMock<Tenant>();
+    const em = {
+      getRepository: (entity: any) => {
+        if (entity === Tenant) return tenantRepo;
+        if (entity === User) return userRepo;
+        if (entity === RefreshToken) return refreshRepo;
+        return {};
+      },
+    };
+    dataSource = { transaction: jest.fn(async (cb: any) => cb(em)) };
+
     service = new AuthService(
       userRepo as unknown as Repository<User>,
       refreshRepo as unknown as Repository<RefreshToken>,
@@ -62,6 +77,7 @@ describe('AuthService', () => {
       jwtService as unknown as JwtService,
       configService as unknown as ConfigService,
       sessionService as unknown as SessionService,
+      dataSource as any,
     );
 
     jest.clearAllMocks();
@@ -69,9 +85,10 @@ describe('AuthService', () => {
 
   it('registers a tenant + user and issues tokens', async () => {
     tenantsService.findByEmail.mockResolvedValue(null);
-    tenantsService.create.mockResolvedValue({ id: 'tenant-1', email: 'acme@corp.io' });
-    userRepo.create?.mockReturnValue({ id: 'user-1', email: 'ceo@acme.io' });
-    userRepo.save?.mockResolvedValue(undefined);
+    tenantRepo.create?.mockImplementation((e: any) => e);
+    tenantRepo.save?.mockResolvedValue({ id: 'tenant-1', email: 'acme@corp.io' });
+    userRepo.create?.mockImplementation((e: any) => e);
+    userRepo.save?.mockResolvedValue({ id: 'user-1', email: 'ceo@acme.io' });
     refreshRepo.create?.mockImplementation((entity: RefreshToken) => entity);
     (refreshRepo.save as jest.Mock).mockResolvedValue(undefined);
 
@@ -92,7 +109,7 @@ describe('AuthService', () => {
       userId: 'user-1',
       tenantId: 'tenant-1',
     });
-    expect(tenantsService.create).toHaveBeenCalledWith({ name: 'Acme', email: 'ceo@acme.io' });
+    expect(tenantRepo.create).toHaveBeenCalledWith(expect.objectContaining({ name: 'Acme', email: 'ceo@acme.io' }));
     expect(refreshRepo.save).toHaveBeenCalled();
 
     tokenSpy.mockRestore();
@@ -141,8 +158,12 @@ describe('AuthService', () => {
     const result = await service.refresh({ refreshToken: 'tid.secret' });
 
     expect(result.refresh_token).toBe('new-id.new-secret');
-    expect(refreshRepo.save).toHaveBeenCalledTimes(2);
-    expect(refreshRepo.save?.mock.calls[0][0].isRevoked).toBe(true);
+    // Revocation is now an atomic conditional update; the new token is saved once.
+    expect(refreshRepo.update).toHaveBeenCalledWith(
+      expect.objectContaining({ isRevoked: false }),
+      expect.objectContaining({ isRevoked: true }),
+    );
+    expect(refreshRepo.save).toHaveBeenCalledTimes(1);
 
     tokenSpy.mockRestore();
   });

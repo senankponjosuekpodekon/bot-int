@@ -17,7 +17,11 @@ const inline = (s: string) =>
     .replace(/__(.*?)__/g, '<strong class="font-semibold text-current">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/_(.*?)_/g, '<em>$1</em>')
-    .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:underline">$1</a>');
+    .replace(/\[(.*?)\]\((.*?)\)/g, (_match, text, url) => {
+      const raw = String(url).replace(/&amp;/g, '&').trim();
+      const safe = /^(https?:\/\/|mailto:|tel:|\/|#)/i.test(raw) ? String(url) : '#';
+      return `<a href="${safe}" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:underline">${text}</a>`;
+    });
 
 function renderBlock(block: string): string {
   const lines = block.split('\n').filter((l) => l.trim() !== '');

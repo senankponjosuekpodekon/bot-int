@@ -15,6 +15,7 @@ describe('BillingService', () => {
     findOne: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
+    createQueryBuilder: jest.fn(),
   };
 
   const mockConvRepo = {
@@ -156,7 +157,18 @@ describe('BillingService', () => {
   });
 
   describe('incrementUsage', () => {
-    it('should increment and track overage', async () => {
+    const setupQb = () => {
+      const qb: any = { params: undefined as any };
+      qb.update = jest.fn().mockReturnValue(qb);
+      qb.set = jest.fn().mockReturnValue(qb);
+      qb.where = jest.fn().mockReturnValue(qb);
+      qb.setParameters = jest.fn((p: any) => { qb.params = p; return qb; });
+      qb.execute = jest.fn().mockResolvedValue({ affected: 1 });
+      mockSubRepo.createQueryBuilder.mockReturnValue(qb);
+      return qb;
+    };
+
+    it('should atomically increment usage with plan limit parameters', async () => {
       const sub = {
         tenantId: 't1',
         plan: PlanType.STARTER,
@@ -165,14 +177,15 @@ describe('BillingService', () => {
         meteringResetAt: new Date(),
       } as any;
       mockSubRepo.findOne.mockResolvedValue(sub);
-      mockSubRepo.save.mockResolvedValue(sub);
+      const qb = setupQb();
 
       await service.incrementUsage('t1');
-      expect(sub.conversationsThisMonth).toBe(1001);
-      expect(sub.overageConversations).toBe(1);
+      expect(qb.where).toHaveBeenCalledWith('"tenantId" = :tenantId', { tenantId: 't1' });
+      expect(qb.setParameters).toHaveBeenCalledWith(expect.objectContaining({ limit: 1000 }));
+      expect(qb.execute).toHaveBeenCalled();
     });
 
-    it('should reset monthly counter on new month', async () => {
+    it('should run the atomic reset+increment update on a new month', async () => {
       const oldDate = new Date();
       oldDate.setMonth(oldDate.getMonth() - 1);
 
@@ -184,11 +197,10 @@ describe('BillingService', () => {
         meteringResetAt: oldDate,
       } as any;
       mockSubRepo.findOne.mockResolvedValue(sub);
-      mockSubRepo.save.mockResolvedValue(sub);
+      const qb = setupQb();
 
       await service.incrementUsage('t1');
-      expect(sub.conversationsThisMonth).toBe(1);
-      expect(sub.overageConversations).toBe(0);
+      expect(qb.execute).toHaveBeenCalled();
     });
   });
 
