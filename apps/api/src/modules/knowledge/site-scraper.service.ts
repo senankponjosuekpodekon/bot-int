@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { KnowledgeService } from '../knowledge/knowledge.service';
+import { KnowledgeService } from './knowledge.service';
 import { assertPublicHttpUrl } from '../../common/ssrf-guard';
 
 export interface ScrapedInfo {

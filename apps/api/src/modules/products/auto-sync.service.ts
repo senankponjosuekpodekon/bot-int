@@ -3,8 +3,8 @@ import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Integration } from '../integrations/integration.entity';
-import { ProductImportSource } from '../products/product-import-source.entity';
-import { ProductsService } from '../products/products.service';
+import { ProductImportSource } from './product-import-source.entity';
+import { ProductsService } from './products.service';
 
 @Injectable()
 export class AutoSyncService {
