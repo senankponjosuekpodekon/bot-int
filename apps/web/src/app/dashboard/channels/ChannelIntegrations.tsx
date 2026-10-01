@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Save, Trash2, Plus, Loader2, Check, X } from 'lucide-react';
 import { integrationsApi } from '@/lib/api';
 import { toast } from 'sonner';
@@ -51,69 +52,75 @@ const INTEGRATION_SCHEMAS: Record<string, { label: string; fields: { key: string
 };
 
 const KNOWN_TYPES = Object.keys(INTEGRATION_SCHEMAS);
+const EMPTY_INTEGRATIONS: Integration[] = [];
 
 export default function ChannelIntegrations() {
-  const [integrations, setIntegrations] = useState<Integration[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data, isLoading: loading, isError } = useQuery<Integration[]>({
+    queryKey: ['integrations'],
+    queryFn: async () => {
+      const res = await integrationsApi.list();
+      return Array.isArray(res) ? res : res?.data ?? [];
+    },
+    refetchOnWindowFocus: false,
+  });
+  const integrations = data ?? EMPTY_INTEGRATIONS;
   const [savingType, setSavingType] = useState<string | null>(null);
   const [forms, setForms] = useState<Record<string, { config: Record<string, any>; enabled: boolean; open: boolean }>>({});
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await integrationsApi.list();
-      const data = Array.isArray(res) ? res : res?.data ?? [];
-      setIntegrations(data);
-      const initialForms: Record<string, any> = {};
-      KNOWN_TYPES.forEach((type) => {
-        const existing = data.find((i: Integration) => i.type === type);
-        initialForms[type] = {
-          config: existing?.config ?? {},
-          enabled: existing?.enabled ?? false,
-          open: !!existing,
-        };
-      });
-      setForms(initialForms);
-    } catch {
-      toast.error('Erreur lors du chargement des intégrations');
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const initialForms: Record<string, any> = {};
+    KNOWN_TYPES.forEach((type) => {
+      const existing = integrations.find((i: Integration) => i.type === type);
+      initialForms[type] = {
+        config: existing?.config ?? {},
+        enabled: existing?.enabled ?? false,
+        open: !!existing,
+      };
+    });
+    setForms(initialForms);
+  }, [integrations]);
 
   useEffect(() => {
-    load();
-  }, []);
+    if (isError) toast.error('Erreur lors du chargement des intégrations');
+  }, [isError]);
 
-  const handleSave = async (type: string) => {
-    setSavingType(type);
-    const { config, enabled } = forms[type];
-    try {
-      const existing = integrations.find((i) => i.type === type);
+  const saveIntegration = useMutation({
+    mutationFn: async ({ type, config, enabled, existing }: { type: string; config: Record<string, any>; enabled: boolean; existing?: Integration }) => {
       await integrationsApi.upsert(type, config);
       if (existing && existing.enabled !== enabled) {
         await integrationsApi.toggle(type, enabled);
       } else if (!existing && !enabled) {
         await integrationsApi.toggle(type, false);
       }
+    },
+    onSuccess: () => {
       toast.success('Intégration enregistrée');
-      await load();
-    } catch {
-      toast.error('Erreur lors de l\'enregistrement');
-    } finally {
-      setSavingType(null);
-    }
+      queryClient.invalidateQueries({ queryKey: ['integrations'] });
+    },
+    onError: () => toast.error('Erreur lors de l\'enregistrement'),
+    onSettled: () => setSavingType(null),
+  });
+
+  const deleteIntegration = useMutation({
+    mutationFn: (type: string) => integrationsApi.remove(type),
+    onSuccess: () => {
+      toast.success('Intégration supprimée');
+      queryClient.invalidateQueries({ queryKey: ['integrations'] });
+    },
+    onError: () => toast.error('Erreur lors de la suppression'),
+  });
+
+  const handleSave = (type: string) => {
+    setSavingType(type);
+    const { config, enabled } = forms[type];
+    const existing = integrations.find((i) => i.type === type);
+    saveIntegration.mutate({ type, config, enabled, existing });
   };
 
-  const handleDelete = async (type: string) => {
+  const handleDelete = (type: string) => {
     if (!confirm('Supprimer cette intégration ?')) return;
-    try {
-      await integrationsApi.remove(type);
-      toast.success('Intégration supprimée');
-      await load();
-    } catch {
-      toast.error('Erreur lors de la suppression');
-    }
+    deleteIntegration.mutate(type);
   };
 
   const updateConfig = (type: string, key: string, value: any) => {

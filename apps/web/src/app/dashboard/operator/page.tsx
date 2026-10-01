@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Headphones, MessageSquare, ArrowLeft, Phone, Mail, Send, Zap,
   RotateCcw, Sparkles, Info, Globe, Target, BarChart3, Tag,
@@ -69,17 +70,12 @@ const renderPairs = (obj?: Record<string, any> | null) => {
 };
 
 export default function OperatorPage() {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [reply, setReply] = useState('');
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('handed_off');
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-  const [lead, setLead] = useState<any>(null);
   const [visitorTyping, setVisitorTyping] = useState(false);
-  const [suggesting, setSuggesting] = useState(false);
-  const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const typingDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -88,68 +84,67 @@ export default function OperatorPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const loadPendingActions = useCallback(async () => {
-    try {
-      const data = await agentsApi.listPendingActions('pending');
-      setPendingActions(data || []);
-    } catch {
-      // Silent — non-critical panel
-    }
-  }, []);
+  const { data: pendingActions = [] } = useQuery<PendingAction[]>({
+    queryKey: ['pending-actions'],
+    queryFn: () => agentsApi.listPendingActions('pending'),
+    refetchInterval: 20000,
+  });
+
+  const { data: conversations = [], isLoading: loading, isError: conversationsError } = useQuery<Conversation[]>({
+    queryKey: ['conversations', filter],
+    queryFn: async () => {
+      const data = await chatApi.conversations({ status: filter || undefined, limit: 50 });
+      return data.data || data;
+    },
+  });
+
+  const { data: messages = [], isError: historyError } = useQuery<Message[]>({
+    queryKey: ['conversation-history', selected?.id],
+    queryFn: () => chatApi.history(selected!.id),
+    enabled: !!selected,
+  });
+
+  const { data: lead = null } = useQuery<any>({
+    queryKey: ['lead', selected?.leadId],
+    queryFn: async () => {
+      const leads = await leadsApi.list();
+      return leads.find((l: any) => l.id === selected!.leadId) || null;
+    },
+    enabled: !!selected?.leadId,
+  });
 
   useEffect(() => {
-    loadPendingActions();
-    const interval = setInterval(loadPendingActions, 20000);
-    return () => clearInterval(interval);
-  }, [loadPendingActions]);
+    if (conversationsError) showToast('Erreur lors du chargement', 'error');
+  }, [conversationsError]);
 
-  const handleApproveAction = async (id: string) => {
-    try {
-      await agentsApi.approvePendingAction(id);
+  useEffect(() => {
+    if (historyError) showToast('Erreur lors du chargement de l\'historique', 'error');
+  }, [historyError]);
+
+  const approveAction = useMutation({
+    mutationFn: (id: string) => agentsApi.approvePendingAction(id),
+    onSuccess: () => {
       showToast('Action approuvée');
-      loadPendingActions();
-    } catch {
-      showToast('Erreur', 'error');
-    }
-  };
+      queryClient.invalidateQueries({ queryKey: ['pending-actions'] });
+    },
+    onError: () => showToast('Erreur', 'error'),
+  });
 
-  const handleRejectAction = async (id: string) => {
-    try {
-      await agentsApi.rejectPendingAction(id);
+  const rejectAction = useMutation({
+    mutationFn: (id: string) => agentsApi.rejectPendingAction(id),
+    onSuccess: () => {
       showToast('Action rejetée');
-      loadPendingActions();
-    } catch {
-      showToast('Erreur', 'error');
-    }
-  };
+      queryClient.invalidateQueries({ queryKey: ['pending-actions'] });
+    },
+    onError: () => showToast('Erreur', 'error'),
+  });
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await chatApi.conversations({ status: filter || undefined, limit: 50 });
-      setConversations(data.data || data);
-    } catch {
-      showToast('Erreur lors du chargement', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [filter]);
+  const handleApproveAction = (id: string) => approveAction.mutate(id);
 
-  useEffect(() => { load(); }, [load]);
+  const handleRejectAction = (id: string) => rejectAction.mutate(id);
 
-  const selectConversation = async (conv: Conversation) => {
+  const selectConversation = (conv: Conversation) => {
     setSelected(conv);
-    try {
-      const [history, leads] = await Promise.all([
-        chatApi.history(conv.id),
-        conv.leadId ? leadsApi.list() : Promise.resolve([]),
-      ]);
-      setMessages(history);
-      const found = leads.find((l: any) => l.id === conv.leadId);
-      setLead(found || null);
-    } catch {
-      showToast('Erreur lors du chargement de l\'historique', 'error');
-    }
   };
 
   useEffect(() => {
@@ -159,7 +154,7 @@ export default function OperatorPage() {
     const controller = new AbortController();
     const handleEvent = (data: any) => {
       if (data.event === 'new-message') {
-        setMessages((prev) => {
+        queryClient.setQueryData<Message[]>(['conversation-history', selected.id], (prev = []) => {
           if (prev.some((m) => m.role === data.role && m.content === data.content)) return prev;
           return [...prev, {
             id: data.id || `sse-${Date.now()}`,
@@ -203,67 +198,81 @@ export default function OperatorPage() {
       } catch {}
     })();
     return () => { controller.abort(); };
-  }, [selected]);
+  }, [selected, queryClient]);
 
-  const handleSend = async () => {
-    if (!reply.trim() || !selected) return;
-    try {
-      await chatApi.operatorReply(selected.id, reply);
+  const sendReply = useMutation({
+    mutationFn: ({ conversationId, message }: { conversationId: string; message: string }) =>
+      chatApi.operatorReply(conversationId, message),
+    onSuccess: (_data, { conversationId }) => {
       setReply('');
-      selectConversation(selected);
-    } catch {
-      showToast('Erreur lors de l\'envoi', 'error');
-    }
-  };
+      queryClient.invalidateQueries({ queryKey: ['conversation-history', conversationId] });
+    },
+    onError: () => showToast('Erreur lors de l\'envoi', 'error'),
+  });
 
-  const handleTakeOver = async () => {
-    if (!selected) return;
-    try {
-      await chatApi.take(selected.id);
+  const takeConversation = useMutation({
+    mutationFn: (conversationId: string) => chatApi.take(conversationId),
+    onSuccess: (_data, conversationId) => {
       showToast('Conversation prise en charge');
-      load();
-      selectConversation(selected);
-    } catch {
-      showToast('Erreur', 'error');
-    }
-  };
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversation-history', conversationId] });
+    },
+    onError: () => showToast('Erreur', 'error'),
+  });
 
-  const handleRelease = async () => {
-    if (!selected) return;
-    try {
-      await chatApi.release(selected.id);
+  const releaseConversation = useMutation({
+    mutationFn: (conversationId: string) => chatApi.release(conversationId),
+    onSuccess: (_data, conversationId) => {
       showToast('Conversation rendue à l\'IA');
-      load();
-      selectConversation(selected);
-    } catch {
-      showToast('Erreur', 'error');
-    }
-  };
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversation-history', conversationId] });
+    },
+    onError: () => showToast('Erreur', 'error'),
+  });
 
-  const handleSuggest = async () => {
-    if (!selected) return;
-    try {
-      setSuggesting(true);
-      const { suggestion } = await chatApi.suggest(selected.id);
-      setReply(suggestion || '');
+  const suggestReply = useMutation({
+    mutationFn: (conversationId: string) => chatApi.suggest(conversationId),
+    onSuccess: (data) => {
+      setReply(data?.suggestion || '');
       showToast('Suggestion IA insérée');
-    } catch {
-      showToast('Erreur suggestion', 'error');
-    } finally {
-      setSuggesting(false);
-    }
-  };
+    },
+    onError: () => showToast('Erreur suggestion', 'error'),
+  });
+  const suggesting = suggestReply.isPending;
 
-  const handleClose = async () => {
-    if (!selected) return;
-    try {
-      await chatApi.updateStatus(selected.id, 'closed');
+  const closeConversation = useMutation({
+    mutationFn: (conversationId: string) => chatApi.updateStatus(conversationId, 'closed'),
+    onSuccess: () => {
       showToast('Conversation fermée');
       setSelected(null);
-      load();
-    } catch {
-      showToast('Erreur', 'error');
-    }
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+    onError: () => showToast('Erreur', 'error'),
+  });
+
+  const handleSend = () => {
+    if (!reply.trim() || !selected) return;
+    sendReply.mutate({ conversationId: selected.id, message: reply });
+  };
+
+  const handleTakeOver = () => {
+    if (!selected) return;
+    takeConversation.mutate(selected.id);
+  };
+
+  const handleRelease = () => {
+    if (!selected) return;
+    releaseConversation.mutate(selected.id);
+  };
+
+  const handleSuggest = () => {
+    if (!selected) return;
+    suggestReply.mutate(selected.id);
+  };
+
+  const handleClose = () => {
+    if (!selected) return;
+    closeConversation.mutate(selected.id);
   };
 
   const handleReplyChange = (value: string) => {

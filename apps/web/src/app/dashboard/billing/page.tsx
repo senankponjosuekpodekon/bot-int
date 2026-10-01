@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   CreditCard, Check, Zap, Crown, Building2, TrendingUp, AlertCircle,
   Calendar, X, Loader2, Sparkles
@@ -7,34 +7,34 @@ import {
 import { billingApi, analyticsApi } from '@/lib/api';
 
 export default function BillingPage() {
-  const [usage, setUsage] = useState<any>(null);
-  const [sub, setSub] = useState<any>(null);
-  const [plans, setPlans] = useState<any[]>([]);
-  const [tokenData, setTokenData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['billing'],
+    queryFn: async () => {
+      const [u, s, p, t] = await Promise.all([
+        billingApi.usage(),
+        billingApi.subscription(),
+        billingApi.plans(),
+        analyticsApi.tokens(7),
+      ]);
+      return { usage: u, sub: s, plans: p, tokenData: t };
+    },
+  });
+  const usage = data?.usage || null;
+  const sub = data?.sub || null;
+  const plans: any[] = data?.plans || [];
+  const tokenData = data?.tokenData || null;
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [u, s, p, t] = await Promise.all([
-          billingApi.usage(),
-          billingApi.subscription(),
-          billingApi.plans(),
-          analyticsApi.tokens(7),
-        ]);
-        setUsage(u);
-        setSub(s);
-        setPlans(p);
-        setTokenData(t);
-      } catch {
-        // error
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+  const checkoutMutation = useMutation({
+    mutationFn: (plan: string) => billingApi.checkout(plan),
+  });
+  const cancelMutation = useMutation({
+    mutationFn: () => billingApi.cancel(),
+  });
+  const actionLoading: string | null = checkoutMutation.isPending
+    ? checkoutMutation.variables
+    : cancelMutation.isPending
+      ? 'cancel'
+      : null;
 
   if (loading) return <div className="p-4 lg:p-6 text-center text-gray-500">Chargement...</div>;
 
@@ -49,27 +49,21 @@ export default function BillingPage() {
   const usagePct = usage ? Math.min(100, (usage.conversationsUsed / usage.conversationsLimit) * 100) : 0;
 
   const handleCheckout = async (plan: string) => {
-    setActionLoading(plan);
     try {
-      const { url } = await billingApi.checkout(plan);
+      const { url } = await checkoutMutation.mutateAsync(plan);
       window.location.href = url;
     } catch {
       // error
-    } finally {
-      setActionLoading(null);
     }
   };
 
   const handleCancel = async () => {
     if (!confirm('Annuler votre abonnement ?')) return;
-    setActionLoading('cancel');
     try {
-      await billingApi.cancel();
+      await cancelMutation.mutateAsync();
       window.location.reload();
     } catch {
       // error
-    } finally {
-      setActionLoading(null);
     }
   };
 

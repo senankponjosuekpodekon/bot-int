@@ -1,22 +1,20 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Code2, Copy, Check, ExternalLink, Settings as SettingsIcon } from 'lucide-react';
 import { agentsApi } from '@/lib/api';
 
 export default function WidgetConfigPage() {
-  const [agents, setAgents] = useState<any[]>([]);
-  const [selectedAgent, setSelectedAgent] = useState('');
+  const { data: agents = [] } = useQuery<any[]>({
+    queryKey: ['widget-config', 'agents'],
+    queryFn: () => agentsApi.list(),
+  });
+  const [selectedAgentOverride, setSelectedAgent] = useState('');
+  const selectedAgent = selectedAgentOverride || agents[0]?.id || '';
   const [customColor, setCustomColor] = useState('#4f46e5');
   const [customTitle, setCustomTitle] = useState('Chat IA');
   const [position, setPosition] = useState('bottom-right');
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    agentsApi.list().then((data) => {
-      setAgents(data);
-      if (data.length > 0) setSelectedAgent(data[0].id);
-    }).catch(() => {});
-  }, []);
 
   const apiUrl = typeof window !== 'undefined' ? `${window.location.origin.replace(/:\d+$/, ':3001')}/api` : 'http://localhost:3001/api';
 

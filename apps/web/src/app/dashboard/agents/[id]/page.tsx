@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { agentsApi, marketplaceApi } from '@/lib/api';
 import { ArrowLeft, Save, Trash2, Bot, Sparkles, Store } from 'lucide-react';
@@ -16,9 +17,14 @@ const AGENT_TYPES = [
 export default function AgentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [agent, setAgent] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
+  const agentQuery = useQuery({
+    queryKey: ['agent', id],
+    queryFn: () => agentsApi.getById(id),
+    enabled: !!id,
+  });
+  const agent = agentQuery.data ?? null;
+  const loading = agentQuery.isLoading;
   const [form, setForm] = useState({
     name: '',
     type: 'general',
@@ -28,72 +34,81 @@ export default function AgentDetailPage() {
     iceBreakers: [] as string[],
   });
   const [newIceBreaker, setNewIceBreaker] = useState('');
-  const [publishing, setPublishing] = useState(false);
   const [published, setPublished] = useState(false);
 
-  useEffect(() => {
-    if (!id) return;
-    agentsApi
-      .getById(id)
-      .then((data) => {
-        setAgent(data);
-        setForm({
-          name: data.name || '',
-          type: data.type || 'general',
-          systemPrompt: data.systemPrompt || '',
-          personality: data.personality || '',
-          isActive: data.isActive ?? true,
-          iceBreakers: data.iceBreakers || [],
-        });
-      })
-      .catch(() => toast.error('Agent introuvable'))
-      .finally(() => setLoading(false));
-  }, [id]);
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await agentsApi.update(id, form);
+  const updateAgent = useMutation({
+    mutationFn: (data: typeof form) => agentsApi.update(id, data),
+    onSuccess: (_data, variables) => {
+      queryClient.setQueryData(['agent', id], (old: any) => (old ? { ...old, ...variables } : old));
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
       toast.success('Agent mis à jour');
-      setAgent({ ...agent, ...form });
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       toast.error(error?.response?.data?.message || 'Erreur lors de la mise à jour');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!confirm('Supprimer cet agent ? Cette action est irréversible.')) return;
-    try {
-      await agentsApi.delete(id);
+    },
+  });
+  const deleteAgent = useMutation({
+    mutationFn: () => agentsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
       toast.success('Agent supprimé');
       router.push('/dashboard/agents');
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       toast.error(error?.response?.data?.message || 'Suppression impossible');
-    }
-  };
-
-  const handlePublish = async () => {
-    if (!confirm('Publier cet agent sur le Marketplace ?')) return;
-    setPublishing(true);
-    try {
-      await marketplaceApi.publish({
+    },
+  });
+  const publishAgent = useMutation({
+    mutationFn: () =>
+      marketplaceApi.publish({
         agentId: id as string,
         name: form.name,
         category: form.type,
         industry: agent?.industry,
         description: form.personality,
         isPublic: true,
-      });
+      }),
+    onSuccess: () => {
       toast.success('Agent publié sur le Marketplace');
       setPublished(true);
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       toast.error(error?.response?.data?.message || 'Publication impossible');
-    } finally {
-      setPublishing(false);
-    }
+    },
+  });
+  const saving = updateAgent.isPending;
+  const publishing = publishAgent.isPending;
+
+  useEffect(() => {
+    const data = agentQuery.data;
+    if (!data) return;
+    setForm({
+      name: data.name || '',
+      type: data.type || 'general',
+      systemPrompt: data.systemPrompt || '',
+      personality: data.personality || '',
+      isActive: data.isActive ?? true,
+      iceBreakers: data.iceBreakers || [],
+    });
+  }, [agentQuery.data]);
+
+  useEffect(() => {
+    if (agentQuery.isError) toast.error('Agent introuvable');
+  }, [agentQuery.isError]);
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateAgent.mutate(form);
+  };
+
+  const handleDelete = () => {
+    if (!confirm('Supprimer cet agent ? Cette action est irréversible.')) return;
+    deleteAgent.mutate();
+  };
+
+  const handlePublish = () => {
+    if (!confirm('Publier cet agent sur le Marketplace ?')) return;
+    publishAgent.mutate();
   };
 
   const addIceBreaker = () => {

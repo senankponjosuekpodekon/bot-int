@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { siteApi, agentsApi } from '@/lib/api';
 import { Globe, Plus, Trash2, Save, Eye, X, ExternalLink, CheckCircle2, AlertCircle, Palette, Layout, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,24 +17,58 @@ const COLOR_PRESETS = [
 ];
 
 export default function SiteConfigPage() {
-  const [sites, setSites] = useState<any[]>([]);
-  const [agents, setAgents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: sites = [], isLoading: sitesLoading, isError } = useQuery<any[]>({
+    queryKey: ['sites'],
+    queryFn: () => siteApi.list(),
+  });
+  const { data: agents = [], isLoading: agentsLoading } = useQuery<any[]>({
+    queryKey: ['agents'],
+    queryFn: () => agentsApi.list(),
+  });
+  const loading = sitesLoading || agentsLoading;
   const [showBuilder, setShowBuilder] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [tab, setTab] = useState<'content' | 'design' | 'domain'>('content');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [data, ag] = await Promise.all([siteApi.list(), agentsApi.list()]);
-      setSites(data);
-      setAgents(ag);
-    } catch { toast.error('Erreur'); }
-    finally { setLoading(false); }
-  }, []);
+  useEffect(() => {
+    if (isError) toast.error('Erreur');
+  }, [isError]);
 
-  useEffect(() => { load(); }, [load]);
+  const saveSite = useMutation({
+    mutationFn: (site: any) => (site.id ? siteApi.update(site.id, site) : siteApi.create(site)),
+    onSuccess: (result, site) => {
+      toast.success(site.id ? 'Site mis à jour' : `Site créé: ${result.slug}`);
+      setShowBuilder(false);
+      setEditing(null);
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Erreur'),
+  });
+
+  const deleteSite = useMutation({
+    mutationFn: (id: string) => siteApi.delete(id),
+    onSuccess: () => {
+      toast.success('Supprimé');
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
+    },
+    onError: () => toast.error('Erreur'),
+  });
+
+  const toggleSite = useMutation({
+    mutationFn: (id: string) => siteApi.toggle(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sites'] }),
+    onError: () => toast.error('Erreur'),
+  });
+
+  const verifyDomain = useMutation({
+    mutationFn: (id: string) => siteApi.verifyDomain(id),
+    onSuccess: () => {
+      toast.success('Domaine vérifié');
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
+    },
+    onError: () => toast.error('Erreur vérification'),
+  });
 
   const handleCreate = () => {
     setEditing({
@@ -56,37 +91,22 @@ export default function SiteConfigPage() {
     setShowBuilder(true);
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!editing.businessName.trim()) { toast.error('Nom du business requis'); return; }
-    try {
-      if (editing.id) {
-        await siteApi.update(editing.id, editing);
-        toast.success('Site mis à jour');
-      } else {
-        const created = await siteApi.create(editing);
-        toast.success(`Site créé: ${created.slug}`);
-      }
-      setShowBuilder(false);
-      setEditing(null);
-      load();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur');
-    }
+    saveSite.mutate(editing);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!confirm('Supprimer ce site ?')) return;
-    try { await siteApi.delete(id); toast.success('Supprimé'); load(); }
-    catch { toast.error('Erreur'); }
+    deleteSite.mutate(id);
   };
 
-  const handleToggle = async (id: string) => {
-    try { await siteApi.toggle(id); load(); } catch { toast.error('Erreur'); }
+  const handleToggle = (id: string) => {
+    toggleSite.mutate(id);
   };
 
-  const handleVerifyDomain = async (id: string) => {
-    try { await siteApi.verifyDomain(id); toast.success('Domaine vérifié'); load(); }
-    catch { toast.error('Erreur vérification'); }
+  const handleVerifyDomain = (id: string) => {
+    verifyDomain.mutate(id);
   };
 
   const addFaq = () => {

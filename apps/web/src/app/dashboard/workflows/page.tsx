@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { agentsApi } from '@/lib/api';
 import { Workflow, Plus, Trash2, Play, Settings, Zap, GitBranch, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
@@ -20,52 +21,67 @@ const TRIGGER_TYPES = [
 ];
 
 export default function WorkflowsPage() {
-  const [workflows, setWorkflows] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [executing, setExecuting] = useState<string | null>(null);
   const [execResult, setExecResult] = useState<any>(null);
 
-  const load = async () => {
-    setLoading(true);
-    try {
+  const { data: workflows = [], isLoading: loading, isError } = useQuery<any[]>({
+    queryKey: ['workflows'],
+    queryFn: async () => {
       const res = await agentsApi.listWorkflows();
-      setWorkflows(Array.isArray(res) ? res : res?.data ?? []);
-    } catch {
-      toast.error('Failed to load workflows');
-    } finally {
-      setLoading(false);
-    }
-  };
+      return Array.isArray(res) ? res : res?.data ?? [];
+    },
+  });
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (isError) toast.error('Failed to load workflows');
+  }, [isError]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this workflow?')) return;
-    try {
-      await agentsApi.deleteWorkflow(id);
+  const deleteWorkflow = useMutation({
+    mutationFn: (id: string) => agentsApi.deleteWorkflow(id),
+    onSuccess: () => {
       toast.success('Workflow deleted');
-      load();
-    } catch {
-      toast.error('Failed to delete');
-    }
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+    },
+    onError: () => toast.error('Failed to delete'),
+  });
+
+  const saveWorkflow = useMutation({
+    mutationFn: ({ id, data }: { id?: string; data: any }) =>
+      id ? agentsApi.updateWorkflow(id, data) : agentsApi.createWorkflow(data),
+    onSuccess: (_res, { id }) => {
+      toast.success(id ? 'Workflow updated' : 'Workflow created');
+      setShowForm(false);
+      setEditing(null);
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+    },
+    onError: () => toast.error('Failed to save workflow'),
+  });
+
+  const executeWorkflow = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { userMessage: string } }) =>
+      agentsApi.executeWorkflow(id, data),
+    onSuccess: (result) => {
+      setExecResult(result);
+      toast.success('Workflow executed');
+    },
+    onError: () => toast.error('Execution failed'),
+    onSettled: () => setExecuting(null),
+  });
+
+  const handleDelete = (id: string) => {
+    if (!confirm('Delete this workflow?')) return;
+    deleteWorkflow.mutate(id);
   };
 
-  const handleExecute = async (id: string) => {
+  const handleExecute = (id: string) => {
     const msg = prompt('Enter test message for workflow:');
     if (!msg) return;
     setExecuting(id);
     setExecResult(null);
-    try {
-      const result = await agentsApi.executeWorkflow(id, { userMessage: msg });
-      setExecResult(result);
-      toast.success('Workflow executed');
-    } catch {
-      toast.error('Execution failed');
-    } finally {
-      setExecuting(null);
-    }
+    executeWorkflow.mutate({ id, data: { userMessage: msg } });
   };
 
   return (
@@ -86,22 +102,7 @@ export default function WorkflowsPage() {
       {showForm && (
         <WorkflowForm
           workflow={editing}
-          onSave={async (data) => {
-            try {
-              if (editing) {
-                await agentsApi.updateWorkflow(editing.id, data);
-                toast.success('Workflow updated');
-              } else {
-                await agentsApi.createWorkflow(data);
-                toast.success('Workflow created');
-              }
-              setShowForm(false);
-              setEditing(null);
-              load();
-            } catch {
-              toast.error('Failed to save workflow');
-            }
-          }}
+          onSave={(data) => saveWorkflow.mutate({ id: editing?.id, data })}
           onCancel={() => { setShowForm(false); setEditing(null); }}
         />
       )}

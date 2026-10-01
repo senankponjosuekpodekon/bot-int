@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { Send, Loader2, MessageCircle, ArrowLeft } from 'lucide-react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import Markdown from '@/components/Markdown';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -43,10 +44,13 @@ export default function PublicChatPage() {
   const agentId = params.agentId as string;
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [config, setConfig] = useState<any>(null);
-  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const fromQuery = new URLSearchParams(window.location.search).get('conversationId');
+    const saved = fromQuery || localStorage.getItem(`stiamond_conversation_${agentId}`);
+    if (fromQuery) localStorage.setItem(`stiamond_conversation_${agentId}`, fromQuery);
+    return saved;
+  });
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const typingDebounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -63,36 +67,64 @@ export default function PublicChatPage() {
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const configQuery = useQuery({
+    queryKey: ['widget', 'config', agentId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/widget/config/${agentId}`);
+      return res.json();
+    },
+  });
+  const config = configQuery.data;
+
+  const sendMutation = useMutation({
+    mutationFn: async (text: string) => {
+      const res = await fetch(`${API_BASE}/widget/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId, message: text, visitorId, conversationId: conversationId || undefined, utmParams: getUtmParams(), referrerUrl: typeof window !== 'undefined' ? document.referrer : '', landingPageUrl: typeof window !== 'undefined' ? window.location.href : '', clientInfo: getClientInfo() }),
+      });
+      return res.json();
+    },
+  });
+  const sending = sendMutation.isPending;
+
+  const historyQuery = useQuery({
+    queryKey: ['widget', 'history', conversationId, visitorId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/widget/history/${conversationId}?visitorId=${visitorId}`);
+      return res.json();
+    },
+    enabled: !!conversationId,
+    refetchInterval: sending ? false : 5000,
+  });
+
+  // Sync fetched history into local message list; fall back to the icebreaker
+  // when the restored conversation has no messages yet.
+  const historyInitRef = useRef(false);
   useEffect(() => {
-    fetch(`${API_BASE}/widget/config/${agentId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setConfig(data);
-        const fromQuery = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('conversationId') : null;
-        const saved = fromQuery || (typeof window !== 'undefined' ? localStorage.getItem(`stiamond_conversation_${agentId}`) : null);
-        if (saved) {
-          if (fromQuery && typeof window !== 'undefined') {
-            localStorage.setItem(`stiamond_conversation_${agentId}`, saved);
-          }
-          setConversationId(saved);
-          fetch(`${API_BASE}/widget/history/${saved}?visitorId=${visitorId}`)
-            .then((r) => r.json())
-            .then((history: any[]) => {
-              const historyMessages = (history || [])
-                .filter((m) => m.role === 'user' || m.role === 'assistant')
-                .map((m) => ({ role: m.role === 'user' ? 'user' : 'agent' as 'user' | 'agent', text: m.content }));
-              setMessages(historyMessages.length > 0 ? historyMessages : [{ role: 'agent' as const, text: data.iceBreakers?.[0] || `Bonjour ! Je suis ${data.name}. Comment puis-je vous aider ?` }]);
-              setLoading(false);
-            })
-            .catch(() => setLoading(false));
-        } else {
-          const initial = data.iceBreakers?.[0] || `Bonjour ! Je suis ${data.name}. Comment puis-je vous aider ?`;
-          setMessages([{ role: 'agent' as const, text: initial }]);
-          setLoading(false);
-        }
-      })
-      .catch(() => setLoading(false));
-  }, [agentId]);
+    const history = historyQuery.data;
+    if (!Array.isArray(history)) return;
+    const newMessages = history
+      .filter((m: any) => m.role === 'user' || m.role === 'assistant')
+      .map((m: any) => ({ role: m.role === 'user' ? 'user' : 'agent' as 'user' | 'agent', text: m.content }));
+    if (newMessages.length > 0) {
+      historyInitRef.current = true;
+      setMessages(newMessages);
+    } else if (!historyInitRef.current && config) {
+      historyInitRef.current = true;
+      setMessages([{ role: 'agent' as const, text: config.iceBreakers?.[0] || `Bonjour ! Je suis ${config.name}. Comment puis-je vous aider ?` }]);
+    }
+  }, [historyQuery.data, config]);
+
+  // Fresh visitor (no saved conversation): show the icebreaker once config loads
+  const greetedRef = useRef(false);
+  useEffect(() => {
+    if (conversationId || !config || greetedRef.current) return;
+    greetedRef.current = true;
+    setMessages([{ role: 'agent' as const, text: config.iceBreakers?.[0] || `Bonjour ! Je suis ${config.name}. Comment puis-je vous aider ?` }]);
+  }, [conversationId, config]);
+
+  const loading = configQuery.isLoading || (!!conversationId && historyQuery.isLoading);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -122,38 +154,14 @@ export default function PublicChatPage() {
     };
   }, [conversationId]);
 
-  useEffect(() => {
-    if (!conversationId || sending) return;
-    const load = () => {
-      fetch(`${API_BASE}/widget/history/${conversationId}?visitorId=${visitorId}`)
-        .then((r) => r.json())
-        .then((history: any[]) => {
-          const newMessages = (history || [])
-            .filter((m) => m.role === 'user' || m.role === 'assistant')
-            .map((m) => ({ role: m.role === 'user' ? 'user' : 'agent' as 'user' | 'agent', text: m.content }));
-          setMessages(newMessages);
-        })
-        .catch(() => {});
-    };
-    load();
-    const interval = setInterval(load, 5000);
-    return () => clearInterval(interval);
-  }, [conversationId, sending]);
-
   const send = async () => {
     if (!input.trim() || sending) return;
     const text = input.trim();
     setInput('');
     setMessages((m) => [...m, { role: 'user', text }]);
-    setSending(true);
 
     try {
-      const res = await fetch(`${API_BASE}/widget/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId, message: text, visitorId, conversationId: conversationId || undefined, utmParams: getUtmParams(), referrerUrl: typeof window !== 'undefined' ? document.referrer : '', landingPageUrl: typeof window !== 'undefined' ? window.location.href : '', clientInfo: getClientInfo() }),
-      });
-      const data = await res.json();
+      const data = await sendMutation.mutateAsync(text);
       if (data.conversationId) {
         setConversationId(data.conversationId);
         if (typeof window !== 'undefined') localStorage.setItem(`stiamond_conversation_${agentId}`, data.conversationId);
@@ -161,8 +169,6 @@ export default function PublicChatPage() {
       setMessages((m) => [...m, { role: 'agent', text: data.reply, products: data.products }]);
     } catch {
       setMessages((m) => [...m, { role: 'agent', text: 'Désolé, une erreur est survenue. Réessayez dans un instant.' }]);
-    } finally {
-      setSending(false);
     }
   };
 

@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Plus, Trash2, X, Save } from 'lucide-react';
 import { agentsApi } from '@/lib/api';
 import { toast } from 'sonner';
@@ -67,8 +68,13 @@ function formatOptions(options?: { label: string; value: string }[]): string {
 }
 
 export default function FlowForm({ flow, onSave, onCancel }: FlowFormProps) {
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [loadingAgents, setLoadingAgents] = useState(true);
+  const { data: agents = [], isLoading: loadingAgents } = useQuery<Agent[]>({
+    queryKey: ['agents', { limit: 100 }],
+    queryFn: async () => {
+      const res = await agentsApi.list({ limit: 100 });
+      return res?.data ?? res ?? [];
+    },
+  });
   const [form, setForm] = useState({
     agentId: flow?.agentId || '',
     title: flow?.title || '',
@@ -77,17 +83,6 @@ export default function FlowForm({ flow, onSave, onCancel }: FlowFormProps) {
     fields: Array.isArray(flow?.fields) ? flow.fields : [],
     actions: Array.isArray(flow?.actions) ? flow.actions : [],
   });
-
-  useEffect(() => {
-    agentsApi
-      .list({ limit: 100 })
-      .then((res: any) => {
-        const data = res?.data ?? res ?? [];
-        setAgents(data);
-      })
-      .catch(() => {})
-      .finally(() => setLoadingAgents(false));
-  }, []);
 
   const addField = () => {
     setForm({

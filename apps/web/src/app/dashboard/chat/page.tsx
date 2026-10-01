@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { agentsApi, chatApi, leadsApi } from '@/lib/api';
 import { Send, Bot, User, RefreshCw, MessageSquare, ArrowUpRight, Info, Copy, CheckCircle2, Pencil } from 'lucide-react';
@@ -52,108 +53,196 @@ interface Message {
   createdAt?: string;
 }
 
+interface ConversationsPage {
+  data: any[];
+  meta: { total?: number; page: number; limit: number; hasMore: boolean };
+}
+
 export default function ChatPage() {
   const router = useRouter();
-  const [agents, setAgents] = useState<any[]>([]);
+  const queryClient = useQueryClient();
   const [selectedAgent, setSelectedAgent] = useState('');
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [sending, setSending] = useState(false);
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [loadingConversations, setLoadingConversations] = useState(false);
-  const [loadingHistory, setLoadingHistory] = useState(false);
   const [captureLead, setCaptureLead] = useState(true);
-  const [leads, setLeads] = useState<any[]>([]);
   const [selectedLeadToAttach, setSelectedLeadToAttach] = useState('');
-  const [attachingLead, setAttachingLead] = useState(false);
-  const [statusUpdating, setStatusUpdating] = useState(false);
   const [copiedConversationId, setCopiedConversationId] = useState<string | null>(null);
   const [conversationFilters, setConversationFilters] = useState<ConversationFilters>({
     ...DEFAULT_FILTERS,
   });
-  const [conversationMeta, setConversationMeta] = useState({
-    total: 0,
-    page: 1,
-    limit: CONVERSATION_PAGE_SIZE,
-    hasMore: true,
-  });
-  const [loadingMoreConversations, setLoadingMoreConversations] = useState(false);
   const [pendingDeepLinkId, setPendingDeepLinkId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const conversationListRef = useRef<HTMLDivElement | null>(null);
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
-  const loadConversations = useCallback(
-    async (page = 1, append = false) => {
-      const params: Record<string, any> = { page, limit: CONVERSATION_PAGE_SIZE };
+  const { data: agents = [] } = useQuery<any[]>({
+    queryKey: ['agents'],
+    queryFn: () => agentsApi.list().then((res: any) => res.data || res),
+  });
+  const leadsQuery = useQuery<any[]>({
+    queryKey: ['leads'],
+    queryFn: () =>
+      leadsApi.list().then((res: any) => (Array.isArray(res) ? res : res?.data ?? [])),
+  });
+  const leads = leadsQuery.data ?? [];
+
+  const conversationsQuery = useInfiniteQuery({
+    queryKey: ['conversations', conversationFilters],
+    queryFn: async ({ pageParam }): Promise<ConversationsPage> => {
+      const params: Record<string, any> = { page: pageParam, limit: CONVERSATION_PAGE_SIZE };
       if (conversationFilters.status !== 'all') params.status = conversationFilters.status;
       if (conversationFilters.agentId !== 'all') params.agentId = conversationFilters.agentId;
       if (conversationFilters.leadStatus !== 'all') params.leadStatus = conversationFilters.leadStatus;
       if (conversationFilters.hasLead !== 'all') {
         params.hasLead = conversationFilters.hasLead === 'with';
       }
+      const response = await chatApi.conversations(params);
+      const payload = Array.isArray(response) ? { data: response } : response;
+      const incoming = Array.isArray(payload?.data) ? payload.data : [];
+      const meta = payload?.meta ?? {};
+      return {
+        data: incoming,
+        meta: {
+          total: meta.total,
+          page: meta.page ?? pageParam,
+          limit: meta.limit ?? CONVERSATION_PAGE_SIZE,
+          hasMore: meta.hasMore ?? incoming.length === CONVERSATION_PAGE_SIZE,
+        },
+      };
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.meta.hasMore ? lastPage.meta.page + 1 : undefined),
+  });
 
-      if (append) {
-        setLoadingMoreConversations(true);
-      } else {
-        setLoadingConversations(true);
-      }
-
-      try {
-        const response = await chatApi.conversations(params);
-        const payload = Array.isArray(response) ? { data: response } : response;
-        const data = payload?.data ?? [];
-        const meta = payload?.meta ?? {};
-        const incoming = Array.isArray(data) ? data : [];
-        setConversationMeta((prevMeta) => {
-          const total = meta.total ?? (append ? prevMeta.total : incoming.length);
-          return {
-            total,
-            page: meta.page ?? page,
-            limit: meta.limit ?? CONVERSATION_PAGE_SIZE,
-            hasMore: meta.hasMore ?? incoming.length === CONVERSATION_PAGE_SIZE,
-          };
-        });
-        setConversations((prev) => {
-          if (!append) return incoming;
-          const existingIds = new Set(prev.map((c) => c.id));
-          const deduped = incoming.filter((c: any) => !existingIds.has(c.id));
-          return [...prev, ...deduped];
-        });
-      } catch (error) {
-        console.error(error);
-        toast.error('Impossible de charger les conversations');
-      } finally {
-        if (append) {
-          setLoadingMoreConversations(false);
-        } else {
-          setLoadingConversations(false);
+  const conversations = useMemo(() => {
+    const pages = conversationsQuery.data?.pages ?? [];
+    const seen = new Set<string>();
+    const flat: any[] = [];
+    for (const page of pages) {
+      for (const c of page.data) {
+        if (!seen.has(c.id)) {
+          seen.add(c.id);
+          flat.push(c);
         }
       }
+    }
+    return flat;
+  }, [conversationsQuery.data]);
+
+  const lastPageMeta =
+    conversationsQuery.data?.pages?.[conversationsQuery.data.pages.length - 1]?.meta;
+  const loadingConversations =
+    conversationsQuery.isFetching && !conversationsQuery.isFetchingNextPage;
+  const loadingMoreConversations = conversationsQuery.isFetchingNextPage;
+  const hasMoreConversations = !!conversationsQuery.hasNextPage;
+  const totalConversationsLabel = lastPageMeta?.total ?? conversations.length;
+
+  const historyQuery = useQuery<any[]>({
+    queryKey: ['chat', 'history', selectedConversation],
+    queryFn: () =>
+      chatApi
+        .history(selectedConversation as string)
+        .then((history) => (Array.isArray(history) ? history : history?.data ?? [])),
+    enabled: !!selectedConversation,
+    staleTime: 0,
+  });
+  const loadingHistory = historyQuery.isFetching;
+  const historyData = historyQuery.data;
+
+  const sendMessage = useMutation({
+    mutationFn: (payload: {
+      agentId: string;
+      message: string;
+      conversationId?: string;
+      captureLead: boolean;
+    }) => chatApi.send(payload),
+    onSuccess: (data) => {
+      setConversationId(data.conversationId);
+      setSelectedConversation(data.conversationId);
+      setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
-    [conversationFilters],
-  );
+    onError: () => {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: "⚠️ Erreur — vérifiez qu'Ollama est démarré." },
+      ]);
+      toast.error("Échec de l'envoi du message");
+    },
+  });
+  const sending = sendMessage.isPending;
+
+  const updateStatus = useMutation({
+    mutationFn: (status: 'open' | 'handed_off' | 'closed') =>
+      chatApi.updateStatus(selectedConversation as string, status),
+    onSuccess: (_data, status) => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      toast.success(
+        status === 'closed' ? 'Conversation fermée' : 'Conversation ré-ouverte',
+      );
+    },
+    onError: () => toast.error('Impossible de mettre à jour le statut'),
+  });
+  const statusUpdating = updateStatus.isPending;
+
+  const attachLead = useMutation({
+    mutationFn: ({ conversationId, leadId }: { conversationId: string; leadId: string }) =>
+      chatApi.attachLead(conversationId, leadId),
+    onSuccess: () => {
+      toast.success('Lead associé à la conversation');
+      setSelectedLeadToAttach('');
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      if (selectedConversation) {
+        queryClient.invalidateQueries({ queryKey: ['chat', 'history', selectedConversation] });
+      }
+    },
+    onError: () => toast.error("Impossible d'associer le lead"),
+  });
+  const attachingLead = attachLead.isPending;
+
+  const sendFeedback = useMutation({
+    mutationFn: (data: {
+      agentId: string;
+      userMessage: string;
+      originalReply: string;
+      correctedReply: string;
+    }) => chatApi.feedback(data),
+    onSuccess: () =>
+      toast.success("Correction enregistrée. L'agent apprendra de cette erreur."),
+    onError: () => toast.error("Erreur lors de l'enregistrement"),
+  });
 
   useEffect(() => {
-    agentsApi.list().then((res) => {
-      const list = res.data || res;
-      setAgents(list);
-      if (list.length > 0) setSelectedAgent(list[0].id);
-    });
-  }, []);
+    if (!selectedAgent && agents.length > 0) setSelectedAgent(agents[0].id);
+  }, [agents, selectedAgent]);
 
   useEffect(() => {
-    loadConversations(1, false);
-  }, [loadConversations]);
+    if (leadsQuery.isError) toast.error('Impossible de charger les leads');
+  }, [leadsQuery.isError]);
 
   useEffect(() => {
-    leadsApi.list().then((res) => setLeads(Array.isArray(res) ? res : res?.data ?? [])).catch(() => {
-      toast.error('Impossible de charger les leads');
-    });
-  }, []);
+    if (conversationsQuery.isError) toast.error('Impossible de charger les conversations');
+  }, [conversationsQuery.isError]);
+
+  useEffect(() => {
+    if (historyQuery.isError) toast.error('Conversation introuvable');
+  }, [historyQuery.isError]);
+
+  // Sync loaded history into the local message list
+  useEffect(() => {
+    if (!selectedConversation || !historyData) return;
+    setMessages(
+      historyData.map((msg: any) => ({
+        id: msg.id,
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content,
+        createdAt: msg.createdAt,
+      })),
+    );
+  }, [historyData, selectedConversation]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -181,54 +270,22 @@ export default function ChatPage() {
         const entry = entries[0];
         if (
           entry?.isIntersecting &&
-          conversationMeta.hasMore &&
+          hasMoreConversations &&
           !loadingConversations &&
           !loadingMoreConversations
         ) {
-          loadConversations((conversationMeta.page ?? 1) + 1, true);
+          conversationsQuery.fetchNextPage();
         }
       },
       { root: scrollRoot, threshold: 0.2 },
     );
     observerRef.current.observe(sentinel);
     return () => observerRef.current?.disconnect();
-  }, [conversationMeta.hasMore, conversationMeta.page, loadingConversations, loadingMoreConversations, loadConversations]);
+  }, [hasMoreConversations, loadingConversations, loadingMoreConversations, conversationsQuery.fetchNextPage]);
 
-  const loadHistory = async (id: string) => {
-    setLoadingHistory(true);
-    try {
-      const history = await chatApi.history(id);
-      const list = Array.isArray(history) ? history : history?.data ?? [];
-      const formatted = list.map((msg: any) => ({
-        id: msg.id,
-        role: msg.role === 'user' ? 'user' : 'assistant',
-        content: msg.content,
-        createdAt: msg.createdAt,
-      }));
-      setMessages(formatted);
-    } catch (error) {
-      console.error(error);
-      toast.error('Conversation introuvable');
-    } finally {
-      setLoadingHistory(false);
-    }
-  };
-
-  const handleUpdateStatus = async (status: 'open' | 'handed_off' | 'closed') => {
+  const handleUpdateStatus = (status: 'open' | 'handed_off' | 'closed') => {
     if (!selectedConversation) return;
-    setStatusUpdating(true);
-    try {
-      await chatApi.updateStatus(selectedConversation, status);
-      await loadConversations(1, false);
-      toast.success(
-        status === 'closed' ? 'Conversation fermée' : 'Conversation ré-ouverte',
-      );
-    } catch (error) {
-      console.error(error);
-      toast.error('Impossible de mettre à jour le statut');
-    } finally {
-      setStatusUpdating(false);
-    }
+    updateStatus.mutate(status);
   };
 
   const handleCopyConversationLink = async () => {
@@ -244,7 +301,7 @@ export default function ChatPage() {
     }, 3000);
   };
 
-  const handleSelectConversation = async (id: string) => {
+  const handleSelectConversation = (id: string) => {
     const convo = conversations.find((c) => c.id === id);
     if (convo) {
       setSelectedAgent(convo.agentId);
@@ -252,35 +309,14 @@ export default function ChatPage() {
     setSelectedConversation(id);
     setConversationId(id);
     setMessages([]);
-    await loadHistory(id);
   };
 
-  const handleSend = async () => {
+  const handleSend = () => {
     if (!input.trim() || !selectedAgent || sending) return;
     const userMsg = input.trim();
     setInput('');
     setMessages((prev) => [...prev, { role: 'user', content: userMsg }]);
-    setSending(true);
-    try {
-      const data = await chatApi.send({
-        agentId: selectedAgent,
-        message: userMsg,
-        conversationId,
-        captureLead,
-      });
-      setConversationId(data.conversationId);
-      setSelectedConversation(data.conversationId);
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
-      await loadConversations(1, false);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: "⚠️ Erreur — vérifiez qu'Ollama est démarré." },
-      ]);
-      toast.error("Échec de l'envoi du message");
-    } finally {
-      setSending(false);
-    }
+    sendMessage.mutate({ agentId: selectedAgent, message: userMsg, conversationId, captureLead });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -335,9 +371,6 @@ export default function ChatPage() {
     setConversationFilters({ ...DEFAULT_FILTERS });
   };
 
-  const totalConversationsLabel = conversationMeta.total ?? conversations.length;
-  const hasMoreConversations = conversationMeta.hasMore;
-
   const isConversationClosed = selectedConversationData?.status === 'closed';
   const isHandedOff = selectedConversationData?.status === 'handed_off';
 
@@ -363,21 +396,9 @@ export default function ChatPage() {
     router.push(`/dashboard/leads?leadId=${leadInfo.id}`);
   };
 
-  const handleAttachLead = async () => {
+  const handleAttachLead = () => {
     if (!selectedConversation || !selectedLeadToAttach) return;
-    setAttachingLead(true);
-    try {
-      await chatApi.attachLead(selectedConversation, selectedLeadToAttach);
-      toast.success('Lead associé à la conversation');
-      setSelectedLeadToAttach('');
-      await loadConversations(1, false);
-      await loadHistory(selectedConversation);
-    } catch (error) {
-      console.error(error);
-      toast.error("Impossible d'associer le lead");
-    } finally {
-      setAttachingLead(false);
-    }
+    attachLead.mutate({ conversationId: selectedConversation, leadId: selectedLeadToAttach });
   };
 
   return (
@@ -417,7 +438,7 @@ export default function ChatPage() {
             </div>
             <button
               className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:border-primary-200 transition-colors"
-              onClick={() => loadConversations(1, false)}
+              onClick={() => conversationsQuery.refetch()}
               aria-label="Rafraîchir"
             >
               <RefreshCw className={clsx('w-4 h-4', { 'animate-spin': loadingConversations })} />
@@ -720,13 +741,12 @@ export default function ChatPage() {
                         const corrected = prompt('Corrigez la réponse de l\'agent. Cette correction sera apprise par l\'IA:', msg.content);
                         if (corrected && corrected.trim() !== msg.content) {
                           const prevMsg = messages[i - 1];
-                          chatApi.feedback({
+                          sendFeedback.mutate({
                             agentId: selectedAgent || agents[0]?.id || '',
                             userMessage: prevMsg?.content || '',
                             originalReply: msg.content,
                             correctedReply: corrected.trim(),
-                          }).then(() => toast.success('Correction enregistrée. L\'agent apprendra de cette erreur.'))
-                            .catch(() => toast.error('Erreur lors de l\'enregistrement'));
+                          });
                         }
                       }}
                       className="mt-2 flex items-center gap-1 text-xs text-gray-400 hover:text-primary-600"

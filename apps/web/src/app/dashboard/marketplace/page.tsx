@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Store, Sparkles, Loader2, Plus, Check } from 'lucide-react';
 import { marketplaceApi } from '@/lib/api';
 
@@ -13,44 +14,31 @@ interface Template {
 }
 
 export default function MarketplacePage() {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1 });
-  const [loading, setLoading] = useState(true);
-  const [installing, setInstalling] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['marketplace', 'templates', page],
+    queryFn: () => marketplaceApi.list({ page, limit: 20 }),
+  });
+  const templates: Template[] = data?.data || [];
+  const pagination = {
+    page: data?.page || 1,
+    limit: data?.limit || 20,
+    total: data?.total || 0,
+    totalPages: data?.totalPages || 1,
+  };
+  const installTemplate = useMutation({
+    mutationFn: (id: string) => marketplaceApi.install(id),
+  });
+  const installing = installTemplate.isPending ? installTemplate.variables : null;
   const [installed, setInstalled] = useState<string | null>(null);
 
-  const load = async (page = 1) => {
-    setLoading(true);
-    try {
-      const res = await marketplaceApi.list({ page, limit: 20 });
-      setTemplates(res.data || []);
-      setPagination({
-        page: res.page || 1,
-        limit: res.limit || 20,
-        total: res.total || 0,
-        totalPages: res.totalPages || 1,
-      });
-    } catch {
-      // error
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
   const handleInstall = async (id: string) => {
-    setInstalling(id);
     try {
-      await marketplaceApi.install(id);
+      await installTemplate.mutateAsync(id);
       setInstalled(id);
       setTimeout(() => setInstalled(null), 2000);
     } catch {
       // error
-    } finally {
-      setInstalling(null);
     }
   };
 
@@ -127,7 +115,7 @@ export default function MarketplacePage() {
           {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => (
             <button
               key={p}
-              onClick={() => load(p)}
+              onClick={() => setPage(p)}
               className={`px-3 py-1 rounded-lg text-sm font-medium ${
                 p === pagination.page ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
               }`}

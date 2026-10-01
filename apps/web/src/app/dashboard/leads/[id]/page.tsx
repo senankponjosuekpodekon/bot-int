@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { leadsApi, chatApi } from '@/lib/api';
 import {
@@ -32,94 +33,114 @@ const STATUS_OPTIONS = [
 export default function LeadDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [lead, setLead] = useState<any>(null);
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [comments, setComments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: lead = null, isLoading: leadLoading } = useQuery<any>({
+    queryKey: ['lead', id],
+    queryFn: () => leadsApi.getById(id).catch(() => null),
+    enabled: !!id,
+  });
+  const { data: conversations = [], isLoading: convLoading } = useQuery<any[]>({
+    queryKey: ['lead', id, 'conversations'],
+    queryFn: async () => {
+      const convData = await chatApi.conversations({ limit: 100 }).catch(() => ({ data: [] }));
+      const allConvs = convData?.data || convData || [];
+      return allConvs.filter((c: any) => c.leadId === id);
+    },
+    enabled: !!id,
+  });
+  const { data: comments = [], isLoading: commentsLoading } = useQuery<any[]>({
+    queryKey: ['lead', id, 'comments'],
+    queryFn: () => leadsApi.getComments(id).catch(() => []),
+    enabled: !!id,
+  });
+  const loading = leadLoading || convLoading || commentsLoading;
   const [newTag, setNewTag] = useState('');
-  const [savingStatus, setSavingStatus] = useState(false);
   const [newComment, setNewComment] = useState('');
-  const [savingComment, setSavingComment] = useState(false);
 
-  useEffect(() => {
-    if (!id) return;
-    Promise.all([
-      leadsApi.getById(id).catch(() => null),
-      chatApi.conversations({ limit: 100 }).catch(() => ({ data: [] })),
-      leadsApi.getComments(id).catch(() => []),
-    ])
-      .then(([leadData, convData, commentData]) => {
-        setLead(leadData);
-        const allConvs = convData?.data || convData || [];
-        setConversations(allConvs.filter((c: any) => c.leadId === id));
-        setComments(commentData || []);
-      })
-      .finally(() => setLoading(false));
-  }, [id]);
-
-  const handleStatusChange = async (status: string) => {
-    if (!lead || lead.status === status) return;
-    setSavingStatus(true);
-    const prev = lead.status;
-    setLead({ ...lead, status });
-    try {
-      await leadsApi.update(id, { status });
-      toast.success('Statut mis à jour');
-    } catch {
+  const updateStatus = useMutation({
+    mutationFn: (status: string) => leadsApi.update(id, { status }),
+    onMutate: async (status) => {
+      await queryClient.cancelQueries({ queryKey: ['lead', id] });
+      const previous = queryClient.getQueryData<any>(['lead', id]);
+      queryClient.setQueryData<any>(['lead', id], (old: any) => (old ? { ...old, status } : old));
+      return { previous };
+    },
+    onSuccess: () => toast.success('Statut mis à jour'),
+    onError: (_err, _status, ctx) => {
+      queryClient.setQueryData(['lead', id], ctx?.previous);
       toast.error('Impossible de mettre à jour le statut');
-      setLead({ ...lead, status: prev });
-    } finally {
-      setSavingStatus(false);
-    }
-  };
+    },
+  });
+  const savingStatus = updateStatus.isPending;
 
-  const handleAddTag = async () => {
-    if (!newTag.trim() || !lead) return;
-    try {
-      await leadsApi.addTag(id, newTag.trim());
-      setLead({ ...lead, tags: [...(lead.tags || []), newTag.trim()] });
+  const addTag = useMutation({
+    mutationFn: (tag: string) => leadsApi.addTag(id, tag),
+    onSuccess: (_data, tag) => {
+      queryClient.setQueryData<any>(['lead', id], (old: any) =>
+        old ? { ...old, tags: [...(old.tags || []), tag] } : old,
+      );
       setNewTag('');
       toast.success('Tag ajouté');
-    } catch {
-      toast.error('Impossible d\'ajouter le tag');
-    }
-  };
+    },
+    onError: () => toast.error('Impossible d\'ajouter le tag'),
+  });
 
-  const handleRemoveTag = async (tag: string) => {
-    if (!lead) return;
-    try {
-      await leadsApi.removeTag(id, tag);
-      setLead({ ...lead, tags: (lead.tags || []).filter((t: string) => t !== tag) });
+  const removeTag = useMutation({
+    mutationFn: (tag: string) => leadsApi.removeTag(id, tag),
+    onSuccess: (_data, tag) => {
+      queryClient.setQueryData<any>(['lead', id], (old: any) =>
+        old ? { ...old, tags: (old.tags || []).filter((t: string) => t !== tag) } : old,
+      );
       toast.success('Tag supprimé');
-    } catch {
-      toast.error('Impossible de supprimer le tag');
-    }
-  };
+    },
+    onError: () => toast.error('Impossible de supprimer le tag'),
+  });
 
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim() || !lead) return;
-    setSavingComment(true);
-    try {
-      const comment = await leadsApi.addComment(id, newComment.trim());
-      setComments([comment, ...comments]);
+  const addComment = useMutation({
+    mutationFn: (content: string) => leadsApi.addComment(id, content),
+    onSuccess: (comment) => {
+      queryClient.setQueryData<any[]>(['lead', id, 'comments'], (old = []) => [comment, ...old]);
       setNewComment('');
       toast.success('Commentaire ajouté');
-    } catch {
-      toast.error('Impossible d\'ajouter le commentaire');
-    } finally {
-      setSavingComment(false);
-    }
+    },
+    onError: () => toast.error('Impossible d\'ajouter le commentaire'),
+  });
+  const savingComment = addComment.isPending;
+
+  const deleteComment = useMutation({
+    mutationFn: (commentId: string) => leadsApi.deleteComment(id, commentId),
+    onSuccess: (_data, commentId) => {
+      queryClient.setQueryData<any[]>(['lead', id, 'comments'], (old = []) =>
+        old.filter((c) => c.id !== commentId),
+      );
+      toast.success('Commentaire supprimé');
+    },
+    onError: () => toast.error('Suppression impossible'),
+  });
+
+  const handleStatusChange = (status: string) => {
+    if (!lead || lead.status === status) return;
+    updateStatus.mutate(status);
   };
 
-  const handleDeleteComment = async (commentId: string) => {
-    try {
-      await leadsApi.deleteComment(id, commentId);
-      setComments(comments.filter((c) => c.id !== commentId));
-      toast.success('Commentaire supprimé');
-    } catch {
-      toast.error('Suppression impossible');
-    }
+  const handleAddTag = () => {
+    if (!newTag.trim() || !lead) return;
+    addTag.mutate(newTag.trim());
+  };
+
+  const handleRemoveTag = (tag: string) => {
+    if (!lead) return;
+    removeTag.mutate(tag);
+  };
+
+  const handleAddComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !lead) return;
+    addComment.mutate(newComment.trim());
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    deleteComment.mutate(commentId);
   };
 
   const handleExportTranscript = async (conversationId: string) => {

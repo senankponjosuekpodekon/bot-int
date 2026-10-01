@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { Send, Loader2, MessageCircle, Phone, Mail, MapPin, Clock, Globe, ShoppingBag, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { siteApi } from '@/lib/api';
@@ -35,13 +36,10 @@ function getClientInfo() {
 export default function PublicSitePage() {
   const params = useParams();
   const slug = params.slug as string;
-  const [site, setSite] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
-  const [sending, setSending] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [restoreChecked, setRestoreChecked] = useState(false);
   const [visitorId] = useState(() => {
     if (typeof window !== 'undefined') {
       let id = localStorage.getItem('stiamond_visitor_id');
@@ -56,44 +54,98 @@ export default function PublicSitePage() {
   const typingDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const siteQuery = useQuery({
+    queryKey: ['site', 'public', slug],
+    queryFn: () => siteApi.public.getBySlug(slug),
+    enabled: !!slug,
+  });
+  const site = siteQuery.data ?? null;
+  const loading = siteQuery.isLoading;
+  const error = siteQuery.error ? (siteQuery.error.message || 'Site introuvable') : '';
+
+  const sendMessage = useMutation({
+    mutationFn: async (text: string) => {
+      const res = await fetch(`${API_BASE}/widget/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId: site.agentId, message: text, visitorId, conversationId: conversationId || undefined, utmParams: getUtmParams(), referrerUrl: typeof window !== 'undefined' ? document.referrer : '', landingPageUrl: typeof window !== 'undefined' ? window.location.href : '', clientInfo: getClientInfo() }),
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.conversationId) {
+        setConversationId(data.conversationId);
+        if (typeof window !== 'undefined') localStorage.setItem(`stiamond_conversation_${slug}`, data.conversationId);
+      }
+      setMessages((m) => [...m, { role: 'agent', text: data.reply, products: data.products }]);
+    },
+    onError: () => {
+      setMessages((m) => [...m, { role: 'agent', text: 'Désolé, une erreur est survenue.' }]);
+    },
+  });
+  const sending = sendMessage.isPending;
+
+  // Chat history — polls every 5s while a conversation is active (pauses while sending)
+  const historyQuery = useQuery<any[]>({
+    queryKey: ['widget', 'history', conversationId, visitorId],
+    queryFn: () =>
+      fetch(`${API_BASE}/widget/history/${conversationId}?visitorId=${visitorId}`).then((r) => r.json()),
+    enabled: !!conversationId && !sending,
+    refetchInterval: 5000,
+  });
+  const historyData = historyQuery.data;
+
+  // Widget config — fetched only for fresh visitors (no restored conversation)
+  const configQuery = useQuery({
+    queryKey: ['widget', 'config', site?.agentId],
+    queryFn: () => fetch(`${API_BASE}/widget/config/${site.agentId}`).then((r) => r.json()),
+    enabled: !!site?.agentId && restoreChecked && !conversationId,
+  });
+  const configData = configQuery.data;
+
+  // Restore any saved conversation once the site config is loaded
   useEffect(() => {
-    siteApi.public.getBySlug(slug)
-      .then((data) => {
-        setSite(data);
-        const fromQuery = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('conversationId') : null;
-        const saved = fromQuery || (typeof window !== 'undefined' ? localStorage.getItem(`stiamond_conversation_${slug}`) : null);
-        if (data.agentId) {
-          if (saved) {
-            if (fromQuery && typeof window !== 'undefined') {
-              localStorage.setItem(`stiamond_conversation_${slug}`, saved);
-            }
-            setConversationId(saved);
-            fetch(`${API_BASE}/widget/history/${saved}?visitorId=${visitorId}`)
-              .then((r) => r.json())
-              .then((history: any[]) => {
-                const historyMessages = (history || [])
-                  .filter((m) => m.role === 'user' || m.role === 'assistant')
-                  .map((m) => ({ role: m.role === 'user' ? 'user' : 'agent', text: m.content }));
-                setMessages(historyMessages.length > 0 ? historyMessages : [{ role: 'agent', text: `Bonjour ! Bienvenue chez ${data.businessName}. Comment puis-je vous aider ?` }]);
-              })
-              .catch(() => {});
-          } else {
-            fetch(`${API_BASE}/widget/config/${data.agentId}`)
-              .then((r) => r.json())
-              .then((cfg) => {
-                if (cfg.iceBreakers?.length > 0) {
-                  setMessages([{ role: 'agent', text: cfg.iceBreakers[0] }]);
-                } else {
-                  setMessages([{ role: 'agent', text: `Bonjour ! Bienvenue chez ${data.businessName}. Comment puis-je vous aider ?` }]);
-                }
-              })
-              .catch(() => {});
-          }
-        }
-        setLoading(false);
-      })
-      .catch((err) => { setError(err.message || 'Site introuvable'); setLoading(false); });
-  }, [slug]);
+    if (!site?.agentId || restoreChecked) return;
+    const fromQuery = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('conversationId') : null;
+    const saved = fromQuery || (typeof window !== 'undefined' ? localStorage.getItem(`stiamond_conversation_${slug}`) : null);
+    if (saved) {
+      if (fromQuery && typeof window !== 'undefined') {
+        localStorage.setItem(`stiamond_conversation_${slug}`, saved);
+      }
+      setConversationId(saved);
+    }
+    setRestoreChecked(true);
+  }, [site?.agentId, slug, restoreChecked]);
+
+  // Sync fetched history into the local message list
+  useEffect(() => {
+    if (!historyData) return;
+    const historyMessages = (historyData || [])
+      .filter((m) => m.role === 'user' || m.role === 'assistant')
+      .map((m) => ({ role: m.role === 'user' ? 'user' : 'agent', text: m.content }));
+    setMessages((prev) =>
+      historyMessages.length > 0
+        ? historyMessages
+        : prev.length > 0
+          ? prev
+          : [{ role: 'agent', text: `Bonjour ! Bienvenue chez ${site?.businessName}. Comment puis-je vous aider ?` }],
+    );
+  }, [historyData, site?.businessName]);
+
+  // Greet with an icebreaker (or a fallback) when there is no restored conversation
+  useEffect(() => {
+    if (!configData) return;
+    setMessages((prev) =>
+      prev.length > 0
+        ? prev
+        : [{
+            role: 'agent',
+            text: configData.iceBreakers?.length > 0
+              ? configData.iceBreakers[0]
+              : `Bonjour ! Bienvenue chez ${site?.businessName}. Comment puis-je vous aider ?`,
+          }],
+    );
+  }, [configData, site?.businessName]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -122,47 +174,12 @@ export default function PublicSitePage() {
     };
   }, [conversationId]);
 
-  useEffect(() => {
-    if (!conversationId || sending) return;
-    const load = () => {
-      fetch(`${API_BASE}/widget/history/${conversationId}?visitorId=${visitorId}`)
-        .then((r) => r.json())
-        .then((history: any[]) => {
-          const newMessages = (history || [])
-            .filter((m) => m.role === 'user' || m.role === 'assistant')
-            .map((m) => ({ role: m.role === 'user' ? 'user' : 'agent', text: m.content }));
-          setMessages(newMessages);
-        })
-        .catch(() => {});
-    };
-    load();
-    const interval = setInterval(load, 5000);
-    return () => clearInterval(interval);
-  }, [conversationId, sending]);
-
-  const send = async () => {
+  const send = () => {
     if (!input.trim() || sending || !site?.agentId) return;
     const text = input.trim();
     setInput('');
     setMessages((m) => [...m, { role: 'user', text }]);
-    setSending(true);
-    try {
-      const res = await fetch(`${API_BASE}/widget/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: site.agentId, message: text, visitorId, conversationId: conversationId || undefined, utmParams: getUtmParams(), referrerUrl: typeof window !== 'undefined' ? document.referrer : '', landingPageUrl: typeof window !== 'undefined' ? window.location.href : '', clientInfo: getClientInfo() }),
-      });
-      const data = await res.json();
-      if (data.conversationId) {
-        setConversationId(data.conversationId);
-        if (typeof window !== 'undefined') localStorage.setItem(`stiamond_conversation_${slug}`, data.conversationId);
-      }
-      setMessages((m) => [...m, { role: 'agent', text: data.reply, products: data.products }]);
-    } catch {
-      setMessages((m) => [...m, { role: 'agent', text: 'Désolé, une erreur est survenue.' }]);
-    } finally {
-      setSending(false);
-    }
+    sendMessage.mutate(text);
   };
 
   if (loading) {

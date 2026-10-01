@@ -1,12 +1,12 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Sparkles, Clock, MessageCircle, Shield, Zap, Trash2, Plus, Save, AlertCircle, Globe, Brain } from 'lucide-react';
 import { agentsApi, chatApi } from '@/lib/api';
 
 export default function PersonalityPage() {
-  const [agents, setAgents] = useState<any[]>([]);
+  const queryClient = useQueryClient();
   const [selectedAgent, setSelectedAgent] = useState('');
-  const [agent, setAgent] = useState<any>(null);
   const [config, setConfig] = useState<any>({
     tone: 'friendly',
     discloseAI: true,
@@ -21,10 +21,8 @@ export default function PersonalityPage() {
     escalationTopics: [],
     forbiddenTopics: [],
   });
-  const [feedback, setFeedback] = useState<any[]>([]);
   const [newTopic, setNewTopic] = useState('');
   const [topicType, setTopicType] = useState<'escalation' | 'forbidden'>('escalation');
-  const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -32,23 +30,53 @@ export default function PersonalityPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const load = useCallback(async () => {
-    try {
-      const data = await agentsApi.list();
-      const list = Array.isArray(data) ? data : data?.data ?? [];
-      setAgents(list);
-      if (list.length > 0 && !selectedAgent) setSelectedAgent(list[0].id);
-    } catch {
-      showToast('Erreur lors du chargement', 'error');
-    }
-  }, []);
+  const agentsQuery = useQuery<any[]>({
+    queryKey: ['agents'],
+    queryFn: () => agentsApi.list().then((data: any) => (Array.isArray(data) ? data : data?.data ?? [])),
+  });
+  const agents = agentsQuery.data ?? [];
 
-  useEffect(() => { load(); }, [load]);
+  const feedbackQuery = useQuery<any[]>({
+    queryKey: ['chat', 'feedback', selectedAgent],
+    queryFn: () =>
+      chatApi.getFeedback(selectedAgent).then((fb) => (Array.isArray(fb) ? fb : fb?.data ?? [])),
+    enabled: !!selectedAgent,
+  });
+  const feedback = feedbackQuery.data ?? [];
+
+  const savePersonality = useMutation({
+    mutationFn: () => agentsApi.update(selectedAgent, { personalityConfig: config }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      queryClient.invalidateQueries({ queryKey: ['agent', selectedAgent] });
+      showToast('Personnalité sauvegardée');
+    },
+    onError: () => showToast('Erreur lors de la sauvegarde', 'error'),
+  });
+  const saving = savePersonality.isPending;
+
+  const deleteFeedbackMutation = useMutation({
+    mutationFn: (id: string) => chatApi.deleteFeedback(id),
+    onSuccess: (_data, id) => {
+      queryClient.setQueryData(['chat', 'feedback', selectedAgent], (old: any[] = []) =>
+        old.filter((f) => f.id !== id),
+      );
+      showToast('Feedback supprimé');
+    },
+    onError: () => showToast('Erreur', 'error'),
+  });
+
+  useEffect(() => {
+    if (agents.length > 0 && !selectedAgent) setSelectedAgent(agents[0].id);
+  }, [agents, selectedAgent]);
+
+  useEffect(() => {
+    if (agentsQuery.isError) showToast('Erreur lors du chargement', 'error');
+  }, [agentsQuery.isError]);
 
   useEffect(() => {
     if (selectedAgent) {
       const a = agents.find((x) => x.id === selectedAgent);
-      setAgent(a);
       if (a?.personalityConfig) {
         const p = a.personalityConfig;
         setConfig({
@@ -65,23 +93,11 @@ export default function PersonalityPage() {
           },
         });
       }
-      chatApi
-        .getFeedback(selectedAgent)
-        .then((fb) => setFeedback(Array.isArray(fb) ? fb : fb?.data ?? []))
-        .catch(() => setFeedback([]));
     }
   }, [selectedAgent, agents]);
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await agentsApi.update(selectedAgent, { personalityConfig: config });
-      showToast('Personnalité sauvegardée');
-    } catch {
-      showToast('Erreur lors de la sauvegarde', 'error');
-    } finally {
-      setSaving(false);
-    }
+  const handleSave = () => {
+    savePersonality.mutate();
   };
 
   const addTopic = () => {
@@ -96,14 +112,8 @@ export default function PersonalityPage() {
     setConfig({ ...config, [key]: (config[key] || []).filter((t: string) => t !== topic) });
   };
 
-  const deleteFeedback = async (id: string) => {
-    try {
-      await chatApi.deleteFeedback(id);
-      setFeedback(feedback.filter((f) => f.id !== id));
-      showToast('Feedback supprimé');
-    } catch {
-      showToast('Erreur', 'error');
-    }
+  const deleteFeedback = (id: string) => {
+    deleteFeedbackMutation.mutate(id);
   };
 
   const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];

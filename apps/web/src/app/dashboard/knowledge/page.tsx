@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { knowledgeApi } from '@/lib/api';
 import { BookOpen, Plus, Trash2, Search, X, FileText, Link as LinkIcon, Upload, Building2, Loader2, Globe } from 'lucide-react';
 import { toast } from 'sonner';
@@ -14,18 +15,100 @@ interface KnowledgeDoc {
 }
 
 export default function KnowledgePage() {
-  const [docs, setDocs] = useState<KnowledgeDoc[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [importMode, setImportMode] = useState<'text' | 'file' | 'url' | 'company' | 'scrape'>('text');
   const [form, setForm] = useState({ content: '', filename: '' });
   const [urlForm, setUrlForm] = useState('');
   const [companyForm, setCompanyForm] = useState('');
   const [companyResult, setCompanyResult] = useState<any>(null);
-  const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState('');
-  const [searching, setSearching] = useState(false);
+  const [submittedQuery, setSubmittedQuery] = useState('');
+
+  const { data: docs = [], isLoading: loading, isFetching: searching, error: loadError, refetch } = useQuery<KnowledgeDoc[]>({
+    queryKey: ['knowledge', submittedQuery],
+    queryFn: () => (submittedQuery ? knowledgeApi.search(submittedQuery) : knowledgeApi.list()),
+  });
+
+  useEffect(() => {
+    if (loadError) {
+      toast.error((loadError as any)?.response?.data?.message || (submittedQuery ? 'Recherche impossible' : 'Impossible de charger les documents'));
+    }
+  }, [loadError, submittedQuery]);
+
+  const invalidateDocs = () => queryClient.invalidateQueries({ queryKey: ['knowledge'] });
+
+  const addText = useMutation({
+    mutationFn: ({ content, filename }: { content: string; filename?: string }) =>
+      knowledgeApi.addText(content, filename),
+    onSuccess: () => {
+      toast.success('Document ajouté');
+      setShowForm(false);
+      setForm({ content: '', filename: '' });
+      invalidateDocs();
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Ajout impossible'),
+  });
+
+  const deleteDoc = useMutation({
+    mutationFn: (id: string) => knowledgeApi.delete(id),
+    onSuccess: (_res, id) => {
+      toast.success('Document supprimé');
+      queryClient.setQueriesData<KnowledgeDoc[]>({ queryKey: ['knowledge'] }, (old) =>
+        old ? old.filter((doc) => doc.id !== id) : old,
+      );
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Suppression impossible'),
+  });
+
+  const uploadFile = useMutation({
+    mutationFn: (file: File) => knowledgeApi.uploadFile(file),
+    onSuccess: () => {
+      toast.success('Fichier importé avec succès');
+      setShowForm(false);
+      invalidateDocs();
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Import impossible'),
+  });
+
+  const importUrl = useMutation({
+    mutationFn: (url: string) => knowledgeApi.importUrlAsync(url),
+    onSuccess: () => {
+      toast.success('Import URL lancé en arrière-plan');
+      setShowForm(false);
+      setUrlForm('');
+      setTimeout(() => invalidateDocs(), 5000);
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Import URL impossible'),
+  });
+
+  const searchCompany = useMutation({
+    mutationFn: (name: string) => knowledgeApi.searchCompany(name),
+    onSuccess: (result, name) => {
+      setCompanyResult(result);
+      if (result.docs?.length > 0) {
+        toast.success(`${result.docs.length} document(s) importé(s) pour ${name}`);
+        invalidateDocs();
+      } else {
+        toast.info('Recherche terminée — aucune page exploitable trouvée');
+      }
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Recherche entreprise impossible'),
+  });
+
+  const scrapeSite = useMutation({
+    mutationFn: (url: string) => knowledgeApi.scrapeSite(url),
+    onSuccess: (result) => {
+      toast.success(`${result.knowledgeEntries} entrée(s) ajoutée(s) à la base de connaissances`);
+      setShowForm(false);
+      setUrlForm('');
+      invalidateDocs();
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Scraping impossible'),
+  });
+
+  const uploading = uploadFile.isPending;
+  const saving = addText.isPending || importUrl.isPending || searchCompany.isPending || scrapeSite.isPending;
 
   const filteredDocs = useMemo(() => {
     if (!query.trim()) return docs;
@@ -35,132 +118,49 @@ export default function KnowledgePage() {
     );
   }, [docs, query]);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const data = await knowledgeApi.list();
-      setDocs(data);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Impossible de charger les documents');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.content.trim()) return;
-    setSaving(true);
-    try {
-      await knowledgeApi.addText(form.content, form.filename || undefined);
-      toast.success('Document ajouté');
-      setShowForm(false);
-      setForm({ content: '', filename: '' });
-      load();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Ajout impossible');
-    } finally {
-      setSaving(false);
-    }
+    addText.mutate({ content: form.content, filename: form.filename || undefined });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!confirm('Supprimer ce document ?')) return;
-    try {
-      await knowledgeApi.delete(id);
-      toast.success('Document supprimé');
-      setDocs((prev) => prev.filter((doc) => doc.id !== id));
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Suppression impossible');
-    }
+    deleteDoc.mutate(id);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
-    try {
-      await knowledgeApi.uploadFile(file);
-      toast.success('Fichier importé avec succès');
-      setShowForm(false);
-      load();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Import impossible');
-    } finally {
-      setUploading(false);
-    }
+    uploadFile.mutate(file);
   };
 
-  const handleUrlImport = async (e: React.FormEvent) => {
+  const handleUrlImport = (e: React.FormEvent) => {
     e.preventDefault();
     if (!urlForm.trim()) return;
-    setSaving(true);
-    try {
-      await knowledgeApi.importUrlAsync(urlForm.trim());
-      toast.success('Import URL lancé en arrière-plan');
-      setShowForm(false);
-      setUrlForm('');
-      setTimeout(() => load(), 5000);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Import URL impossible');
-    } finally {
-      setSaving(false);
-    }
+    importUrl.mutate(urlForm.trim());
   };
 
-  const handleCompanySearch = async (e: React.FormEvent) => {
+  const handleCompanySearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyForm.trim()) return;
-    setSaving(true);
     setCompanyResult(null);
-    try {
-      const result = await knowledgeApi.searchCompany(companyForm.trim());
-      setCompanyResult(result);
-      if (result.docs?.length > 0) {
-        toast.success(`${result.docs.length} document(s) importé(s) pour ${companyForm.trim()}`);
-        load();
-      } else {
-        toast.info('Recherche terminée — aucune page exploitable trouvée');
-      }
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Recherche entreprise impossible');
-    } finally {
-      setSaving(false);
-    }
+    searchCompany.mutate(companyForm.trim());
   };
 
-  const handleScrapeSite = async (e: React.FormEvent) => {
+  const handleScrapeSite = (e: React.FormEvent) => {
     e.preventDefault();
     if (!urlForm.trim()) return;
-    setSaving(true);
-    try {
-      const result = await knowledgeApi.scrapeSite(urlForm.trim());
-      toast.success(`${result.knowledgeEntries} entrée(s) ajoutée(s) à la base de connaissances`);
-      setShowForm(false);
-      setUrlForm('');
-      load();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Scraping impossible');
-    } finally {
-      setSaving(false);
-    }
+    scrapeSite.mutate(urlForm.trim());
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return load();
-    setSearching(true);
-    try {
-      const results = await knowledgeApi.search(query.trim());
-      setDocs(results);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Recherche impossible');
-    } finally {
-      setSearching(false);
+    const q = query.trim();
+    if (q === submittedQuery) {
+      refetch();
+    } else {
+      setSubmittedQuery(q);
     }
   };
 

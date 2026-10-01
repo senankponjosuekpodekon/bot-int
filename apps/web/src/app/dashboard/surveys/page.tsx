@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { surveysApi, agentsApi } from '@/lib/api';
 import { ClipboardList, Plus, Trash2, Save, BarChart3, Eye, Copy, X, ChevronDown, ChevronUp, Star, Download } from 'lucide-react';
 import { toast } from 'sonner';
@@ -19,28 +20,74 @@ const AGE_OPTIONS = ['18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
 const LOCATION_OPTIONS = ['Europe', 'Afrique', 'Amérique du Nord', 'Amérique du Sud', 'Asie', 'Océanie'];
 
 export default function SurveysPage() {
-  const [surveys, setSurveys] = useState<any[]>([]);
-  const [agents, setAgents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showBuilder, setShowBuilder] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [resultsFor, setResultsFor] = useState<any>(null);
-  const [results, setResults] = useState<any>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
+  const { data: bundle, isLoading: loading, isError } = useQuery({
+    queryKey: ['surveys'],
+    queryFn: async () => {
       const [data, ag] = await Promise.all([surveysApi.list(), agentsApi.list()]);
-      setSurveys(data);
-      setAgents(ag);
-    } catch {
-      toast.error('Erreur lors du chargement');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return { surveys: data as any[], agents: ag as any[] };
+    },
+  });
+  const surveys = bundle?.surveys ?? [];
+  const agents = bundle?.agents ?? [];
 
-  useEffect(() => { load(); }, [load]);
+  const { data: results, isError: resultsError } = useQuery({
+    queryKey: ['surveys', resultsFor?.id, 'results'],
+    queryFn: () => surveysApi.results(resultsFor!.id),
+    enabled: !!resultsFor,
+  });
+
+  useEffect(() => {
+    if (isError) toast.error('Erreur lors du chargement');
+  }, [isError]);
+
+  useEffect(() => {
+    if (resultsError) toast.error('Erreur lors du chargement des résultats');
+  }, [resultsError]);
+
+  const saveSurvey = useMutation({
+    mutationFn: (survey: any) => (survey.id ? surveysApi.update(survey.id, survey) : surveysApi.create(survey)),
+    onSuccess: (_res, survey) => {
+      toast.success(survey.id ? 'Survey mis à jour' : 'Survey créé');
+      setShowBuilder(false);
+      setEditing(null);
+      queryClient.invalidateQueries({ queryKey: ['surveys'] });
+    },
+    onError: () => toast.error('Erreur lors de la sauvegarde'),
+  });
+
+  const deleteSurvey = useMutation({
+    mutationFn: (id: string) => surveysApi.delete(id),
+    onSuccess: () => {
+      toast.success('Survey supprimé');
+      queryClient.invalidateQueries({ queryKey: ['surveys'] });
+    },
+    onError: () => toast.error('Erreur'),
+  });
+
+  const toggleSurvey = useMutation({
+    mutationFn: (id: string) => surveysApi.toggle(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['surveys'] }),
+    onError: () => toast.error('Erreur'),
+  });
+
+  const exportCsv = useMutation({
+    mutationFn: (survey: any) => surveysApi.exportCsv(survey.id),
+    onSuccess: (blob, survey) => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `survey-${survey.title.replace(/\s+/g, '_')}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success('Export CSV téléchargé');
+    },
+    onError: () => toast.error('Erreur lors de l\'export'),
+  });
 
   const handleCreate = () => {
     setEditing({
@@ -55,68 +102,27 @@ export default function SurveysPage() {
     setShowBuilder(true);
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!editing.title.trim()) { toast.error('Titre requis'); return; }
     if (editing.questions.length === 0) { toast.error('Au moins une question requise'); return; }
-    try {
-      if (editing.id) {
-        await surveysApi.update(editing.id, editing);
-        toast.success('Survey mis à jour');
-      } else {
-        await surveysApi.create(editing);
-        toast.success('Survey créé');
-      }
-      setShowBuilder(false);
-      setEditing(null);
-      load();
-    } catch {
-      toast.error('Erreur lors de la sauvegarde');
-    }
+    saveSurvey.mutate(editing);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!confirm('Supprimer ce survey ?')) return;
-    try {
-      await surveysApi.delete(id);
-      toast.success('Survey supprimé');
-      load();
-    } catch {
-      toast.error('Erreur');
-    }
+    deleteSurvey.mutate(id);
   };
 
-  const handleToggle = async (id: string) => {
-    try {
-      await surveysApi.toggle(id);
-      load();
-    } catch {
-      toast.error('Erreur');
-    }
+  const handleToggle = (id: string) => {
+    toggleSurvey.mutate(id);
   };
 
-  const handleResults = async (survey: any) => {
+  const handleResults = (survey: any) => {
     setResultsFor(survey);
-    try {
-      const data = await surveysApi.results(survey.id);
-      setResults(data);
-    } catch {
-      toast.error('Erreur lors du chargement des résultats');
-    }
   };
 
-  const handleExportCsv = async (survey: any) => {
-    try {
-      const blob = await surveysApi.exportCsv(survey.id);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `survey-${survey.title.replace(/\s+/g, '_')}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      toast.success('Export CSV téléchargé');
-    } catch {
-      toast.error('Erreur lors de l\'export');
-    }
+  const handleExportCsv = (survey: any) => {
+    exportCsv.mutate(survey);
   };
 
   const addQuestion = () => {
@@ -391,7 +397,7 @@ export default function SurveysPage() {
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-4 lg:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">Résultats: {resultsFor.title}</h2>
-              <button onClick={() => { setResultsFor(null); setResults(null); }} className="p-1 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
+              <button onClick={() => setResultsFor(null)} className="p-1 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
             </div>
 
             <div className="mb-4 p-3 bg-primary-50 rounded-lg">

@@ -1,45 +1,47 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { agentsApi } from '@/lib/api';
 import { Brain, Search, Trash2, Plus, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function MemoryPage() {
-  const [memories, setMemories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [scope, setScope] = useState('visitor');
   const [scopeId, setScopeId] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [newMemory, setNewMemory] = useState({ key: '', value: '', importance: 1 });
 
-  const load = async () => {
-    if (!scopeId.trim()) {
-      setMemories([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const data = await agentsApi.recall({ scope, scopeId });
-      setMemories(data || []);
-    } catch {
-      setMemories([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const hasScopeId = !!scopeId.trim();
+  const { data: memories = [], isLoading, refetch } = useQuery<any[]>({
+    queryKey: ['memory', scope, scopeId],
+    queryFn: async () => (await agentsApi.recall({ scope, scopeId })) || [],
+    enabled: hasScopeId,
+  });
+  const loading = hasScopeId && isLoading;
 
-  useEffect(() => { load(); }, [scope, scopeId]);
+  const rememberMutation = useMutation({
+    mutationFn: (data: { scope: string; scopeId: string; key: string; value: string; importance: number }) =>
+      agentsApi.remember(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['memory'] }),
+  });
+  const forgetMutation = useMutation({
+    mutationFn: (key?: string) => agentsApi.forget(scope, scopeId, key),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['memory'] }),
+  });
+
+  const load = () => {
+    if (hasScopeId) refetch();
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!scopeId.trim() || !newMemory.key || !newMemory.value) return;
     try {
-      await agentsApi.remember({ scope, scopeId, ...newMemory });
+      await rememberMutation.mutateAsync({ scope, scopeId, ...newMemory });
       toast.success('Memory stored');
       setShowAdd(false);
       setNewMemory({ key: '', value: '', importance: 1 });
-      load();
     } catch {
       toast.error('Failed to store memory');
     }
@@ -48,9 +50,8 @@ export default function MemoryPage() {
   const handleForget = async (key?: string) => {
     if (!confirm(key ? `Delete memory "${key}"?` : 'Delete all memories for this scope?')) return;
     try {
-      await agentsApi.forget(scope, scopeId, key);
+      await forgetMutation.mutateAsync(key);
       toast.success('Memory deleted');
-      load();
     } catch {
       toast.error('Failed to delete memory');
     }

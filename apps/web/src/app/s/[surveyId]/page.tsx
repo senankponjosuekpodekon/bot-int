@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { ClipboardList, CheckCircle2, Loader2, Star } from 'lucide-react';
+import { ClipboardList, CheckCircle2, Loader2 } from 'lucide-react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -25,30 +26,47 @@ export default function PublicSurveyPage() {
   const surveyId = params.surveyId as string;
   const leadId = searchParams.get('lead') || '';
 
-  const [survey, setSurvey] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const surveyQuery = useQuery({
+    queryKey: ['survey', 'public', surveyId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/surveys/public/${surveyId}`);
+      if (!res.ok) throw new Error('Survey not found');
+      return res.json();
+    },
+  });
+  const survey = surveyQuery.data;
+  const loading = surveyQuery.isLoading;
+
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [visibleQuestions, setVisibleQuestions] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch(`${API_BASE}/surveys/public/${surveyId}`)
-      .then((r) => {
-        if (!r.ok) throw new Error('Survey not found');
-        return r.json();
-      })
-      .then((data) => {
-        setSurvey(data);
-        setVisibleQuestions(data.questions || []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message || 'Erreur');
-        setLoading(false);
+    if (survey) setVisibleQuestions(survey.questions || []);
+  }, [survey]);
+
+  useEffect(() => {
+    if (surveyQuery.isError) setError((surveyQuery.error as Error)?.message || 'Erreur');
+  }, [surveyQuery.isError, surveyQuery.error]);
+
+  const submitMutation = useMutation({
+    mutationFn: async (answerArray: { questionId: string; value: any }[]) => {
+      const res = await fetch(`${API_BASE}/surveys/public/${surveyId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          answers: answerArray,
+          leadId: leadId || undefined,
+          source: 'public_link',
+        }),
       });
-  }, [surveyId]);
+      if (!res.ok) throw new Error('Erreur lors de la soumission');
+      return res.json().catch(() => ({}));
+    },
+    onSuccess: () => setSubmitted(true),
+    onError: (err: any) => setError(err.message || 'Erreur'),
+  });
 
   const hasOptions = (type: string) => ['single_choice', 'multiple_choice'].includes(type);
   const isDemographic = (type: string) => ['demographic_age', 'demographic_location'].includes(type);
@@ -78,36 +96,15 @@ export default function PublicSurveyPage() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     const requiredMissing = visibleQuestions.filter((q: any) => q.required && answers[q.id] === undefined);
     if (requiredMissing.length > 0) {
       setError(`Veuillez répondre aux questions obligatoires (${requiredMissing.length})`);
       return;
     }
-
-    setSubmitting(true);
     setError('');
-
     const answerArray = Object.entries(answers).map(([questionId, value]) => ({ questionId, value }));
-
-    try {
-      const res = await fetch(`${API_BASE}/surveys/public/${surveyId}/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          answers: answerArray,
-          leadId: leadId || undefined,
-          source: 'public_link',
-        }),
-      });
-
-      if (!res.ok) throw new Error('Erreur lors de la soumission');
-      setSubmitted(true);
-    } catch (err: any) {
-      setError(err.message || 'Erreur');
-    } finally {
-      setSubmitting(false);
-    }
+    submitMutation.mutate(answerArray);
   };
 
   if (loading) {
@@ -284,10 +281,10 @@ export default function PublicSurveyPage() {
           {/* Submit */}
           <button
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitMutation.isPending}
             className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {submitting ? (
+            {submitMutation.isPending ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Envoi...</>
             ) : (
               'Envoyer mes réponses'

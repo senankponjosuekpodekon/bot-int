@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CreditCard, Calendar, Mail, Save, Check, X, ExternalLink, MessageCircle, Send, Smartphone, Globe, Clock, MapPin } from 'lucide-react';
 import { integrationsApi, tenantApi } from '@/lib/api';
 
@@ -25,10 +26,8 @@ interface Integration {
 }
 
 export default function SettingsPage() {
+  const queryClient = useQueryClient();
   const [profile, setProfile] = useState({ language: 'fr', timezone: 'UTC', location: '' });
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [integrations, setIntegrations] = useState<Integration[]>([]);
-  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [stripeForm, setStripeForm] = useState({ secretKey: '', publishableKey: '' });
   const [calendlyForm, setCalendlyForm] = useState({ accessToken: '' });
@@ -42,108 +41,125 @@ export default function SettingsPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  useEffect(() => {
-    load();
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
-    try {
-      const data = await tenantApi.me();
-      setProfile({
-        language: data.language || 'fr',
-        timezone: data.timezone || 'UTC',
-        location: data.location || '',
-      });
-    } catch { showToast('Erreur lors du chargement du profil', 'error'); }
-  };
-
-  const saveProfile = async () => {
-    setSavingProfile(true);
-    try {
-      await tenantApi.updateMe(profile);
+  const integrationsQuery = useQuery<Integration[]>({
+    queryKey: ['integrations'],
+    queryFn: () => integrationsApi.list(),
+  });
+  const profileQuery = useQuery({
+    queryKey: ['tenant', 'me'],
+    queryFn: () => tenantApi.me(),
+  });
+  const upsertIntegration = useMutation({
+    mutationFn: ({ type, config }: { type: string; config: Record<string, any> }) =>
+      integrationsApi.upsert(type, config),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['integrations'] }),
+  });
+  const toggleIntegrationMutation = useMutation({
+    mutationFn: ({ type, enabled }: { type: string; enabled: boolean }) =>
+      integrationsApi.toggle(type, enabled),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['integrations'] }),
+  });
+  const updateProfile = useMutation({
+    mutationFn: (data: typeof profile) => tenantApi.updateMe(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant', 'me'] });
       showToast('Préférences mises à jour');
-    } catch { showToast('Erreur lors de la mise à jour', 'error'); }
-    finally { setSavingProfile(false); }
-  };
+    },
+    onError: () => showToast('Erreur lors de la mise à jour', 'error'),
+  });
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const data = await integrationsApi.list();
-      setIntegrations(data);
-      const stripe = data.find((i: Integration) => i.type === 'stripe');
-      if (stripe) setStripeForm({ secretKey: stripe.config.secretKey || '', publishableKey: stripe.config.publishableKey || '' });
-      const calendly = data.find((i: Integration) => i.type === 'calendly');
-      if (calendly) setCalendlyForm({ accessToken: calendly.config.accessToken || '' });
-      const email = data.find((i: Integration) => i.type === 'email');
-      if (email) setEmailForm({ provider: email.config.provider || 'resend', apiKey: email.config.apiKey || '', fromEmail: email.config.fromEmail || '', fromName: email.config.fromName || '' });
-      const whatsapp = data.find((i: Integration) => i.type === 'whatsapp');
-      if (whatsapp) setWhatsappForm({ phoneNumberId: whatsapp.config.phoneNumberId || '', accessToken: whatsapp.config.accessToken || '', verifyToken: whatsapp.config.verifyToken || '' });
-      const telegram = data.find((i: Integration) => i.type === 'telegram');
-      if (telegram) setTelegramForm({ botToken: telegram.config.botToken || '' });
-      const twilio = data.find((i: Integration) => i.type === 'twilio');
-      if (twilio) setTwilioForm({ accountSid: twilio.config.accountSid || '', authToken: twilio.config.authToken || '', fromNumber: twilio.config.fromNumber || '' });
-    } catch {
-      showToast('Erreur lors du chargement', 'error');
-    } finally {
-      setLoading(false);
-    }
+  const integrations = integrationsQuery.data ?? [];
+  const loading = integrationsQuery.isLoading;
+  const savingProfile = updateProfile.isPending;
+
+  // Sync the local profile form once tenant data arrives
+  useEffect(() => {
+    const data = profileQuery.data;
+    if (!data) return;
+    setProfile({
+      language: data.language || 'fr',
+      timezone: data.timezone || 'UTC',
+      location: data.location || '',
+    });
+  }, [profileQuery.data]);
+
+  // Sync the integration forms when integrations data arrives
+  useEffect(() => {
+    const data = integrationsQuery.data;
+    if (!data) return;
+    const stripe = data.find((i) => i.type === 'stripe');
+    if (stripe) setStripeForm({ secretKey: stripe.config.secretKey || '', publishableKey: stripe.config.publishableKey || '' });
+    const calendly = data.find((i) => i.type === 'calendly');
+    if (calendly) setCalendlyForm({ accessToken: calendly.config.accessToken || '' });
+    const email = data.find((i) => i.type === 'email');
+    if (email) setEmailForm({ provider: email.config.provider || 'resend', apiKey: email.config.apiKey || '', fromEmail: email.config.fromEmail || '', fromName: email.config.fromName || '' });
+    const whatsapp = data.find((i) => i.type === 'whatsapp');
+    if (whatsapp) setWhatsappForm({ phoneNumberId: whatsapp.config.phoneNumberId || '', accessToken: whatsapp.config.accessToken || '', verifyToken: whatsapp.config.verifyToken || '' });
+    const telegram = data.find((i) => i.type === 'telegram');
+    if (telegram) setTelegramForm({ botToken: telegram.config.botToken || '' });
+    const twilio = data.find((i) => i.type === 'twilio');
+    if (twilio) setTwilioForm({ accountSid: twilio.config.accountSid || '', authToken: twilio.config.authToken || '', fromNumber: twilio.config.fromNumber || '' });
+  }, [integrationsQuery.data]);
+
+  useEffect(() => {
+    if (integrationsQuery.isError) showToast('Erreur lors du chargement', 'error');
+  }, [integrationsQuery.isError]);
+
+  useEffect(() => {
+    if (profileQuery.isError) showToast('Erreur lors du chargement du profil', 'error');
+  }, [profileQuery.isError]);
+
+  const saveProfile = () => {
+    updateProfile.mutate(profile);
   };
 
   const saveStripe = async () => {
     try {
-      await integrationsApi.upsert('stripe', stripeForm);
+      await upsertIntegration.mutateAsync({ type: 'stripe', config: stripeForm });
       showToast('Stripe configuré');
-      load();
     } catch { showToast('Erreur', 'error'); }
   };
 
   const saveCalendly = async () => {
     try {
-      await integrationsApi.upsert('calendly', calendlyForm);
+      await upsertIntegration.mutateAsync({ type: 'calendly', config: calendlyForm });
       showToast('Calendly configuré');
-      load();
     } catch { showToast('Erreur', 'error'); }
   };
 
   const saveEmail = async () => {
     try {
-      await integrationsApi.upsert('email', emailForm);
+      await upsertIntegration.mutateAsync({ type: 'email', config: emailForm });
       showToast('Email configuré');
-      load();
     } catch { showToast('Erreur', 'error'); }
   };
 
   const saveWhatsapp = async () => {
     try {
-      await integrationsApi.upsert('whatsapp', whatsappForm);
+      await upsertIntegration.mutateAsync({ type: 'whatsapp', config: whatsappForm });
       showToast('WhatsApp configuré');
-      load();
     } catch { showToast('Erreur', 'error'); }
   };
 
   const saveTelegram = async () => {
     try {
-      await integrationsApi.upsert('telegram', telegramForm);
+      await upsertIntegration.mutateAsync({ type: 'telegram', config: telegramForm });
       showToast('Telegram configuré');
-      load();
     } catch { showToast('Erreur', 'error'); }
   };
 
   const saveTwilio = async () => {
     try {
-      await integrationsApi.upsert('twilio', twilioForm);
+      await upsertIntegration.mutateAsync({ type: 'twilio', config: twilioForm });
       showToast('SMS (Twilio) configuré');
-      load();
     } catch { showToast('Erreur', 'error'); }
   };
 
-  const toggleIntegration = async (type: string, enabled: boolean) => {
-    try {
-      await integrationsApi.toggle(type, enabled);
-      load();
-    } catch { showToast('Erreur', 'error'); }
+  const toggleIntegration = (type: string, enabled: boolean) => {
+    toggleIntegrationMutation.mutate(
+      { type, enabled },
+      { onError: () => showToast('Erreur', 'error') },
+    );
   };
 
   const isEnabled = (type: string) => integrations.find((i) => i.type === type)?.enabled ?? false;

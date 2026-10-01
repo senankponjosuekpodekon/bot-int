@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Brain, AlertCircle, TrendingUp, Lightbulb, Check, RefreshCw, Zap, Target, Globe, Sparkles } from 'lucide-react';
 import { intelligenceApi } from '@/lib/api';
 
@@ -23,64 +24,64 @@ const TYPE_CONFIG: Record<string, { icon: any; color: string; label: string }> =
 };
 
 export default function IntelligencePage() {
-  const [dashboard, setDashboard] = useState<any>(null);
-  const [insights, setInsights] = useState<Insight[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<string>('');
   const [showResolved, setShowResolved] = useState(false);
   const [enriching, setEnriching] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-  const [platform, setPlatform] = useState<any>(null);
-  const [recommendations, setRecommendations] = useState<any[]>([]);
 
-  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+  const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
-  };
+  }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
+  const { data: bundle, isLoading: loading, isError, refetch } = useQuery({
+    queryKey: ['intelligence', filter, showResolved],
+    queryFn: async () => {
       const [d, i, p, recs] = await Promise.all([
         intelligenceApi.dashboard(),
         intelligenceApi.insights({ type: filter || undefined, resolved: showResolved ? 'true' : 'false' }),
         intelligenceApi.platformDashboard().catch(() => null),
         intelligenceApi.platformRecommendations().catch(() => []),
       ]);
-      setDashboard(d);
-      setInsights(i);
-      setPlatform(p);
-      setRecommendations(recs);
-    } catch {
-      showToast('Erreur lors du chargement', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [filter, showResolved]);
+      return { dashboard: d, insights: i as Insight[], platform: p, recommendations: recs as any[] };
+    },
+  });
+  const dashboard = bundle?.dashboard ?? null;
+  const insights = bundle?.insights ?? [];
+  const platform = bundle?.platform ?? null;
+  const recommendations = bundle?.recommendations ?? [];
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (isError) showToast('Erreur lors du chargement', 'error');
+  }, [isError, showToast]);
 
-  const handleResolve = async (id: string) => {
-    try {
-      await intelligenceApi.resolve(id);
+  const resolveInsight = useMutation({
+    mutationFn: (id: string) => intelligenceApi.resolve(id),
+    onSuccess: () => {
       showToast('Insight résolu');
-      load();
-    } catch {
-      showToast('Erreur', 'error');
-    }
+      queryClient.invalidateQueries({ queryKey: ['intelligence'] });
+    },
+    onError: () => showToast('Erreur', 'error'),
+  });
+
+  const autoEnrich = useMutation({
+    mutationFn: (keyword: string) => intelligenceApi.autoEnrich(keyword),
+    onSuccess: (result: any) => {
+      showToast(result.message);
+      queryClient.invalidateQueries({ queryKey: ['intelligence'] });
+    },
+    onError: () => showToast('Erreur lors de l\'enrichissement', 'error'),
+    onSettled: () => setEnriching(null),
+  });
+
+  const handleResolve = (id: string) => {
+    resolveInsight.mutate(id);
   };
 
-  const handleAutoEnrich = async (keyword: string) => {
+  const handleAutoEnrich = (keyword: string) => {
     setEnriching(keyword);
-    try {
-      const result = await intelligenceApi.autoEnrich(keyword);
-      showToast(result.message);
-      load();
-    } catch {
-      showToast('Erreur lors de l\'enrichissement', 'error');
-    } finally {
-      setEnriching(null);
-    }
+    autoEnrich.mutate(keyword);
   };
 
   const stats = dashboard ? [
@@ -101,7 +102,7 @@ export default function IntelligencePage() {
           </h1>
           <p className="text-sm text-gray-500 mt-1">Auto-apprentissage en arrière-plan — plus le bot tourne, plus il devient pertinent</p>
         </div>
-        <button onClick={load} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
+        <button onClick={() => refetch()} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
           <RefreshCw className="w-4 h-4" /> Actualiser
         </button>
       </div>

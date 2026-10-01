@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { agentsApi } from '@/lib/api';
 import { Bot, Plus, Pencil, Trash2, X, Sparkles, Copy, Check, Power } from 'lucide-react';
 import { toast } from 'sonner';
@@ -56,36 +57,41 @@ interface Agent {
 }
 
 export default function AgentsPage() {
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: agents = [], isLoading: loading, isError } = useQuery<Agent[]>({
+    queryKey: ['agents'],
+    queryFn: () => agentsApi.list().then((res: any) => res.data || res),
+  });
+  const createAgent = useMutation({
+    mutationFn: (data: { name: string; type: string; systemPrompt: string; personality: string }) =>
+      agentsApi.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['agents'] }),
+  });
+  const deleteAgent = useMutation({
+    mutationFn: (id: string) => agentsApi.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['agents'] }),
+  });
+  const toggleAgent = useMutation({
+    mutationFn: (agent: Agent) => agentsApi.update(agent.id, { isActive: !agent.isActive }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['agents'] }),
+  });
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', type: 'general', systemPrompt: '', personality: '' });
   const [saving, setSaving] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await agentsApi.list();
-      setAgents(res.data || res);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Impossible de charger les agents');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (isError) toast.error('Impossible de charger les agents');
+  }, [isError]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      await agentsApi.create(form);
+      await createAgent.mutateAsync(form);
       toast.success('Agent créé avec succès');
       setShowForm(false);
       setForm({ name: '', type: 'general', systemPrompt: '', personality: '' });
-      load();
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Erreur lors de la création de l'agent");
     } finally {
@@ -104,9 +110,8 @@ export default function AgentsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Supprimer cet agent ?')) return;
     try {
-      await agentsApi.delete(id);
+      await deleteAgent.mutateAsync(id);
       toast.success('Agent supprimé');
-      load();
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Suppression impossible");
     }
@@ -114,9 +119,8 @@ export default function AgentsPage() {
 
   const handleToggle = async (agent: Agent) => {
     try {
-      await agentsApi.update(agent.id, { isActive: !agent.isActive });
+      await toggleAgent.mutateAsync(agent);
       toast.success(agent.isActive ? 'Agent désactivé' : 'Agent activé');
-      load();
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Impossible de modifier le statut');
     }

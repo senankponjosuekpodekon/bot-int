@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BarChart3, MessageSquare, Users, TrendingUp, Activity, Plus, Trash2, Webhook } from 'lucide-react';
 import { analyticsApi, webhooksApi } from '@/lib/api';
 import ChannelIntegrations from './ChannelIntegrations';
@@ -25,66 +26,49 @@ const CHANNEL_COLORS: Record<string, string> = {
 };
 
 export default function ChannelAnalyticsPage() {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [days, setDays] = useState(30);
-  const [webhooks, setWebhooks] = useState<any[]>([]);
-  const [webhooksLoading, setWebhooksLoading] = useState(true);
+  const { data, isLoading: loading } = useQuery<any>({
+    queryKey: ['analytics', 'channels', days],
+    queryFn: () => analyticsApi.channels(days),
+  });
+  const { data: webhooks = [], isLoading: webhooksLoading } = useQuery<any[]>({
+    queryKey: ['webhooks'],
+    queryFn: async () => {
+      const res = await webhooksApi.list();
+      return Array.isArray(res) ? res : res?.data ?? [];
+    },
+  });
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookEvents, setWebhookEvents] = useState('message.replied,lead.created');
-  const [webhookSubmitting, setWebhookSubmitting] = useState(false);
 
-  useEffect(() => {
-    setLoading(true);
-    analyticsApi.channels(days)
-      .then((data) => setData(data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [days]);
-
-  const loadWebhooks = async () => {
-    setWebhooksLoading(true);
-    try {
-      const res = await webhooksApi.list();
-      setWebhooks(Array.isArray(res) ? res : res?.data ?? []);
-    } catch {
-      // error
-    } finally {
-      setWebhooksLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadWebhooks();
-  }, []);
-
-  const handleAddWebhook = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!webhookUrl.trim()) return;
-    setWebhookSubmitting(true);
-    try {
-      await webhooksApi.create({
-        url: webhookUrl.trim(),
-        events: webhookEvents.split(',').map((e) => e.trim()).filter(Boolean),
-      });
+  const createWebhook = useMutation({
+    mutationFn: (data: { url: string; events: string[] }) => webhooksApi.create(data),
+    onSuccess: () => {
       setWebhookUrl('');
       setWebhookEvents('message.replied,lead.created');
-      await loadWebhooks();
-    } catch {
-      // error
-    } finally {
-      setWebhookSubmitting(false);
-    }
+      queryClient.invalidateQueries({ queryKey: ['webhooks'] });
+    },
+  });
+  const webhookSubmitting = createWebhook.isPending;
+
+  const deleteWebhook = useMutation({
+    mutationFn: (id: string) => webhooksApi.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['webhooks'] }),
+  });
+
+  const handleAddWebhook = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!webhookUrl.trim()) return;
+    createWebhook.mutate({
+      url: webhookUrl.trim(),
+      events: webhookEvents.split(',').map((e) => e.trim()).filter(Boolean),
+    });
   };
 
-  const handleDeleteWebhook = async (id: string) => {
+  const handleDeleteWebhook = (id: string) => {
     if (!confirm('Supprimer ce webhook ?')) return;
-    try {
-      await webhooksApi.delete(id);
-      await loadWebhooks();
-    } catch {
-      // error
-    }
+    deleteWebhook.mutate(id);
   };
 
   if (loading) {

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { List, Play, Settings, Trash2, Plus, Loader2, Activity, X, Save } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { List, Play, Settings, Trash2, Plus, Loader2, Activity } from 'lucide-react';
 import { flowsApi } from '@/lib/api';
 import { toast } from 'sonner';
 import FlowForm from './FlowForm';
@@ -30,52 +31,98 @@ interface FlowExecution {
   createdAt: string;
 }
 
+function FlowExecutions({ flowId }: { flowId: string }) {
+  const { data: execs, isLoading } = useQuery<FlowExecution[]>({
+    queryKey: ['flows', flowId, 'executions'],
+    queryFn: async () => {
+      try {
+        const res = await flowsApi.executionsByFlow(flowId, { page: 1, limit: 20 });
+        return (res.data || []) as FlowExecution[];
+      } catch {
+        return [];
+      }
+    },
+  });
+
+  return (
+    <div className="mt-4 border-t border-gray-100 pt-4">
+      <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+        <Play className="w-4 h-4 text-gray-400" /> Dernières exécutions
+      </h4>
+      {isLoading || !execs ? (
+        <p className="text-sm text-gray-400 flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> Chargement...</p>
+      ) : execs.length === 0 ? (
+        <p className="text-sm text-gray-400">Aucune exécution.</p>
+      ) : (
+        <div className="space-y-2">
+          {execs.map((exec) => (
+            <div key={exec.id} className="p-3 rounded-lg bg-gray-50 text-sm">
+              <div className="flex items-center justify-between">
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  exec.status === 'success' ? 'bg-green-50 text-green-700' :
+                  exec.status === 'error' ? 'bg-red-50 text-red-700' :
+                  'bg-yellow-50 text-yellow-700'
+                }`}>
+                  {exec.status}
+                </span>
+                <span className="text-xs text-gray-400">{new Date(exec.createdAt).toLocaleString('fr-FR')}</span>
+              </div>
+              <p className="mt-1 text-gray-600">{exec.triggeredBy}</p>
+              {exec.errorMessage && <p className="text-xs text-red-500 mt-1">{exec.errorMessage}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function FlowsPage() {
-  const [flows, setFlows] = useState<Flow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [executions, setExecutions] = useState<Record<string, FlowExecution[]>>({});
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Flow | null>(null);
 
-  const load = async () => {
-    setLoading(true);
-    try {
+  const { data: flows = [], isLoading: loading, isError } = useQuery<Flow[]>({
+    queryKey: ['flows'],
+    queryFn: async () => {
       const res = await flowsApi.list();
-      setFlows(Array.isArray(res) ? res : res?.data ?? []);
-    } catch {
-      toast.error('Erreur lors du chargement des flux');
-    } finally {
-      setLoading(false);
-    }
-  };
+      return Array.isArray(res) ? res : res?.data ?? [];
+    },
+  });
 
   useEffect(() => {
-    load();
-  }, []);
+    if (isError) toast.error('Erreur lors du chargement des flux');
+  }, [isError]);
 
-  const toggleExecutions = async (flowId: string) => {
-    const isOpen = !expanded[flowId];
-    setExpanded({ ...expanded, [flowId]: isOpen });
-    if (isOpen && !executions[flowId]) {
-      try {
-        const res = await flowsApi.executionsByFlow(flowId, { page: 1, limit: 20 });
-        setExecutions({ ...executions, [flowId]: (res.data || []) as FlowExecution[] });
-      } catch {
-        setExecutions({ ...executions, [flowId]: [] });
-      }
-    }
+  const deleteFlow = useMutation({
+    mutationFn: (id: string) => flowsApi.delete(id),
+    onSuccess: () => {
+      toast.success('Flux supprimé');
+      queryClient.invalidateQueries({ queryKey: ['flows'] });
+    },
+    onError: () => toast.error('Erreur lors de la suppression'),
+  });
+
+  const saveFlow = useMutation({
+    mutationFn: ({ id, data }: { id?: string; data: any }) =>
+      id ? flowsApi.update(id, data) : flowsApi.create(data),
+    onSuccess: (_res, { id }) => {
+      toast.success(id ? 'Flux mis à jour' : 'Flux créé');
+      setShowForm(false);
+      setEditing(null);
+      queryClient.invalidateQueries({ queryKey: ['flows'] });
+    },
+    onError: () => toast.error('Erreur lors de l\'enregistrement'),
+  });
+
+  const toggleExecutions = (flowId: string) => {
+    setExpanded({ ...expanded, [flowId]: !expanded[flowId] });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!confirm('Supprimer ce flux ?')) return;
-    try {
-      await flowsApi.delete(id);
-      toast.success('Flux supprimé');
-      load();
-    } catch {
-      toast.error('Erreur lors de la suppression');
-    }
+    deleteFlow.mutate(id);
   };
 
   const handleEdit = (flow: Flow) => {
@@ -83,21 +130,8 @@ export default function FlowsPage() {
     setShowForm(true);
   };
 
-  const handleSave = async (data: any) => {
-    try {
-      if (editing) {
-        await flowsApi.update(editing.id, data);
-        toast.success('Flux mis à jour');
-      } else {
-        await flowsApi.create(data);
-        toast.success('Flux créé');
-      }
-      setShowForm(false);
-      setEditing(null);
-      load();
-    } catch {
-      toast.error('Erreur lors de l\'enregistrement');
-    }
+  const handleSave = (data: any) => {
+    saveFlow.mutate({ id: editing?.id, data });
   };
 
   if (loading) {
@@ -176,37 +210,7 @@ export default function FlowsPage() {
                 </div>
               </div>
 
-              {expanded[flow.id] && (
-                <div className="mt-4 border-t border-gray-100 pt-4">
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <Play className="w-4 h-4 text-gray-400" /> Dernières exécutions
-                  </h4>
-                  {!executions[flow.id] ? (
-                    <p className="text-sm text-gray-400 flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> Chargement...</p>
-                  ) : executions[flow.id].length === 0 ? (
-                    <p className="text-sm text-gray-400">Aucune exécution.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {executions[flow.id].map((exec) => (
-                        <div key={exec.id} className="p-3 rounded-lg bg-gray-50 text-sm">
-                          <div className="flex items-center justify-between">
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              exec.status === 'success' ? 'bg-green-50 text-green-700' :
-                              exec.status === 'error' ? 'bg-red-50 text-red-700' :
-                              'bg-yellow-50 text-yellow-700'
-                            }`}>
-                              {exec.status}
-                            </span>
-                            <span className="text-xs text-gray-400">{new Date(exec.createdAt).toLocaleString('fr-FR')}</span>
-                          </div>
-                          <p className="mt-1 text-gray-600">{exec.triggeredBy}</p>
-                          {exec.errorMessage && <p className="text-xs text-red-500 mt-1">{exec.errorMessage}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+              {expanded[flow.id] && <FlowExecutions flowId={flow.id} />}
             </div>
           ))}
         </div>

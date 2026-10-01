@@ -1,24 +1,24 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { agentsApi, leadsApi, chatApi } from '@/lib/api';
 import { Bot, MessageSquare, Users, TrendingUp } from 'lucide-react';
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({ agents: 0, conversations: 0, leads: 0 });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    Promise.all([agentsApi.list(), chatApi.conversations(), leadsApi.list()])
-      .then(([agents, conversations, leads]) => {
-        setStats({
-          agents: agents.data?.length ?? agents.length ?? 0,
-          conversations: conversations.data?.length ?? conversations.length ?? 0,
-          leads: leads.data?.length ?? leads.length ?? 0,
-        });
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: stats = { agents: 0, conversations: 0, leads: 0 }, isLoading: loading } = useQuery({
+    queryKey: ['dashboard', 'stats'],
+    queryFn: async () => {
+      const [agents, conversations, leads] = await Promise.all([
+        agentsApi.list(),
+        chatApi.conversations(),
+        leadsApi.list(),
+      ]);
+      return {
+        agents: agents.data?.length ?? agents.length ?? 0,
+        conversations: conversations.data?.length ?? conversations.length ?? 0,
+        leads: leads.data?.length ?? leads.length ?? 0,
+      };
+    },
+  });
 
   const cards = [
     { label: 'Agents actifs', value: stats.agents, icon: Bot, color: 'bg-blue-500' },

@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText, Plus, Trash2, Download, X, Check, Clock } from 'lucide-react';
 import { quotesApi } from '@/lib/api';
 
@@ -30,8 +31,11 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 export default function QuotesPage() {
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: quotes = [], isLoading: loading, isError } = useQuery<Quote[]>({
+    queryKey: ['quotes'],
+    queryFn: () => quotesApi.list(),
+  });
   const [showForm, setShowForm] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [form, setForm] = useState({
@@ -49,55 +53,54 @@ export default function QuotesPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await quotesApi.list();
-      setQuotes(data);
-    } catch {
-      showToast('Erreur lors du chargement', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  useEffect(() => {
+    if (isError) showToast('Erreur lors du chargement', 'error');
+  }, [isError]);
 
-  useEffect(() => { load(); }, [load]);
+  const createQuote = useMutation({
+    mutationFn: (data: typeof form) => quotesApi.create(data),
+    onSuccess: () => {
+      showToast('Devis créé');
+      setShowForm(false);
+      setForm({ customerName: '', customerEmail: '', customerPhone: '', customerCompany: '', taxRate: 20, notes: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] });
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+    },
+    onError: () => showToast('Erreur lors de la création', 'error'),
+  });
 
-  const handleSave = async () => {
+  const updateQuoteStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => quotesApi.updateStatus(id, status),
+    onSuccess: () => {
+      showToast('Statut mis à jour');
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+    },
+    onError: () => showToast('Erreur', 'error'),
+  });
+
+  const deleteQuote = useMutation({
+    mutationFn: (id: string) => quotesApi.delete(id),
+    onSuccess: () => {
+      showToast('Devis supprimé');
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+    },
+    onError: () => showToast('Erreur', 'error'),
+  });
+
+  const handleSave = () => {
     if (!form.customerName || form.items.length === 0) {
       showToast('Nom client et au moins un article requis', 'error');
       return;
     }
-    try {
-      await quotesApi.create(form);
-      showToast('Devis créé');
-      setShowForm(false);
-      setForm({ customerName: '', customerEmail: '', customerPhone: '', customerCompany: '', taxRate: 20, notes: '', items: [{ description: '', quantity: 1, unitPrice: 0 }] });
-      load();
-    } catch {
-      showToast('Erreur lors de la création', 'error');
-    }
+    createQuote.mutate(form);
   };
 
-  const handleStatusChange = async (id: string, status: string) => {
-    try {
-      await quotesApi.updateStatus(id, status);
-      showToast('Statut mis à jour');
-      load();
-    } catch {
-      showToast('Erreur', 'error');
-    }
+  const handleStatusChange = (id: string, status: string) => {
+    updateQuoteStatus.mutate({ id, status });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!confirm('Supprimer ce devis ?')) return;
-    try {
-      await quotesApi.delete(id);
-      showToast('Devis supprimé');
-      load();
-    } catch {
-      showToast('Erreur', 'error');
-    }
+    deleteQuote.mutate(id);
   };
 
   const downloadPdf = (id: string) => {

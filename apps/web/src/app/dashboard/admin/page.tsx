@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Building2, Users, MessageSquare, Bot, TrendingUp, DollarSign,
   Search, Eye, ToggleLeft, ToggleRight, Trash2, Crown, UserCog,
@@ -10,76 +11,58 @@ import { adminApi } from '@/lib/api';
 type Tab = 'overview' | 'tenants' | 'users' | 'conversations';
 
 export default function AdminPage() {
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>('overview');
-  const [stats, setStats] = useState<any>(null);
-  const [tenants, setTenants] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedTenant, setSelectedTenant] = useState<any>(null);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadStats();
-  }, []);
+  const { data: stats, isLoading: loading } = useQuery({
+    queryKey: ['admin', 'stats'],
+    queryFn: () => adminApi.stats(),
+  });
+  const { data: tenantsData, refetch: loadTenants } = useQuery({
+    queryKey: ['admin', 'tenants'],
+    queryFn: () => adminApi.tenants(1, 50, search),
+    enabled: tab === 'tenants',
+  });
+  const tenants: any[] = tenantsData?.data || [];
+  const { data: usersData } = useQuery({
+    queryKey: ['admin', 'users'],
+    queryFn: () => adminApi.users(1, 50),
+    enabled: tab === 'users',
+  });
+  const users: any[] = usersData?.data || [];
+  const { data: conversationsData } = useQuery({
+    queryKey: ['admin', 'conversations'],
+    queryFn: () => adminApi.conversations(1, 50),
+    enabled: tab === 'conversations',
+  });
+  const conversations: any[] = conversationsData?.data || [];
 
-  useEffect(() => {
-    if (tab === 'tenants') loadTenants();
-    if (tab === 'users') loadUsers();
-    if (tab === 'conversations') loadConversations();
-  }, [tab]);
-
-  const loadStats = async () => {
-    try {
-      const s = await adminApi.stats();
-      setStats(s);
-    } catch {
-      // not super admin
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadTenants = async () => {
-    try {
-      const res = await adminApi.tenants(1, 50, search);
-      setTenants(res.data);
-    } catch {}
-  };
-
-  const loadUsers = async () => {
-    try {
-      const res = await adminApi.users(1, 50);
-      setUsers(res.data);
-    } catch {}
-  };
-
-  const loadConversations = async () => {
-    try {
-      const res = await adminApi.conversations(1, 50);
-      setConversations(res.data);
-    } catch {}
-  };
+  const toggleTenantMutation = useMutation({
+    mutationFn: (id: string) => adminApi.toggleTenant(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'tenants'] }),
+  });
+  const toggleUserMutation = useMutation({
+    mutationFn: (id: string) => adminApi.toggleUser(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
+  });
+  const actionLoading: string | null = toggleTenantMutation.isPending
+    ? toggleTenantMutation.variables
+    : toggleUserMutation.isPending
+      ? toggleUserMutation.variables
+      : null;
 
   const handleToggleTenant = async (id: string) => {
-    setActionLoading(id);
     try {
-      await adminApi.toggleTenant(id);
-      loadTenants();
-    } catch {} finally {
-      setActionLoading(null);
-    }
+      await toggleTenantMutation.mutateAsync(id);
+    } catch {}
   };
 
   const handleToggleUser = async (id: string) => {
-    setActionLoading(id);
     try {
-      await adminApi.toggleUser(id);
-      loadUsers();
-    } catch {} finally {
-      setActionLoading(null);
-    }
+      await toggleUserMutation.mutateAsync(id);
+    } catch {}
   };
 
   if (loading) return <div className="p-4 lg:p-6 text-center text-gray-500">Chargement...</div>;
@@ -215,7 +198,7 @@ export default function AdminPage() {
                 className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-indigo-500"
               />
             </div>
-            <button onClick={loadTenants} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium">
+            <button onClick={() => loadTenants()} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium">
               Rechercher
             </button>
           </div>

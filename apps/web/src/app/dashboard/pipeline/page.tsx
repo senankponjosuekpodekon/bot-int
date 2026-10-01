@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Tag, X, Plus } from 'lucide-react';
 import { leadsApi } from '@/lib/api';
 
@@ -26,73 +27,69 @@ const COLUMNS = [
 ];
 
 export default function PipelinePage() {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [stats, setStats] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [newTag, setNewTag] = useState('');
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
-  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+  const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
-  };
+  }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
+  const { data: bundle, isLoading: loading, isError } = useQuery({
+    queryKey: ['pipeline', search],
+    queryFn: async () => {
       const [data, s] = await Promise.all([
         leadsApi.list({ search: search || undefined }),
         leadsApi.pipelineStats(),
       ]);
-      setLeads(Array.isArray(data) ? data : data?.data ?? []);
-      setStats(s ?? {});
-    } catch {
-      showToast('Erreur lors du chargement', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [search]);
+      return {
+        leads: (Array.isArray(data) ? data : data?.data ?? []) as Lead[],
+        stats: (s ?? {}) as Record<string, number>,
+      };
+    },
+  });
+  const leads = bundle?.leads ?? [];
+  const stats = bundle?.stats ?? {};
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (isError) showToast('Erreur lors du chargement', 'error');
+  }, [isError, showToast]);
 
-  const handleStatusChange = async (leadId: string, newStatus: string) => {
-    try {
-      await leadsApi.update(leadId, { status: newStatus });
-      setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, status: newStatus } : l));
-      load();
-    } catch {
-      showToast('Erreur lors du changement de statut', 'error');
-    }
-  };
+  const updateLeadStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => leadsApi.update(id, { status }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['pipeline'] }),
+    onError: () => showToast('Erreur lors du changement de statut', 'error'),
+  });
 
-  const handleAddTag = async () => {
-    if (!selectedLead || !newTag.trim()) return;
-    try {
-      const updated = await leadsApi.addTag(selectedLead.id, newTag.trim());
+  const addTag = useMutation({
+    mutationFn: ({ id, tag }: { id: string; tag: string }) => leadsApi.addTag(id, tag),
+    onSuccess: (updated) => {
       setSelectedLead(updated);
       setNewTag('');
-      load();
-    } catch {
-      showToast('Erreur', 'error');
-    }
-  };
+      queryClient.invalidateQueries({ queryKey: ['pipeline'] });
+    },
+    onError: () => showToast('Erreur', 'error'),
+  });
 
-  const handleRemoveTag = async (tag: string) => {
-    if (!selectedLead) return;
-    try {
-      const updated = await leadsApi.removeTag(selectedLead.id, tag);
+  const removeTag = useMutation({
+    mutationFn: ({ id, tag }: { id: string; tag: string }) => leadsApi.removeTag(id, tag),
+    onSuccess: (updated) => {
       setSelectedLead(updated);
-      load();
-    } catch {
-      showToast('Erreur', 'error');
-    }
-  };
+      queryClient.invalidateQueries({ queryKey: ['pipeline'] });
+    },
+    onError: () => showToast('Erreur', 'error'),
+  });
 
-  const handleExport = async () => {
-    try {
-      const blob = await leadsApi.exportCsv();
+  const updateLeadNotes = useMutation({
+    mutationFn: ({ id, notes }: { id: string; notes: string }) => leadsApi.update(id, { notes }),
+  });
+
+  const exportCsv = useMutation({
+    mutationFn: () => leadsApi.exportCsv(),
+    onSuccess: (blob) => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -100,9 +97,26 @@ export default function PipelinePage() {
       a.click();
       window.URL.revokeObjectURL(url);
       showToast('Export CSV téléchargé');
-    } catch {
-      showToast('Erreur lors de l\'export', 'error');
-    }
+    },
+    onError: () => showToast('Erreur lors de l\'export', 'error'),
+  });
+
+  const handleStatusChange = (leadId: string, newStatus: string) => {
+    updateLeadStatus.mutate({ id: leadId, status: newStatus });
+  };
+
+  const handleAddTag = () => {
+    if (!selectedLead || !newTag.trim()) return;
+    addTag.mutate({ id: selectedLead.id, tag: newTag.trim() });
+  };
+
+  const handleRemoveTag = (tag: string) => {
+    if (!selectedLead) return;
+    removeTag.mutate({ id: selectedLead.id, tag });
+  };
+
+  const handleExport = () => {
+    exportCsv.mutate();
   };
 
   const leadsByStatus = (status: string) => leads.filter((l) => l.status === status);
@@ -208,10 +222,10 @@ export default function PipelinePage() {
                 <label className="text-gray-500">Notes</label>
                 <textarea
                   value={selectedLead.notes || ''}
-                  onChange={async (e) => {
+                  onChange={(e) => {
                     const updated = { ...selectedLead, notes: e.target.value };
                     setSelectedLead(updated);
-                    try { await leadsApi.update(selectedLead.id, { notes: e.target.value }); } catch {}
+                    updateLeadNotes.mutate({ id: selectedLead.id, notes: e.target.value });
                   }}
                   rows={3}
                   className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"

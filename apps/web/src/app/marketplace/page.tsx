@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Store, Loader2, Plus, Check, ArrowRight, Sparkles } from 'lucide-react';
 import { marketplaceApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
@@ -15,41 +16,28 @@ interface Template {
 }
 
 export default function MarketplacePage() {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [installing, setInstalling] = useState<string | null>(null);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['marketplace', 'templates', 'public'],
+    queryFn: () => marketplaceApi.list({ limit: 50 }),
+  });
+  const templates: Template[] = data?.data || [];
+  const installTemplate = useMutation({
+    mutationFn: (id: string) => marketplaceApi.install(id),
+  });
+  const installing = installTemplate.isPending ? installTemplate.variables : null;
   const [installed, setInstalled] = useState<string | null>(null);
   const { accessToken, isAuthenticated } = useAuthStore();
 
   const authenticated = isAuthenticated();
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await marketplaceApi.list({ limit: 50 });
-      setTemplates(res.data || []);
-    } catch {
-      // error
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
   const handleInstall = async (id: string) => {
     if (!authenticated) return;
-    setInstalling(id);
     try {
-      await marketplaceApi.install(id);
+      await installTemplate.mutateAsync(id);
       setInstalled(id);
       setTimeout(() => setInstalled(null), 2000);
     } catch {
       // error
-    } finally {
-      setInstalling(null);
     }
   };
 
