@@ -109,7 +109,7 @@ export class IntegrationsService {
 
   async upsert(tenantId: string, type: string, config: Record<string, any>): Promise<Integration> {
     const cleaned = this.stripMaskedConfig(config);
-    let existing = await this.findByType(tenantId, type);
+    const existing = await this.findByType(tenantId, type);
     if (existing) {
       existing.config = this.encryptConfig({ ...existing.config, ...cleaned });
       existing.enabled = true;

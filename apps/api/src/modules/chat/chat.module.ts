@@ -31,6 +31,10 @@ import { RegionsModule } from '../regions/regions.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { BusinessModule } from '../business/business.module';
 import { ScoringService } from './scoring.service';
+import { ChatGuardService } from './chat-guard.service';
+import { ConversationQueryService } from './conversation-query.service';
+import { OperatorService } from './operator.service';
+import { FeedbackService } from './feedback.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Conversation, Message, AgentFeedback, Agent]), forwardRef(() => AgentsModule), forwardRef(() => LeadsModule), forwardRef(() => KnowledgeModule), forwardRef(() => ProductsModule), forwardRef(() => IntegrationsModule), forwardRef(() => FlowsModule), forwardRef(() => IntelligenceModule), forwardRef(() => BillingModule), forwardRef(() => RegionsModule), forwardRef(() => WebhooksModule), forwardRef(() => BusinessModule)],
@@ -49,6 +53,10 @@ import { ScoringService } from './scoring.service';
     ChatService,
     ChatEventsService,
     ScoringService,
+    ChatGuardService,
+    ConversationQueryService,
+    OperatorService,
+    FeedbackService,
     ChatGateway,
   ],
   controllers: [ChatController, PublicController, AnalyticsController],

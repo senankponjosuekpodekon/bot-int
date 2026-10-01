@@ -3,6 +3,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import cors from 'cors';
 import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/global-exception.filter';
@@ -66,7 +67,6 @@ async function bootstrap() {
 
   // Per-request CORS: widget endpoints are public, everything else uses allowed origins
    
-  const cors = require('cors');
   app.use(cors((req: any, callback: any) => {
     const isWidget = req.path?.startsWith('/api/widget') || req.path?.startsWith('/widget');
     if (isWidget) {

@@ -8,6 +8,10 @@ import { AgentsService } from '../agents/agents.service';
 import { LeadsService } from '../leads/leads.service';
 import { LeadTagService } from '../leads/lead-tag.service';
 import { ScoringService } from './scoring.service';
+import { ChatGuardService } from './chat-guard.service';
+import { ConversationQueryService } from './conversation-query.service';
+import { OperatorService } from './operator.service';
+import { FeedbackService } from './feedback.service';
 import { Agent } from '../agents/agent.entity';
 import { Lead } from '../leads/lead.entity';
 
@@ -45,10 +49,13 @@ describe('ChatService', () => {
     productsService = { searchRelevant: jest.fn().mockResolvedValue([]), findByTenant: jest.fn().mockResolvedValue({ data: [], total: 0 }) };
     chatEvents = { emitMessage: jest.fn(), emitTyping: jest.fn() };
 
+    const feedbackRepo = { create: jest.fn(), find: jest.fn(), delete: jest.fn(), save: jest.fn() };
+    const webhookService = { trigger: jest.fn().mockResolvedValue(undefined) };
+
     service = new ChatService(
       convRepo as unknown as Repository<Conversation>,
       msgRepo as unknown as Repository<Message>,
-      { create: jest.fn(), find: jest.fn() } as any, // feedbackRepo
+      feedbackRepo as any, // feedbackRepo
       agentsService as unknown as AgentsService,
       { getDefaultForTenant: jest.fn().mockResolvedValue({ id: 'b-1' }), findById: jest.fn().mockResolvedValue(null) } as any, // businessService
       llmService as unknown as LLMService,
@@ -64,7 +71,7 @@ describe('ChatService', () => {
       noopService() as any, // intelligenceService
       { checkQuota: jest.fn().mockResolvedValue({ allowed: true }), incrementUsage: jest.fn().mockResolvedValue(undefined) } as any, // billingService
       { detectRegion: jest.fn().mockResolvedValue('international'), buildSystemPrompt: jest.fn().mockImplementation((base: string) => base), getProfile: jest.fn() } as any, // regionsService
-      { trigger: jest.fn().mockResolvedValue(undefined) } as any, // webhookService
+      webhookService as any,
       { recall: jest.fn().mockResolvedValue([]), recallAsContext: jest.fn().mockResolvedValue(null), extractAndStore: jest.fn().mockResolvedValue(undefined), remember: jest.fn().mockResolvedValue(undefined) } as any, // agentMemoryService
       { detectAndExecuteTools: jest.fn().mockResolvedValue([]) } as any, // agentToolsService
       { findByTrigger: jest.fn().mockResolvedValue(null), execute: jest.fn().mockResolvedValue({ completed: true, output: '', handoff: false }) } as any, // agentWorkflowService
@@ -72,6 +79,20 @@ describe('ChatService', () => {
       { resolveActiveAgent: jest.fn().mockImplementation((_t, a) => Promise.resolve(a)) } as any, // agentOrchestrationService
       chatEvents as any,
       new ScoringService(),
+      new ChatGuardService(),
+      new ConversationQueryService(
+        convRepo as unknown as Repository<Conversation>,
+        msgRepo as unknown as Repository<Message>,
+        leadsService as unknown as LeadsService,
+        webhookService as any,
+      ),
+      new OperatorService(
+        convRepo as unknown as Repository<Conversation>,
+        msgRepo as unknown as Repository<Message>,
+        chatEvents as any,
+        llmService as unknown as LLMService,
+      ),
+      new FeedbackService(feedbackRepo as any),
     );
   });
 

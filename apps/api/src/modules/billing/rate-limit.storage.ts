@@ -1,3 +1,4 @@
+import Redis from 'ioredis';
 export interface RateLimitStorage {
   isAllowed(key: string, limit: number, windowMs: number): Promise<boolean>;
 }
@@ -23,8 +24,6 @@ export class RedisRateLimitStorage implements RateLimitStorage {
 
   constructor(url: string) {
     try {
-      // @ts-ignore
-      const Redis = require('ioredis');
       this.client = new Redis(url, {
         connectTimeout: 1000,
         maxRetriesPerRequest: 0,

@@ -88,7 +88,7 @@ Rules:
     const langMatch = String(parsed?.language || 'fr')
       .toLowerCase()
       .match(/^[a-z]{2}/);
-    let language = langMatch ? langMatch[0] : this.fallbackLanguage(original);
+    const language = langMatch ? langMatch[0] : this.fallbackLanguage(original);
 
     if (!KNOWN_INTENTS.includes(intent)) {
       intent = this.mapLooseIntent(intent, original);

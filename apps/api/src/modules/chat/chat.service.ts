@@ -1,15 +1,18 @@
 import { Injectable, NotFoundException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, Between } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { Conversation, ConversationStatus, ConversationState, FunnelStage, AcquisitionChannel, ConversationChannel } from './conversation.entity';
 import { Message, MessageRole } from './message.entity';
 import { AgentFeedback } from './agent-feedback.entity';
 import { ChatEventsService } from './chat-events.service';
 import { ScoringService } from './scoring.service';
+import { ChatGuardService, ExtractedData } from './chat-guard.service';
+import { ConversationQueryService } from './conversation-query.service';
+import { OperatorService } from './operator.service';
+import { FeedbackService } from './feedback.service';
 import { Agent } from '../agents/agent.entity';
 import { AgentsService } from '../agents/agents.service';
 import { BusinessService } from '../business/business.service';
-import { Business } from '../business/business.entity';
 import { AgentMemoryService } from '../agents/agent-memory.service';
 import { AgentToolsService } from '../agents/agent-tools.service';
 import { AgentWorkflowService } from '../agents/agent-workflow.service';
@@ -34,14 +37,6 @@ import { RegionsService } from '../regions/regions.service';
 import { RegionCode } from '../regions/region-profile.types';
 import { WebhookService } from '../webhooks/webhook.service';
 import { ListConversationsDto } from './dto/list-conversations.dto';
-
-const EMAIL_REGEX = /[\w.+-]+@[\w-]+\.[\w.-]+/gi;
-const PHONE_REGEX = /(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}/g;
-const NAME_PATTERNS = [
-  /je m'appelle\s+([a-zA-ZÀ-ÿ'-]+)/i,
-  /mon nom est\s+([a-zA-ZÀ-ÿ'-]+)/i,
-  /je suis\s+([a-zA-ZÀ-ÿ'-]+)/i,
-];
 
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -125,11 +120,6 @@ const INDUSTRY_PROMPT_FALLBACK = (industry?: string) =>
     ? `Tu es spécialisé(e) dans le secteur "${industry}". Pose une question sectorielle pertinente pour qualifier le besoin. Ne donne jamais de chiffre, de prix ou de garantie sans contexte vérifié.`
     : `Ne donne jamais de chiffre, de prix ou de garantie sans contexte vérifié. Si le secteur n'est pas connu, pose une question ouverte pour l'identifier. Ne listes pas tous les secteurs pris en charge.`;
 
-interface ExtractedData {
-  email?: string;
-  phone?: string;
-  name?: string;
-}
 
 @Injectable()
 export class ChatService {
@@ -179,6 +169,10 @@ export class ChatService {
     private readonly agentOrchestrationService: AgentOrchestrationService,
     private readonly chatEvents: ChatEventsService,
     private readonly scoringService: ScoringService,
+    private readonly chatGuards: ChatGuardService,
+    private readonly conversationQuery: ConversationQueryService,
+    private readonly operatorService: OperatorService,
+    private readonly feedbackService: FeedbackService,
   ) {}
 
   async sendMessage(
@@ -334,7 +328,7 @@ export class ChatService {
 
     // Business hours check
     if (personalityConfig.autoReplyMode && personalityConfig.autoReplyMode !== 'always') {
-      const inHours = this.isWithinBusinessHours(personalityConfig.businessHours);
+      const inHours = this.chatGuards.isWithinBusinessHours(personalityConfig.businessHours);
       if (personalityConfig.autoReplyMode === 'business_hours' && !inHours) {
         const afterHoursReply = personalityConfig.aiDisclosureMessage || 
           `Notre équipe est actuellement indisponible. Nos horaires sont ${personalityConfig.businessHours?.start} - ${personalityConfig.businessHours?.end}. Laissez-nous votre message, nous vous répondrons dès notre retour.`;
@@ -456,7 +450,7 @@ export class ChatService {
     });
 
     if (conversation.leadId) {
-      const extracted = this.extractData(userMessage);
+      const extracted = this.chatGuards.extractData(userMessage);
       if (extracted.email || extracted.phone || extracted.name) {
         await this.updateLeadData(conversation.leadId, tenantId, extracted, activeBusinessId);
       }
@@ -652,6 +646,89 @@ export class ChatService {
       }
     }
 
+    const promptContext = await this.buildPromptContext({
+      conversation,
+      agent,
+      activeAgent,
+      tenantId,
+      agentId,
+      visitorId,
+      userMessage,
+      isReturningVisitor,
+      activeBusinessId,
+      personalityConfig,
+      formSummary,
+      detectedRegion,
+    });
+    currentLead = promptContext.currentLead;
+
+    const priceSignal = /\b(budget|prix|co[uû]t|offre|devis|proposition|tarif|combien|solution)\b/i.test(userMessage);
+
+    const generated = await this.generateReply({
+      conversation,
+      activeAgent,
+      tenantId,
+      agentId,
+      visitorId,
+      userMessage,
+      activeBusinessId,
+      personalityConfig,
+      currentLead,
+      promptContext,
+      intentResult,
+      conversationId,
+      callbacks,
+      priceSignal,
+    });
+
+    return this.postProcessReply({
+      finalReply: generated.finalReply,
+      usage: generated.usage,
+      discoveryRedirect: generated.discoveryRedirect,
+      conversation,
+      agent,
+      tenantId,
+      agentId,
+      visitorId,
+      userMessage,
+      activeBusinessId,
+      personalityConfig,
+      newIntentScore,
+      createdLeadId,
+      flowData,
+      promptContext,
+      detectedRegion,
+    });
+  }
+
+  // Pipeline stage 1: assemble the LLM prompt (history, memories, tools,
+  // feedback corrections, lead profile, RAG, products, scoring, persona).
+  private async buildPromptContext(params: {
+    conversation: Conversation;
+    agent: Agent;
+    activeAgent: Agent;
+    tenantId: string;
+    agentId: string;
+    visitorId?: string;
+    userMessage: string;
+    isReturningVisitor: boolean;
+    activeBusinessId: string;
+    personalityConfig: Record<string, any>;
+    formSummary: string | null;
+    detectedRegion: RegionCode;
+  }): Promise<{
+    messages: OllamaMessage[];
+    relevantContext: string[];
+    productsContext: string;
+    carouselProducts: any[];
+    currentLead: Lead | null;
+  }> {
+    const {
+      conversation, agent, activeAgent, tenantId, agentId, visitorId, userMessage,
+      isReturningVisitor, activeBusinessId, personalityConfig, formSummary, detectedRegion,
+    } = params;
+    let currentLead: Lead | null = null;
+
     // Load the 20 most recent messages (DESC) then restore chronological order.
     // With ASC+take:20, conversations older than 20 messages lost all recent context.
     let history = await this.msgRepo.find({
@@ -692,7 +769,7 @@ export class ChatService {
         if (business?.profile) {
           messages.push({
             role: 'system',
-            content: this.buildBusinessProfilePrompt(business),
+            content: this.chatGuards.buildBusinessProfilePrompt(business),
           });
         }
       } catch {
@@ -1036,13 +1113,39 @@ export class ChatService {
       });
     }
 
-    const priceSignal = /\b(budget|prix|co[uû]t|offre|devis|proposition|tarif|combien|solution)\b/i.test(userMessage);
+    return { messages, relevantContext, productsContext, carouselProducts, currentLead };
+  }
+
+  // Pipeline stage 2: LLM generation (allowed-intent gate, discovery redirect,
+  // fact grounding, streaming, empty-fallback, disclosure).
+  private async generateReply(params: {
+    conversation: Conversation;
+    activeAgent: Agent;
+    tenantId: string;
+    agentId: string;
+    visitorId?: string;
+    userMessage: string;
+    activeBusinessId: string;
+    personalityConfig: Record<string, any>;
+    currentLead: Lead | null;
+    promptContext: { messages: OllamaMessage[]; relevantContext: string[]; carouselProducts: any[] };
+    intentResult: { intent: string; confidence: number; language?: string };
+    conversationId?: string;
+    callbacks?: { onToken?: (token: string) => void };
+    priceSignal: boolean;
+  }): Promise<{ finalReply: string; usage: { prompt: number; completion: number; total: number }; discoveryRedirect: boolean }> {
+    const {
+      conversation, activeAgent, tenantId, agentId, visitorId, userMessage,
+      activeBusinessId, personalityConfig, currentLead, intentResult, conversationId, callbacks, priceSignal,
+    } = params;
+    const { messages, relevantContext, carouselProducts } = params.promptContext;
+
     const discoveryFacts = await this.getDiscoveryFacts(tenantId, conversation, visitorId, activeBusinessId);
     let finalReply: string;
     let usage: { prompt: number; completion: number; total: number };
     let discoveryRedirect = false;
 
-    const allowedIntents = this.resolveAllowedIntents(activeAgent, personalityConfig);
+    const allowedIntents = this.chatGuards.resolveAllowedIntents(activeAgent, personalityConfig);
     if (allowedIntents && !allowedIntents.includes(intentResult.intent)) {
       conversation.status = ConversationStatus.HANDED_OFF;
       conversation.state = ConversationState.ANSWERING;
@@ -1106,7 +1209,7 @@ export class ChatService {
           }),
         );
       }
-      this.assertContextScope(activeBusinessId, currentLead, carouselProducts);
+      this.chatGuards.assertContextScope(activeBusinessId, currentLead, carouselProducts);
 
       const needsTooling = /\b(prix|tarif|combien|co[uû]t|stock|disponible|créneau|rdv|réserver|book)\b/i.test(userMessage);
       if (needsTooling) {
@@ -1146,7 +1249,7 @@ export class ChatService {
       }
 
       try {
-        this.assertCriticalFactsGrounded(finalReply, carouselProducts);
+        this.chatGuards.assertCriticalFactsGrounded(finalReply, carouselProducts);
       } catch (err: any) {
         this.logger.error(
           JSON.stringify({
@@ -1177,6 +1280,37 @@ export class ChatService {
         finalReply += disclosure;
       }
     }
+
+    return { finalReply, usage, discoveryRedirect };
+  }
+
+  // Pipeline stage 3: post-processing (escalation, workflows, pacing,
+  // payment/booking links, persistence, memory extraction, intelligence).
+  private async postProcessReply(params: {
+    finalReply: string;
+    usage: { prompt: number; completion: number; total: number };
+    discoveryRedirect: boolean;
+    conversation: Conversation;
+    agent: Agent;
+    tenantId: string;
+    agentId: string;
+    visitorId?: string;
+    userMessage: string;
+    activeBusinessId: string;
+    personalityConfig: Record<string, any>;
+    newIntentScore: number;
+    createdLeadId?: string;
+    flowData: FlowData | null;
+    promptContext: { relevantContext: string[]; productsContext: string; carouselProducts: any[] };
+    detectedRegion: RegionCode;
+  }) {
+    const {
+      usage, discoveryRedirect, conversation, agent, tenantId, agentId,
+      visitorId, userMessage, activeBusinessId, personalityConfig, newIntentScore,
+      createdLeadId, flowData, detectedRegion,
+    } = params;
+    let { finalReply } = params;
+    const { relevantContext, productsContext, carouselProducts } = params.promptContext;
 
     // Escalation check: if topic matches escalation topics, hand off
     if (personalityConfig.escalationTopics && personalityConfig.escalationTopics.length > 0) {
@@ -1342,219 +1476,27 @@ export class ChatService {
   }
 
   async getConversationForTenant(conversationId: string, tenantId: string): Promise<Conversation> {
-    const conversation = await this.convRepo.findOne({
-      where: { id: conversationId, tenantId },
-    });
-    if (!conversation) throw new NotFoundException('Conversation not found');
-    return conversation;
+    return this.conversationQuery.getConversationForTenant(conversationId, tenantId);
   }
 
   async getHistory(conversationId: string, tenantId: string, limit = 500) {
-    const conversation = await this.getConversationForTenant(conversationId, tenantId);
-
-    const messages = await this.msgRepo.find({
-      where: { conversationId: conversation.id },
-      order: { createdAt: 'DESC' },
-      take: limit,
-    });
-    return messages.reverse();
+    return this.conversationQuery.getHistory(conversationId, tenantId, limit);
   }
 
   async exportTranscript(conversationId: string, tenantId: string): Promise<{ conversation: Conversation; messages: Message[] }> {
-    const conversation = await this.convRepo.findOne({
-      where: { id: conversationId, tenantId },
-    });
-    if (!conversation) throw new NotFoundException('Conversation not found');
-
-    const messages = await this.msgRepo.find({
-      where: { conversationId, role: In([MessageRole.USER, MessageRole.ASSISTANT]) },
-      order: { createdAt: 'ASC' },
-    });
-
-    return { conversation, messages };
+    return this.conversationQuery.exportTranscript(conversationId, tenantId);
   }
 
   async getConversations(tenantId: string, params: ListConversationsDto) {
-    const page = params.page ?? 1;
-    const limit = Math.min(params.limit ?? 20, 100);
-    const skip = (page - 1) * limit;
-
-    const qb = this.convRepo
-      .createQueryBuilder('conversation')
-      .leftJoinAndSelect('conversation.lead', 'lead')
-      .where('conversation.tenantId = :tenantId', { tenantId })
-      .orderBy('conversation.createdAt', 'DESC')
-      .skip(skip)
-      .take(limit);
-
-    if (params.businessId) {
-      qb.andWhere('conversation.businessId = :businessId', { businessId: params.businessId });
-    }
-
-    if (params.agentId) {
-      qb.andWhere('conversation.agentId = :agentId', { agentId: params.agentId });
-    }
-
-    if (params.status) {
-      qb.andWhere('conversation.status = :status', {
-        status: params.status,
-      });
-    }
-
-    if (params.channel) {
-      qb.andWhere('conversation.channel = :channel', { channel: params.channel });
-    }
-
-    if (params.hasLead !== undefined) {
-      qb.andWhere(`conversation.leadId IS ${params.hasLead ? 'NOT' : ''} NULL`);
-    }
-
-    if (params.leadStatus) {
-      qb.andWhere('lead.status = :leadStatus', { leadStatus: params.leadStatus });
-    }
-
-    if (params.funnelStage) {
-      qb.andWhere('conversation.funnelStage = :funnelStage', { funnelStage: params.funnelStage });
-    }
-
-    if (params.acquisitionChannel) {
-      qb.andWhere('conversation.acquisitionChannel = :acquisitionChannel', { acquisitionChannel: params.acquisitionChannel });
-    }
-
-    if (params.search) {
-      qb.andWhere(
-        '(lead.name ILIKE :search OR lead.email ILIKE :search OR conversation.visitorId ILIKE :search)',
-        { search: `%${params.search}%` },
-      );
-    }
-
-    const [data, total] = await qb.getManyAndCount();
-    const hasMore = skip + data.length < total;
-
-    return {
-      data,
-      meta: {
-        page,
-        limit,
-        total,
-        hasMore,
-      },
-    };
+    return this.conversationQuery.getConversations(tenantId, params);
   }
 
   async attachLead(conversationId: string, tenantId: string, leadId: string) {
-    const conversation = await this.convRepo.findOne({ where: { id: conversationId, tenantId } });
-    if (!conversation) throw new NotFoundException('Conversation not found');
-
-    const lead = await this.leadsService.findById(leadId, tenantId, conversation.businessId);
-    conversation.leadId = lead.id;
-    await this.convRepo.save(conversation);
-
-    return {
-      ...conversation,
-      lead,
-    };
+    return this.conversationQuery.attachLead(conversationId, tenantId, leadId);
   }
 
   async updateStatus(conversationId: string, tenantId: string, status: Conversation['status']) {
-    const conversation = await this.convRepo.findOne({ where: { id: conversationId, tenantId } });
-    if (!conversation) throw new NotFoundException('Conversation not found');
-    conversation.status = status;
-    await this.convRepo.save(conversation);
-
-    if (status === ConversationStatus.CLOSED) {
-      this.webhookService.trigger('conversation.closed', tenantId, {
-        conversationId: conversation.id,
-        agentId: conversation.agentId,
-        leadId: conversation.leadId,
-        fitScore: conversation.fitScore,
-        purchaseProbability: conversation.purchaseProbability,
-        funnelStage: conversation.funnelStage,
-      });
-    }
-
-    return conversation;
-  }
-
-  private extractData(text: string): ExtractedData {
-    const data: ExtractedData = {};
-
-    const emailMatch = text.match(EMAIL_REGEX);
-    if (emailMatch) data.email = emailMatch[0];
-
-    const phoneMatch = text.match(PHONE_REGEX);
-    if (phoneMatch) data.phone = phoneMatch[0].replace(/\s/g, '');
-
-    for (const pattern of NAME_PATTERNS) {
-      const nameMatch = text.match(pattern);
-      if (nameMatch) {
-        data.name = nameMatch[1].trim();
-        break;
-      }
-    }
-
-    return data;
-  }
-
-  private assertContextScope(activeBusinessId: string, lead: Lead | null, products: any[]): void {
-    if (!activeBusinessId) return;
-    if (lead?.businessId && lead.businessId !== activeBusinessId) {
-      this.logger.error(
-        JSON.stringify({
-          debug: 'CONTEXT_LEAK_BLOCKED',
-          source: 'lead',
-          expectedBusinessId: activeBusinessId,
-          receivedBusinessId: lead.businessId,
-        }),
-      );
-      throw new Error('Business context leak detected: lead belongs to a different business');
-    }
-    for (const product of products) {
-      if (product?.businessId && product.businessId !== activeBusinessId) {
-        this.logger.error(
-          JSON.stringify({
-            debug: 'CONTEXT_LEAK_BLOCKED',
-            source: 'product',
-            expectedBusinessId: activeBusinessId,
-            receivedBusinessId: product.businessId,
-          }),
-        );
-        throw new Error('Business context leak detected: product belongs to a different business');
-      }
-    }
-  }
-
-  private resolveAllowedIntents(agent: Agent, personalityConfig: Record<string, any>): string[] | null {
-    if (personalityConfig?.allowedIntents?.length) {
-      return personalityConfig.allowedIntents as string[];
-    }
-    const strict = ['health', 'medical', 'legal', 'finance'];
-    if (strict.includes(agent?.industry)) {
-      return ['greeting', 'goodbye', 'appointment', 'contact', 'unknown'];
-    }
-    return null;
-  }
-
-  private assertCriticalFactsGrounded(reply: string, products: any[]): void {
-    if (!reply) return;
-    const priceRegex = /\b(\d+(?:[.,]\d{1,2})?)\s*(?:€|EUR|euros?)\b/gi;
-    const matches = Array.from(reply.matchAll(priceRegex) || []);
-    if (matches.length === 0) return;
-    if (products.length === 0) {
-      throw new Error('Price mentioned without grounded products');
-    }
-    const productPrices = products
-      .map((p) => Number(p?.price))
-      .filter((p) => !Number.isNaN(p));
-    for (const match of matches) {
-      const raw = match[1].replace(/,/g, '.');
-      const price = Number(raw);
-      if (Number.isNaN(price)) continue;
-      const isGrounded = productPrices.some((p) => Math.abs(p - price) < 0.01);
-      if (!isGrounded) {
-        throw new Error(`Price ${price} not found in grounded products`);
-      }
-    }
+    return this.conversationQuery.updateStatus(conversationId, tenantId, status);
   }
 
   private async updateLeadData(leadId: string, tenantId: string, data: ExtractedData, businessId: string): Promise<void> {
@@ -1629,42 +1571,6 @@ export class ChatService {
     return summaries.length > 0 ? summaries.join('\n') : null;
   }
 
-  // ─── Business hours check (in the configured timezone when provided) ───
-  private isWithinBusinessHours(hours?: { start: string; end: string; days: number[]; timezone?: string }): boolean {
-    if (!hours || !hours.start || !hours.end) return true;
-    const now = new Date();
-    let day = now.getDay();
-    let currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-    if (hours.timezone) {
-      try {
-        const parts = new Intl.DateTimeFormat('en-GB', {
-          timeZone: hours.timezone,
-          weekday: 'short',
-          hour: '2-digit',
-          minute: '2-digit',
-          hourCycle: 'h23',
-        }).formatToParts(now);
-        const get = (type: string) => parts.find((p) => p.type === type)?.value;
-        const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-        day = dayMap[get('weekday') || ''] ?? day;
-        currentMinutes = (parseInt(get('hour') || '0', 10) % 24) * 60 + parseInt(get('minute') || '0', 10);
-      } catch {
-        // Invalid timezone — fall back to server time
-      }
-    }
-
-    if (hours.days && hours.days.length > 0 && !hours.days.includes(day)) return false;
-
-    const [startH, startM] = hours.start.split(':').map(Number);
-    const [endH, endM] = hours.end.split(':').map(Number);
-    const startMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
-
-    return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
-  }
-
-  // ─── Feedback CRUD ───
   async createFeedback(
     tenantId: string,
     agentId: string,
@@ -1673,105 +1579,33 @@ export class ChatService {
     correctedReply: string,
     reason?: string,
   ): Promise<AgentFeedback> {
-    return this.feedbackRepo.save(
-      this.feedbackRepo.create({ tenantId, agentId, userMessage, originalReply, correctedReply, reason }),
-    );
+    return this.feedbackService.createFeedback(tenantId, agentId, userMessage, originalReply, correctedReply, reason);
   }
 
   async getFeedback(tenantId: string, agentId?: string): Promise<AgentFeedback[]> {
-    if (agentId) {
-      return this.feedbackRepo.find({ where: { tenantId, agentId }, order: { createdAt: 'DESC' } });
-    }
-    return this.feedbackRepo.find({ where: { tenantId }, order: { createdAt: 'DESC' } });
+    return this.feedbackService.getFeedback(tenantId, agentId);
   }
 
   async deleteFeedback(id: string, tenantId: string): Promise<void> {
-    await this.feedbackRepo.delete({ id, tenantId });
+    return this.feedbackService.deleteFeedback(id, tenantId);
   }
 
-  // ─── Operator human reply ───
   async operatorReply(conversationId: string, tenantId: string, content: string): Promise<Message> {
-    const conversation = await this.convRepo.findOne({
-      where: { id: conversationId, tenantId },
-    });
-    if (!conversation) throw new NotFoundException('Conversation not found');
-
-    const message = this.msgRepo.create({
-      conversationId,
-      role: MessageRole.ASSISTANT,
-      content,
-      metadata: { isOperator: true },
-    });
-
-    conversation.status = ConversationStatus.HANDED_OFF;
-    conversation.state = ConversationState.HANDED_OFF;
-    await this.convRepo.save(conversation);
-
-    const saved = await this.msgRepo.save(message);
-    this.chatEvents.emitMessage(conversationId, {
-      role: MessageRole.ASSISTANT,
-      content,
-      metadata: { isOperator: true },
-      createdAt: saved.createdAt,
-    });
-    return saved;
+    return this.operatorService.operatorReply(conversationId, tenantId, content);
   }
 
-  // ─── Operator takes over a handed-off conversation ───
   async takeConversation(conversationId: string, tenantId: string): Promise<Conversation> {
-    const conversation = await this.convRepo.findOne({
-      where: { id: conversationId, tenantId },
-    });
-    if (!conversation) throw new NotFoundException('Conversation not found');
-
-    conversation.status = ConversationStatus.HANDED_OFF;
-    conversation.state = ConversationState.HANDED_OFF;
-    return this.convRepo.save(conversation);
+    return this.operatorService.takeConversation(conversationId, tenantId);
   }
 
-  // ─── Operator hands the conversation back to the AI ───
   async releaseConversation(conversationId: string, tenantId: string): Promise<Conversation> {
-    const conversation = await this.convRepo.findOne({
-      where: { id: conversationId, tenantId },
-    });
-    if (!conversation) throw new NotFoundException('Conversation not found');
-
-    conversation.status = ConversationStatus.OPEN;
-    conversation.state = ConversationState.ANSWERING;
-    return this.convRepo.save(conversation);
+    return this.operatorService.releaseConversation(conversationId, tenantId);
   }
 
-  // ─── Suggest an operator reply using the LLM ───
   async suggestReply(conversationId: string, tenantId: string): Promise<{ suggestion: string }> {
-    const conversation = await this.convRepo.findOne({
-      where: { id: conversationId, tenantId },
-    });
-    if (!conversation) throw new NotFoundException('Conversation not found');
-
-    const history = (
-      await this.msgRepo.find({
-        where: { conversationId },
-        order: { createdAt: 'DESC' },
-        take: 20,
-      })
-    ).reverse();
-
-    const systemPrompt =
-      conversation.language === 'en'
-        ? "You are a customer support assistant. Propose a short, professional reply that a human operator can send to the customer. Return only the operator's message, no explanation."
-        : "Tu es un assistant du conseiller client. Propose une réponse courte et professionnelle qu'un opérateur humain peut envoyer au client. Renvoie uniquement le message de l'opérateur, sans explication.";
-
-    const messages: OllamaMessage[] = [
-      { role: 'system', content: systemPrompt },
-      ...history.map((m) => ({ role: m.role as 'user' | 'assistant' | 'system', content: m.content })),
-      { role: 'user', content: conversation.language === 'en' ? 'Suggest a reply for the operator.' : 'Suggère une réponse pour le conseiller.' },
-    ];
-
-    const suggestion = await this.llmService.chat(messages);
-    return { suggestion: suggestion?.trim() || '' };
+    return this.operatorService.suggestReply(conversationId, tenantId);
   }
 
-  // ─── Admin dashboard KPIs ───
   async getDashboardMetrics(
     tenantId: string,
     from?: string,
@@ -1837,21 +1671,6 @@ export class ChatService {
       conversationsWithLead,
       conversionRate,
     };
-  }
-
-  private buildBusinessProfilePrompt(business: Business): string {
-    const p = business.profile || {};
-    const lines: string[] = [`Tu représentes l'entreprise: ${business.name}.`];
-    if (p.tagline) lines.push(`Accroche: ${p.tagline}`);
-    if (p.about) lines.push(`À propos: ${p.about}`);
-    if (p.sellingPoints?.length) {
-      lines.push(`Points de vente à mettre en avant:\n${p.sellingPoints.map((s) => `- ${s}`).join('\n')}`);
-    }
-    if (p.complianceNote) lines.push(`Contrainte / conformité: ${p.complianceNote}`);
-    if (p.contact?.email) lines.push(`Email: ${p.contact.email}`);
-    if (p.contact?.phone) lines.push(`Téléphone: ${p.contact.phone}`);
-    if (p.contact?.address) lines.push(`Adresse: ${p.contact.address}`);
-    return lines.join('\n');
   }
 
   private async getDiscoveryFacts(

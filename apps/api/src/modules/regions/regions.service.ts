@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import axios from 'axios';
 import { RegionCode, RegionProfile, TextDirection } from './region-profile.types';
 import { REGION_PROFILES, DEFAULT_REGION } from './region-profiles';
 
@@ -83,7 +84,6 @@ export class RegionsService {
   }
 
   private async detectRegionFromIp(ip: string): Promise<RegionCode | null> {
-    const axios = require('axios');
     const response = await axios.get(`https://ipapi.co/${ip}/json/`, { timeout: 3000 });
     const country = response.data?.country_code;
 
