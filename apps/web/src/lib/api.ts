@@ -323,6 +323,8 @@ export const integrationsApi = {
     api.post('/integrations/telegram/send', { to, message }).then((r) => r.data),
   sendSMS: (to: string, message: string) =>
     api.post('/integrations/sms/send', { to, message }).then((r) => r.data),
+  setupTelegramWebhook: (tenantId: string) =>
+    api.post(`/webhooks/telegram/${tenantId}/setup`).then((r) => r.data),
 };
 
 export const flowsApi = {

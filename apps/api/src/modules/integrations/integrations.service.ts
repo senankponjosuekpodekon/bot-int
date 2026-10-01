@@ -266,6 +266,34 @@ export class IntegrationsService {
     }
   }
 
+  async sendInstagram(tenantId: string, recipientId: string, message: string): Promise<void> {
+    const integration = await this.findByType(tenantId, 'instagram');
+    if (!integration?.enabled) {
+      this.logger.warn('Instagram not configured, skipping send');
+      return;
+    }
+
+    const { accessToken } = integration.config;
+    try {
+      await axios.post(
+        'https://graph.facebook.com/v18.0/me/messages',
+        {
+          recipient: { id: recipientId },
+          messaging_type: 'RESPONSE',
+          message: { text: message },
+        },
+        {
+          params: { access_token: accessToken },
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+      this.logger.log(`Instagram message sent to ${recipientId}`);
+    } catch (err: any) {
+      this.logger.error(`Instagram send failed: ${err?.response?.data?.error?.message || err?.message}`);
+      throw new Error(`Instagram send failed: ${err?.message}`);
+    }
+  }
+
   async sendTelegram(tenantId: string, chatId: string, message: string): Promise<void> {
     const integration = await this.findByType(tenantId, 'telegram');
     if (!integration?.enabled) {

@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Save, Trash2, Plus, Loader2, Check, X } from 'lucide-react';
-import { integrationsApi } from '@/lib/api';
+import { Save, Trash2, Plus, Loader2, Check, X, Copy, Link2 } from 'lucide-react';
+import { integrationsApi, tenantApi } from '@/lib/api';
 import { toast } from 'sonner';
 
 interface Integration {
@@ -18,14 +18,16 @@ const INTEGRATION_SCHEMAS: Record<string, { label: string; fields: { key: string
     fields: [
       { key: 'phoneNumberId', label: 'Phone Number ID', type: 'text' },
       { key: 'accessToken', label: 'Access Token', type: 'password' },
-      { key: 'verifyToken', label: 'Verify Token', type: 'text' },
+      { key: 'verifyToken', label: 'Verify Token (choisi par vous)', type: 'text' },
+      { key: 'appSecret', label: 'App Secret (signature webhook)', type: 'password' },
     ],
   },
   instagram: {
     label: 'Instagram',
     fields: [
-      { key: 'accessToken', label: 'Access Token', type: 'password' },
-      { key: 'verifyToken', label: 'Verify Token', type: 'text' },
+      { key: 'accessToken', label: 'Page Access Token', type: 'password' },
+      { key: 'verifyToken', label: 'Verify Token (choisi par vous)', type: 'text' },
+      { key: 'appSecret', label: 'App Secret (signature webhook)', type: 'password' },
     ],
   },
   telegram: {
@@ -47,6 +49,7 @@ const INTEGRATION_SCHEMAS: Record<string, { label: string; fields: { key: string
       { key: 'apiKey', label: 'API Key', type: 'password' },
       { key: 'fromEmail', label: 'From Email', type: 'email' },
       { key: 'fromName', label: 'From Name', type: 'text' },
+      { key: 'inboundSecret', label: 'Inbound Secret (webhook entrant)', type: 'password' },
     ],
   },
 };
@@ -65,6 +68,24 @@ export default function ChannelIntegrations() {
     refetchOnWindowFocus: false,
   });
   const integrations = data ?? EMPTY_INTEGRATIONS;
+  const { data: tenant } = useQuery({ queryKey: ['tenant', 'me'], queryFn: () => tenantApi.me() });
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  // Webhook path segment per integration type (twilio receives SMS webhooks)
+  const WEBHOOK_PATH: Record<string, string> = { whatsapp: 'whatsapp', instagram: 'instagram', telegram: 'telegram', twilio: 'sms', email: 'email' };
+  const webhookUrl = (type: string) => (tenant?.id ? `${apiBase}/webhooks/${WEBHOOK_PATH[type]}/${tenant.id}` : null);
+
+  const telegramSetup = useMutation({
+    mutationFn: () => integrationsApi.setupTelegramWebhook(tenant.id),
+    onSuccess: (res: any) => toast.success(res?.webhookUrl ? 'Webhook Telegram configuré' : 'Webhook Telegram configuré'),
+    onError: () => toast.error('Échec de la configuration du webhook Telegram'),
+  });
+
+  const copyWebhook = (url: string) => {
+    navigator.clipboard?.writeText(url).then(
+      () => toast.success('URL de webhook copiée'),
+      () => toast.error('Copie impossible'),
+    );
+  };
   const [savingType, setSavingType] = useState<string | null>(null);
   const [forms, setForms] = useState<Record<string, { config: Record<string, any>; enabled: boolean; open: boolean }>>({});
 
@@ -197,6 +218,29 @@ export default function ChannelIntegrations() {
                   />
                 </div>
               ))}
+              {webhookUrl(type) && (
+                <div className="bg-gray-50 rounded-lg p-2 space-y-1">
+                  <p className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                    <Link2 className="w-3 h-3" /> URL de webhook (à coller dans la console du fournisseur)
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <code className="text-xs text-gray-600 break-all flex-1">{webhookUrl(type)}</code>
+                    <button onClick={() => copyWebhook(webhookUrl(type)!)} className="p-1 text-gray-400 hover:text-gray-600 shrink-0">
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+              {type === 'telegram' && existing?.enabled && (
+                <button
+                  onClick={() => telegramSetup.mutate()}
+                  disabled={telegramSetup.isPending || !tenant?.id}
+                  className="btn-secondary text-sm flex items-center gap-1"
+                >
+                  {telegramSetup.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Link2 className="w-3 h-3" />}
+                  Configurer le webhook Telegram
+                </button>
+              )}
               <div className="flex gap-2 pt-2">
                 <button
                   onClick={() => handleSave(type)}

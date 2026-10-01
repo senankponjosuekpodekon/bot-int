@@ -21,6 +21,7 @@ import { ConfigService } from '@nestjs/config';
 import { IntegrationsService } from './integrations.service';
 import { WhatsAppAdapter } from './whatsapp.adapter';
 import { TelegramAdapter } from './telegram.adapter';
+import { InstagramAdapter } from './instagram.adapter';
 import { ChatService } from '../chat/chat.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -37,6 +38,7 @@ export class WebhooksController {
     private readonly chatService: ChatService,
     private readonly whatsappAdapter: WhatsAppAdapter,
     private readonly telegramAdapter: TelegramAdapter,
+    private readonly instagramAdapter: InstagramAdapter,
     private readonly config: ConfigService,
     @InjectRepository(Agent)
     private readonly agentRepo: Repository<Agent>,
@@ -105,6 +107,59 @@ export class WebhooksController {
       return { status: 'ok' };
     } catch (err: any) {
       this.logger.error(`WhatsApp webhook error: ${err?.message}`);
+      return { status: 'error' };
+    }
+  }
+
+  // Instagram Messaging webhook verification (Meta challenge)
+  @Get('instagram/:tenantId')
+  async verifyInstagram(
+    @Param('tenantId') tenantId: string,
+    @Query('hub.mode') mode: string,
+    @Query('hub.verify_token') token: string,
+    @Query('hub.challenge') challenge: string,
+  ) {
+    const integration = await this.requireIntegration(tenantId, 'instagram');
+    const expectedToken = integration.config?.verifyToken;
+    if (mode === 'subscribe' && expectedToken && this.safeEqual(token || '', expectedToken)) {
+      this.logger.log(`Instagram webhook verified for tenant ${tenantId}`);
+      return challenge;
+    }
+    throw new ForbiddenException('Verification failed');
+  }
+
+  // Instagram Messaging incoming — HMAC-SHA256 signature required (same Meta app secret scheme)
+  @Post('instagram/:tenantId')
+  async receiveInstagram(
+    @Param('tenantId') tenantId: string,
+    @Body() body: any,
+    @Headers('x-hub-signature-256') signature: string | undefined,
+    @Req() req: RawBodyRequest<ExpressRequest>,
+    @Query('agentId') agentId?: string,
+  ) {
+    const integration = await this.requireIntegration(tenantId, 'instagram');
+    const appSecret =
+      integration.config?.appSecret ||
+      this.config.get<string>('INSTAGRAM_APP_SECRET') ||
+      this.config.get<string>('META_APP_SECRET');
+    if (!appSecret) {
+      this.logger.error(`Instagram webhook rejected for tenant ${tenantId}: no appSecret configured`);
+      throw new UnauthorizedException('Instagram appSecret is not configured');
+    }
+    const rawBody = req.rawBody?.toString() || JSON.stringify(body);
+    const expected = `sha256=${createHmac('sha256', appSecret).update(rawBody, 'utf8').digest('hex')}`;
+    if (!signature || !this.safeEqual(signature, expected)) {
+      throw new UnauthorizedException('Invalid Instagram webhook signature');
+    }
+
+    try {
+      const normalized = await this.instagramAdapter.normalize(tenantId, body);
+      if (normalized) {
+        await this.processIncomingMessage(tenantId, normalized, agentId);
+      }
+      return { status: 'ok' };
+    } catch (err: any) {
+      this.logger.error(`Instagram webhook error: ${err?.message}`);
       return { status: 'error' };
     }
   }
@@ -291,6 +346,8 @@ export class WebhooksController {
     try {
       if (normalized.channel === 'whatsapp') {
         await this.integrationsService.sendWhatsApp(tenantId, normalized.metadata?.from, result.reply);
+      } else if (normalized.channel === 'instagram') {
+        await this.integrationsService.sendInstagram(tenantId, normalized.metadata?.from, result.reply);
       } else if (normalized.channel === 'telegram') {
         await this.integrationsService.sendTelegram(tenantId, normalized.metadata?.from, result.reply);
       } else if (normalized.channel === 'email') {

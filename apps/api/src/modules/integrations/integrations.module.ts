@@ -7,12 +7,13 @@ import { WebhooksController } from './webhooks.controller';
 import { MediaParserService } from './media-parser.service';
 import { WhatsAppAdapter } from './whatsapp.adapter';
 import { TelegramAdapter } from './telegram.adapter';
+import { InstagramAdapter } from './instagram.adapter';
 import { Agent } from '../agents/agent.entity';
 import { ChatModule } from '../chat/chat.module';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Integration, Agent]), forwardRef(() => ChatModule)],
-  providers: [IntegrationsService, MediaParserService, WhatsAppAdapter, TelegramAdapter],
+  providers: [IntegrationsService, MediaParserService, WhatsAppAdapter, TelegramAdapter, InstagramAdapter],
   controllers: [IntegrationsController, WebhooksController],
   exports: [IntegrationsService],
 })
