@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ChannelAdapter, NormalizedMessage } from '../channels/channel-adapter.interface';
+import { ChannelAdapter, NormalizedMessage } from './channel-adapter.interface';
 
 @Injectable()
 export class InstagramAdapter implements ChannelAdapter {

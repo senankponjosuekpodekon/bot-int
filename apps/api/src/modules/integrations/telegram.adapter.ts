@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ChannelAdapter, NormalizedMessage } from '../channels/channel-adapter.interface';
+import { ChannelAdapter, NormalizedMessage } from './channel-adapter.interface';
 import { MediaParserService } from './media-parser.service';
 
 @Injectable()

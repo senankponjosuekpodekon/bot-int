@@ -234,9 +234,10 @@ STRIPE_PRICE_GROWTH=
 STRIPE_PRICE_SCALE=
 BILLING_BYPASS_QUOTA=false       # never true in production
 
-# Channel webhooks (inbound signature verification — fail closed if unset)
-WHATSAPP_WEBHOOK_SECRET=
-INSTAGRAM_WEBHOOK_SECRET=
+# Channel webhooks — inbound secrets are now per-tenant, configured via the
+# dashboard integrations UI (encrypted `integrations` table). Optional global
+# fallback for WhatsApp/Instagram signature checks:
+META_APP_SECRET=
 
 # Redis (cache, rate-limit storage)
 REDIS_URL=redis://localhost:6379
