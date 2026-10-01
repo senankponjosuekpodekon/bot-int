@@ -130,7 +130,7 @@ Rules:
     return 'neutral';
   }
 
-  private mapLooseIntent(intent: string, original: string): string {
+  private mapLooseIntent(intent: string, _original: string): string {
     const mapped =
       /devis|quote|estimation|prix|tarif|co[uû]te|combien|budget/.test(intent) ? 'quote' :
       /rendez-vous|rdv|appointment|meeting|consultation|d[eé]mo/.test(intent) ? 'appointment' :

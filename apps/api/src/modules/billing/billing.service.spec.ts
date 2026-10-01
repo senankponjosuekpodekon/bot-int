@@ -1,15 +1,12 @@
+import { Conversation } from '../chat/conversation.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
-import { Repository } from 'typeorm';
 import { BillingService } from './billing.service';
 import { Subscription, PlanType, SubscriptionStatus } from './subscription.entity';
-import { Conversation } from '../chat/conversation.entity';
 
 describe('BillingService', () => {
   let service: BillingService;
-  let subRepo: jest.Mocked<Repository<Subscription>>;
-  let convRepo: jest.Mocked<Repository<Conversation>>;
 
   const mockSubRepo = {
     findOne: jest.fn(),
@@ -38,8 +35,6 @@ describe('BillingService', () => {
     }).compile();
 
     service = module.get<BillingService>(BillingService);
-    subRepo = module.get(getRepositoryToken(Subscription));
-    convRepo = module.get(getRepositoryToken(Conversation));
   });
 
   afterEach(() => jest.clearAllMocks());

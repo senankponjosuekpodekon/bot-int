@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { SurveysService } from './surveys.service';
-import { IsArray, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsOptional, IsString } from 'class-validator';
 
 class PublicSubmitDto {
   @IsArray() answers: { questionId: string; value: string | string[] | number }[];

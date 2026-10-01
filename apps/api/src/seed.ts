@@ -29,7 +29,6 @@ const dataSource = new DataSource({
 
 async function seed() {
   await dataSource.initialize();
-  const queryRunner = dataSource.createQueryRunner();
 
   const tenantRepo = dataSource.getRepository('Tenant');
   const userRepo = dataSource.getRepository('User');

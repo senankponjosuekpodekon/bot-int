@@ -65,7 +65,7 @@ async function bootstrap() {
   const allowedOrigins = Array.from(origins);
 
   // Per-request CORS: widget endpoints are public, everything else uses allowed origins
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   const cors = require('cors');
   app.use(cors((req: any, callback: any) => {
     const isWidget = req.path?.startsWith('/api/widget') || req.path?.startsWith('/widget');

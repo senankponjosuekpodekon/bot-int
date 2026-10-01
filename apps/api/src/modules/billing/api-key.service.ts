@@ -1,10 +1,9 @@
-import { Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomBytes, createHash } from 'crypto';
 import { ApiKey } from './api-key.entity';
 import { BillingService } from './billing.service';
-import { PlanType } from './subscription.entity';
 
 @Injectable()
 export class ApiKeyService {

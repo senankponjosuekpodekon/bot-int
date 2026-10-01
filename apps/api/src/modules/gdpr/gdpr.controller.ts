@@ -4,7 +4,6 @@ import {
   Delete,
   Request,
   UseGuards,
-  StreamableFile,
   Res,
   Query,
 } from '@nestjs/common';

@@ -40,7 +40,7 @@ export class IntegrationsService {
       if (SENSITIVE_CONFIG_KEYS.includes(key) && typeof value === 'string' && this.crypto.isEncrypted(value)) {
         try {
           decrypted[key] = this.crypto.decrypt(value);
-        } catch (err) {
+        } catch {
           this.logger.warn(`Failed to decrypt config key "${key}" — keeping ciphertext untouched`);
           decrypted[key] = value;
         }

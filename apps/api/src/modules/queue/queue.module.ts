@@ -32,7 +32,7 @@ export class QueueModule implements OnModuleInit, OnModuleDestroy {
     this.queueService.startWorker(intervalMs);
   }
 
-  onModuleDestroy(): void {
-    this.queueService.stopWorker();
+  async onModuleDestroy(): Promise<void> {
+    await this.queueService.stopWorker();
   }
 }

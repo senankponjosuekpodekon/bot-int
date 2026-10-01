@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, MoreThan, Between } from 'typeorm';
+import { Repository, In, Between } from 'typeorm';
 import { Conversation, ConversationStatus, ConversationState, FunnelStage, AcquisitionChannel, ConversationChannel } from './conversation.entity';
 import { Message, MessageRole } from './message.entity';
 import { AgentFeedback } from './agent-feedback.entity';
 import { ChatEventsService } from './chat-events.service';
+import { ScoringService } from './scoring.service';
 import { Agent } from '../agents/agent.entity';
 import { AgentsService } from '../agents/agents.service';
 import { BusinessService } from '../business/business.service';
@@ -124,11 +125,6 @@ const INDUSTRY_PROMPT_FALLBACK = (industry?: string) =>
     ? `Tu es spécialisé(e) dans le secteur "${industry}". Pose une question sectorielle pertinente pour qualifier le besoin. Ne donne jamais de chiffre, de prix ou de garantie sans contexte vérifié.`
     : `Ne donne jamais de chiffre, de prix ou de garantie sans contexte vérifié. Si le secteur n'est pas connu, pose une question ouverte pour l'identifier. Ne listes pas tous les secteurs pris en charge.`;
 
-const DIY_OBJECTION_HANDLING = `Gestion des objections "faire soi-même" :
-- Lorsque l'utilisateur objecte "on peut le faire nous-mêmes", souligne les avantages de l'externalisation, tels que la réduction des coûts, l'amélioration de la qualité et la libération de ressources internes.
-- Demande à l'utilisateur de préciser quelles parties du processus il gère en interne et où il rencontre des difficultés.
-- Propose une comparaison concrète entre la solution interne et la solution proposée, en mettant en avant les avantages de la solution proposée.`;
-
 interface ExtractedData {
   email?: string;
   phone?: string;
@@ -182,6 +178,7 @@ export class ChatService {
     private readonly pendingActionService: PendingActionService,
     private readonly agentOrchestrationService: AgentOrchestrationService,
     private readonly chatEvents: ChatEventsService,
+    private readonly scoringService: ScoringService,
   ) {}
 
   async sendMessage(
@@ -206,12 +203,16 @@ export class ChatService {
     },
     clientInfo?: Record<string, any>,
     channel?: ConversationChannel,
+    callbacks?: {
+      onMeta?: (meta: { conversationId: string }) => void;
+      onToken?: (chunk: string) => void;
+    },
   ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: FlowData | null; products?: any[]; funnelStage?: FunnelStage; intentScore?: number; region?: RegionCode }> {
     // Serialize messages per conversation (or per agent+visitor for new ones) so that
     // concurrent sends don't corrupt conversation state (formState, funnelStage, counters).
     const lockKey = conversationId || `new:${agentId}:${visitorId || 'anon'}`;
     return this.runConversationExclusive(lockKey, () =>
-      this.sendMessageLocked(tenantId, agentId, userMessage, conversationId, visitorId, captureLead, tracking, regionContext, clientInfo, channel),
+      this.sendMessageLocked(tenantId, agentId, userMessage, conversationId, visitorId, captureLead, tracking, regionContext, clientInfo, channel, callbacks),
     );
   }
 
@@ -237,6 +238,10 @@ export class ChatService {
     },
     clientInfo?: Record<string, any>,
     channel?: ConversationChannel,
+    callbacks?: {
+      onMeta?: (meta: { conversationId: string }) => void;
+      onToken?: (chunk: string) => void;
+    },
   ): Promise<{ reply: string; conversationId: string; leadId?: string; flow?: FlowData | null; products?: any[]; funnelStage?: FunnelStage; intentScore?: number; region?: RegionCode }> {
     const agent = await this.agentsService.findById(agentId, tenantId);
     const personalityConfig = agent.personalityConfig || {};
@@ -380,7 +385,7 @@ export class ChatService {
           utmParams: tracking?.utmParams || {},
           referrerUrl: tracking?.referrerUrl || null,
           landingPageUrl: tracking?.landingPageUrl || null,
-          acquisitionChannel: tracking?.acquisitionChannel || this.detectAcquisitionChannel(tracking),
+          acquisitionChannel: tracking?.acquisitionChannel || this.scoringService.detectAcquisitionChannel(tracking),
           funnelStage: FunnelStage.AWARENESS,
           intentScore: 0,
           stageHistory: [FunnelStage.AWARENESS],
@@ -433,6 +438,8 @@ export class ChatService {
         }).catch(() => {});
       }
     }
+
+    callbacks?.onMeta?.({ conversationId: conversation.id });
 
     const savedUserMessage = await this.msgRepo.save(
       this.msgRepo.create({
@@ -908,7 +915,7 @@ export class ChatService {
     }
 
     // Funnel stage detection and agent behavior adaptation
-    const detectedStage = this.detectFunnelStage(userMessage, conversation.funnelStage);
+    const detectedStage = this.scoringService.detectFunnelStage(userMessage, conversation.funnelStage);
     if (detectedStage !== conversation.funnelStage) {
       const stageHistory = [...(conversation.stageHistory || []), detectedStage];
       await this.convRepo.update(conversation.id, { funnelStage: detectedStage, stageHistory });
@@ -919,8 +926,8 @@ export class ChatService {
 
     // Multi-dimensional lead scoring: fit (ICP match) and purchase probability.
     // These are internal signals for the sales team, never shown to the visitor.
-    const newFitScore = this.calculateFitScore(conversation, history.length);
-    const newPurchaseProbability = this.calculatePurchaseProbability(conversation.intentScore, conversation.funnelStage);
+    const newFitScore = this.scoringService.calculateFitScore(conversation, history.length);
+    const newPurchaseProbability = this.scoringService.calculatePurchaseProbability(conversation.intentScore, conversation.funnelStage);
     const wasHotLead = conversation.isHotLead;
     const isHotLeadNow = newFitScore >= 80 && newPurchaseProbability >= 0.7;
     if (
@@ -969,7 +976,7 @@ export class ChatService {
     }
 
     // Inject funnel-stage-aware system prompt
-    const stageGuidance = this.getStageGuidance(conversation.funnelStage);
+    const stageGuidance = this.scoringService.getStageGuidance(conversation.funnelStage);
     if (stageGuidance) {
       messages.splice(1, 0, {
         role: 'system',
@@ -1120,9 +1127,23 @@ export class ChatService {
         }
       }
 
-      const result = await this.llmService.generate(messages);
-      finalReply = result.content;
-      usage = result.usage;
+      if (callbacks?.onToken) {
+        // Real streaming: tokens are forwarded to the SSE client as they arrive.
+        // Streamed responses don't carry usage stats — estimate (~4 chars/token)
+        // so metering stays roughly accurate.
+        let acc = '';
+        for await (const chunk of this.llmService.chatStream(messages)) {
+          acc += chunk;
+          callbacks.onToken(chunk);
+        }
+        finalReply = acc;
+        const promptChars = messages.reduce((n, m) => n + (m.content?.length || 0), 0);
+        usage = { prompt: Math.round(promptChars / 4), completion: Math.round(acc.length / 4), total: Math.round((promptChars + acc.length) / 4) };
+      } else {
+        const result = await this.llmService.generate(messages);
+        finalReply = result.content;
+        usage = result.usage;
+      }
 
       try {
         this.assertCriticalFactsGrounded(finalReply, carouselProducts);
@@ -1668,145 +1689,6 @@ export class ChatService {
     await this.feedbackRepo.delete({ id, tenantId });
   }
 
-  // ─── Funnel stage detection ───
-  private detectFunnelStage(message: string, currentStage: FunnelStage): FunnelStage {
-    const msg = message.toLowerCase();
-    const stageOrder = [
-      FunnelStage.AWARENESS,
-      FunnelStage.INTEREST,
-      FunnelStage.QUALIFICATION,
-      FunnelStage.CONSIDERATION,
-      FunnelStage.DECISION,
-    ];
-    const currentIndex = stageOrder.indexOf(currentStage);
-
-    // Decision signals — explicit buying/commitment intent only
-    if (/acheter|payer|commander|checkout|payment|je prends|valider|confirmer|c'est parti|go|ok je|parfait|je veux (acheter|prendre|commander|valider|confirmer|payer|souscrire)|je vais (acheter|prendre|commander|valider|confirmer|payer|souscrire)/.test(msg)) {
-      return FunnelStage.DECISION;
-    }
-
-    // Consideration signals — asking for quotes, comparisons, recommendations
-    if (/devis|tarif|prix|combien|co[uû]te|compar|recommand|lequel|quelle option|diff[eé]rence|avantage/.test(msg)) {
-      return Math.max(currentIndex, 3) >= 3 ? FunnelStage.CONSIDERATION : FunnelStage.CONSIDERATION;
-    }
-
-    // Qualification signals — sharing info about themselves, budget, needs
-    if (/budget|j'ai besoin|mon projet|ma situation|urgence|d[eé]lai|quand|pour quand|mon besoin/.test(msg)) {
-      return Math.max(currentIndex, 2) >= 2 ? FunnelStage.QUALIFICATION : FunnelStage.QUALIFICATION;
-    }
-
-    // Interest signals — asking questions about product/service
-    if (/comment|pourquoi|qu'est-ce|c'est quoi|fonctionne|vous faites|vous proposez|service|produit|capacit[eé]|possible de/.test(msg)) {
-      return Math.max(currentIndex, 1) >= 1 ? FunnelStage.INTEREST : FunnelStage.INTEREST;
-    }
-
-    return currentStage;
-  }
-
-  // ─── Intent score calculation (0-100) ───
-  private calculateIntentScore(message: string, currentScore: number): number {
-    const msg = message.toLowerCase();
-    let delta = 0;
-
-    // High intent signals
-    if (/acheter|payer|commander|checkout|je prends|je veux bien|valider|confirmer/.test(msg)) delta += 15;
-    if (/devis|tarif|prix|combien|co[uû]te/.test(msg)) delta += 10;
-    if (/rendez-vous|rdv|appointment|meeting|consultation|d[eé]mo/.test(msg)) delta += 10;
-    if (/budget|j'ai besoin|urgence|d[eé]lai/.test(msg)) delta += 8;
-    if (/contact|t[eé]l[eé]phone|email|appeler|recontacter/.test(msg)) delta += 5;
-    if (/int[eé]ress[eé]|plut[^o]t|j'aime|bien|parfait/.test(msg)) delta += 5;
-
-    // Negative signals
-    if (/trop cher|pas maintenant|je r[eé]fl[eé]chis|plus tard|pas int[eé]ress[eé]/.test(msg)) delta -= 10;
-    if (/au revoir|merci|c'est tout|rien d'autre/.test(msg)) delta -= 3;
-
-    return Math.max(0, Math.min(100, currentScore + delta));
-  }
-
-  // ─── Acquisition channel detection from tracking data ───
-  private detectAcquisitionChannel(tracking?: {
-    utmParams?: { source?: string; medium?: string; campaign?: string };
-    referrerUrl?: string;
-    landingPageUrl?: string;
-  }): AcquisitionChannel {
-    if (!tracking) return AcquisitionChannel.UNKNOWN;
-
-    const utm = tracking.utmParams;
-    if (utm?.source) {
-      const src = utm.source.toLowerCase();
-      if (src.includes('facebook') || src.includes('instagram') || src.includes('meta')) return AcquisitionChannel.META_ADS;
-      if (src.includes('google') || src.includes('adwords')) return AcquisitionChannel.GOOGLE_ADS;
-      if (src.includes('newsletter') || src.includes('email')) return AcquisitionChannel.EMAIL;
-      if (utm.medium === 'social' || src.includes('social')) return AcquisitionChannel.SOCIAL;
-      if (src.includes('referral')) return AcquisitionChannel.REFERRAL;
-    }
-
-    if (tracking.referrerUrl) {
-      const ref = tracking.referrerUrl.toLowerCase();
-      if (ref.includes('facebook') || ref.includes('instagram')) return AcquisitionChannel.SOCIAL;
-      if (ref.includes('google.')) return AcquisitionChannel.ORGANIC;
-      if (ref.includes('t.co') || ref.includes('twitter') || ref.includes('linkedin')) return AcquisitionChannel.SOCIAL;
-    }
-
-    if (tracking.landingPageUrl) {
-      const landing = tracking.landingPageUrl.toLowerCase();
-      if (landing.includes('/site/')) return AcquisitionChannel.LANDING_PAGE;
-      if (landing.includes('/chat/')) return AcquisitionChannel.PUBLIC_LINK;
-      if (landing.includes('qr=')) return AcquisitionChannel.QR_CODE;
-    }
-
-    return AcquisitionChannel.UNKNOWN;
-  }
-
-  // ─── Multi-dimensional lead scoring ───
-  // Fit score (0-100): how well this conversation matches an ideal, sales-ready lead,
-  // based on data completeness rather than message content alone.
-  private calculateFitScore(conversation: Conversation, historyLength: number): number {
-    let score = 0;
-    if (conversation.leadId) score += 30;
-    const stageOrder = [
-      FunnelStage.AWARENESS,
-      FunnelStage.INTEREST,
-      FunnelStage.QUALIFICATION,
-      FunnelStage.CONSIDERATION,
-      FunnelStage.DECISION,
-    ];
-    const stageIndex = stageOrder.indexOf(conversation.funnelStage);
-    if (stageIndex >= 2) score += 25; // reached QUALIFICATION or beyond
-    if (conversation.intentScore >= 50) score += 25;
-    if (historyLength >= 3) score += 20; // sustained engagement, not a one-off message
-    return Math.max(0, Math.min(100, score));
-  }
-
-  // Purchase probability (0-1): blends real-time intent signals with funnel progression.
-  private calculatePurchaseProbability(intentScore: number, funnelStage: FunnelStage): number {
-    const stageWeight: Record<FunnelStage, number> = {
-      [FunnelStage.AWARENESS]: 0.05,
-      [FunnelStage.INTEREST]: 0.15,
-      [FunnelStage.QUALIFICATION]: 0.35,
-      [FunnelStage.CONSIDERATION]: 0.55,
-      [FunnelStage.DECISION]: 0.85,
-      [FunnelStage.CLOSED_WON]: 1,
-      [FunnelStage.CLOSED_LOST]: 0,
-    };
-    const probability = (intentScore / 100) * 0.5 + (stageWeight[funnelStage] ?? 0) * 0.5;
-    return Math.round(Math.max(0, Math.min(1, probability)) * 100) / 100;
-  }
-
-  // ─── Stage-specific guidance for the agent ───
-  private getStageGuidance(stage: FunnelStage): string | null {
-    const guidance: Record<FunnelStage, string> = {
-      [FunnelStage.AWARENESS]: `Le visiteur découvre votre entreprise. Sois accueillant, pose UNE question ouverte pour identifier d'abord son secteur et son problème principal. Ne demande jamais de budget, ne parle pas de prix, ne présente pas d'offre. Objectif: comprendre son contexte et l'orienter.`,
-      [FunnelStage.INTEREST]: `Le visiteur montre de l'intérêt. Explique brièvement un bénéfice clé lié à ce qu'il a dit, puis pose UNE seule question de suivi pour approfondir son contexte, secteur et besoin. Ne demande pas de budget. N'enchaîne pas plusieurs questions. Objectif: qualifier progressivement avant toute proposition.`,
-      [FunnelStage.QUALIFICATION]: `Le visiteur partage des informations sur son besoin. Qualifie-le progressivement: identifie d'abord le secteur et le problème, puis ne pose UNE seule question à la fois. Ne demande le budget qu'après avoir identifié le secteur et le problème. Ne redemande jamais une information déjà donnée dans la conversation. Si le profil correspond, propose une solution concrète avant de parler prix. Objectif: valider le fit sans donner l'impression d'un formulaire.`,
-      [FunnelStage.CONSIDERATION]: `Le visiteur évalue vos solutions. Donne des détails précis (prix, comparaison, options). Adresse ses objections. Propose un devis ou une démo. Objectif: l'aider à décider.`,
-      [FunnelStage.DECISION]: `Le visiteur est prêt à acheter/réserver. Facilite l'action: lien de paiement, prise de RDV, confirmation de commande. Sois direct et rassurant. Objectif: closing.`,
-      [FunnelStage.CLOSED_WON]: `Le visiteur a converti. Remercie-le, confirme les prochaines étapes, propose un suivi. Objectif: fidélisation.`,
-      [FunnelStage.CLOSED_LOST]: `Le visiteur n'est pas prêt ou a refusé. Reste courtois, propose de revenir vers lui plus tard, laisse une bonne impression. Objectif: nurturing.`,
-    };
-    return guidance[stage] || null;
-  }
-
   // ─── Operator human reply ───
   async operatorReply(conversationId: string, tenantId: string, content: string): Promise<Message> {
     const conversation = await this.convRepo.findOne({
@@ -1866,7 +1748,6 @@ export class ChatService {
     });
     if (!conversation) throw new NotFoundException('Conversation not found');
 
-    const agent = await this.agentsService.findById(conversation.agentId, tenantId);
     const history = (
       await this.msgRepo.find({
         where: { conversationId },

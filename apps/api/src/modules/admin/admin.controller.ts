@@ -8,13 +8,12 @@ import {
   Param,
   Query,
   UseGuards,
-  Req,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { SuperAdminGuard } from './super-admin.guard';
 import { UserRole } from '../auth/user.entity';
 import { PlanType } from '../billing/subscription.entity';
-import { IsString, IsEnum, IsNotEmpty, MinLength, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsEnum, IsNotEmpty, MinLength } from 'class-validator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 class CreateUserDto {

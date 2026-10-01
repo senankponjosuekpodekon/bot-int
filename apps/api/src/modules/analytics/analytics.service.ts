@@ -211,7 +211,6 @@ export class AnalyticsService {
 
   async getAcquisitionAnalytics(tenantId: string) {
     const conversations = await this.convRepo.find({ where: { tenantId } });
-    const leads = await this.leadRepo.find({ where: { tenantId } });
 
     const channelCounts: Record<string, number> = {};
     const channelConversions: Record<string, number> = {};

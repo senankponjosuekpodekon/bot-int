@@ -290,6 +290,13 @@ export class ChatController {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
+    let metaSent = false;
+    const writeMeta = (meta: Record<string, any>) => {
+      if (metaSent) return;
+      metaSent = true;
+      res.write(`data: ${JSON.stringify({ meta })}\n\n`);
+    };
+
     const result = await this.chatService.sendMessage(
       req.user.tenantId,
       dto.agentId,
@@ -299,15 +306,17 @@ export class ChatController {
       dto.captureLead,
       undefined,
       dto.regionContext as any,
+      undefined,
+      undefined,
+      {
+        onMeta: (meta) => writeMeta({ conversationId: meta.conversationId }),
+        onToken: (chunk) => {
+          res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+        },
+      },
     );
 
-    res.write(`data: ${JSON.stringify({ meta: { conversationId: result.conversationId, leadId: result.leadId, flow: result.flow, funnelStage: result.funnelStage, intentScore: result.intentScore, region: result.region } })}\n\n`);
-
-    const words = result.reply.split(/\s+/).filter(Boolean);
-    for (const chunk of words) {
-      res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
-    }
-
+    writeMeta({ conversationId: result.conversationId, leadId: result.leadId, flow: result.flow, funnelStage: result.funnelStage, intentScore: result.intentScore, region: result.region });
     res.write(`data: ${JSON.stringify({ done: true, reply: result.reply })}\n\n`);
     res.end();
   }

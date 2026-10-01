@@ -3,6 +3,7 @@ import './globals.css';
 import ToasterProvider from '@/components/ToasterProvider';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 import { CurrencyProvider } from '@/components/CurrencyProvider';
+import QueryProvider from '@/components/QueryProvider';
 import KeepAlive from '@/components/KeepAlive';
 import { Analytics } from '@vercel/analytics/next';
 
@@ -249,12 +250,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body suppressHydrationWarning>
         <KeepAlive />
+        <QueryProvider>
         <CurrencyProvider>
           <ToasterProvider />
           <ServiceWorkerRegister />
           {children}
           <Analytics />
         </CurrencyProvider>
+        </QueryProvider>
       </body>
     </html>
   );

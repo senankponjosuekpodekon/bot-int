@@ -1,19 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
-import { IsString, IsNotEmpty, IsArray, IsOptional, IsBoolean, IsObject } from 'class-validator';
+import { IsString, IsNotEmpty, IsArray, IsOptional, IsObject } from 'class-validator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { FlowsService } from './flows.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UpdateFlowDto } from './dto/update-flow.dto';
 import { PaginationDto } from '../../common/pagination.dto';
-
-class FlowFieldDto {
-  @IsString() id: string;
-  @IsString() type: string;
-  @IsString() label: string;
-  @IsString() @IsOptional() placeholder?: string;
-  @IsArray() @IsOptional() options?: { label: string; value: string }[];
-  @IsBoolean() @IsOptional() required?: boolean;
-}
 
 class CreateFlowDto {
   @IsString() @IsNotEmpty() agentId: string;

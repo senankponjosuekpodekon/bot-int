@@ -9,9 +9,9 @@ import { LeadsService } from '../leads/leads.service';
 import { Lead } from '../leads/lead.entity';
 import { LeadComment } from '../leads/lead-comment.entity';
 import { QuotesService } from '../quotes/quotes.service';
-import { Quote, QuoteStatus } from '../quotes/quote.entity';
+import { Quote } from '../quotes/quote.entity';
 import { PendingActionService } from '../agents/pending-action.service';
-import { PendingAction, PendingActionStatus } from '../agents/pending-action.entity';
+import { PendingAction } from '../agents/pending-action.entity';
 import { AgentMemoryService } from '../agents/agent-memory.service';
 import { AgentMemory, MemoryScope } from '../agents/agent-memory.entity';
 
@@ -48,7 +48,6 @@ const createQueryBuilderMock = (returnValue: any) => ({
 describe('Business isolation', () => {
   const TENANT = 't-1';
   const BIZ_A = 'b-a';
-  const BIZ_B = 'b-b';
 
   describe('identity: leads cannot be accessed across business', () => {
     let service: LeadsService;

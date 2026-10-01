@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan, IsNull } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Cron } from '@nestjs/schedule';
 import { Survey, SurveyType, QuestionType, SurveyQuestion } from './survey.entity';
 import { SurveyResponse } from './survey-response.entity';

@@ -11,7 +11,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { IsString, IsOptional, IsBoolean, IsNotEmpty } from 'class-validator';
 import { Type } from 'class-transformer';
-import { MarketplaceService, FindTemplatesQuery, PublishTemplateDto } from './marketplace.service';
+import { MarketplaceService, PublishTemplateDto } from './marketplace.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard, Roles } from '../auth/guards/roles.guard';
 import { UserRole } from '../auth/user.entity';

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { MessageSquare, Users, Package, Bot, TrendingUp, Target, Zap, Clock, Filter, Radio, ArrowRight } from 'lucide-react';
 import { analyticsApi } from '@/lib/api';
 
@@ -11,15 +11,9 @@ interface DashboardData {
 }
 
 export default function AnalyticsPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [timeline, setTimeline] = useState<{ date: string; count: number }[]>([]);
-  const [funnel, setFunnel] = useState<any>(null);
-  const [acquisition, setAcquisition] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
+  const { data: bundle, isLoading: loading } = useQuery({
+    queryKey: ['analytics', 'dashboard'],
+    queryFn: async () => {
         const [d, t, f, a] = await Promise.all([
           analyticsApi.dashboard(),
           analyticsApi.timeline(30),
@@ -36,8 +30,8 @@ export default function AnalyticsPage() {
           conversions: agent.leads,
           conversionRate: agent.conversionRate,
         }));
-        setData({ ...d, agents: { ...d.agents, performance: mappedPerformance } });
-        setTimeline(t);
+        const outData = { ...d, agents: { ...d.agents, performance: mappedPerformance } };
+        const outTimeline = t;
 
         const stageLabels: Record<string, string> = {
           awareness: 'Awareness',
@@ -64,7 +58,7 @@ export default function AnalyticsPage() {
             dropoffRate,
           };
         }) || [];
-        setFunnel({ ...f, stages: mappedStages });
+        const outFunnel = { ...f, stages: mappedStages };
 
         const channelLabels: Record<string, string> = {
           web: 'Web widget',
@@ -88,15 +82,14 @@ export default function AnalyticsPage() {
           conversionRate: c.conversionRate,
           avgIntentScore: c.avgIntentScore,
         })) || [];
-        setAcquisition({ ...a, channels: mappedChannels });
-      } catch {
-        // error
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+        const outAcquisition = { ...a, channels: mappedChannels };
+        return { data: outData, timeline: outTimeline, funnel: outFunnel, acquisition: outAcquisition };
+    },
+  });
+  const data = bundle?.data || null;
+  const timeline = bundle?.timeline || [];
+  const funnel = bundle?.funnel || null;
+  const acquisition = bundle?.acquisition || null;
 
   if (loading) return <div className="p-4 lg:p-6 text-center text-gray-500">Chargement des analytics...</div>;
   if (!data) return <div className="p-4 lg:p-6 text-center text-gray-500">Erreur lors du chargement</div>;

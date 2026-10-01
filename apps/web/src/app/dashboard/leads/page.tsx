@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { leadsApi } from '@/lib/api';
 import { Users, Plus, X, Mail, Phone, Filter, ArrowUpRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -28,8 +29,30 @@ const emptyForm = { name: '', email: '', phone: '', source: '', score: 0, status
 const PAGE_SIZE = 15;
 
 export default function LeadsPage() {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: leads = [], isLoading: loading } = useQuery<Lead[]>({
+    queryKey: ['leads'],
+    queryFn: () => leadsApi.list().then((res: any) => res.data || res),
+  });
+  const createLead = useMutation({
+    mutationFn: (data: typeof emptyForm) => leadsApi.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leads'] }),
+  });
+  const updateLeadStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => leadsApi.update(id, { status }),
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['leads'] });
+      const previous = queryClient.getQueryData<Lead[]>(['leads']);
+      queryClient.setQueryData<Lead[]>(['leads'], (old = []) =>
+        old.map((lead) => (lead.id === id ? { ...lead, status } : lead)),
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      queryClient.setQueryData(['leads'], ctx?.previous);
+      toast.error('Impossible de mettre à jour le statut');
+    },
+  });
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -63,22 +86,6 @@ export default function LeadsPage() {
     };
   }, [leads]);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await leadsApi.list();
-      setLeads(res.data || res);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Impossible de charger les leads');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const leadId = new URLSearchParams(window.location.search).get('leadId');
@@ -96,11 +103,10 @@ export default function LeadsPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await leadsApi.create(form);
+      await createLead.mutateAsync(form);
       toast.success('Lead ajouté');
       setShowForm(false);
       setForm(emptyForm);
-      load();
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Création de lead impossible");
     } finally {
@@ -111,15 +117,10 @@ export default function LeadsPage() {
   const handleStatusChange = async (id: string, status: string) => {
     const current = leads.find((lead) => lead.id === id);
     if (!current || current.status === status) return;
-    const optimistic = leads.map((lead) => (lead.id === id ? { ...lead, status } : lead));
-    setLeads(optimistic);
     try {
-      await leadsApi.update(id, { status });
+      await updateLeadStatus.mutateAsync({ id, status });
       toast.success('Statut mis à jour');
-    } catch {
-      toast.error('Impossible de mettre à jour le statut');
-      load();
-    }
+    } catch { /* optimistic rollback handled by onError */ }
   };
 
   return (

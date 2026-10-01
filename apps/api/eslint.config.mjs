@@ -1,5 +1,6 @@
 import tseslint from 'typescript-eslint';
 import parser from '@typescript-eslint/parser';
+import unusedImports from 'eslint-plugin-unused-imports';
 
 export default tseslint.config(
   {
@@ -22,11 +23,14 @@ export default tseslint.config(
     },
     plugins: {
       '@typescript-eslint': tseslint.plugin,
+      'unused-imports': unusedImports,
     },
     rules: {
       ...tseslint.configs.recommended[0].rules,
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': 'off',
+      'unused-imports/no-unused-imports': 'warn',
+      'unused-imports/no-unused-vars': ['warn', { args: 'after-used', argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },
   {
@@ -46,11 +50,14 @@ export default tseslint.config(
     },
     plugins: {
       '@typescript-eslint': tseslint.plugin,
+      'unused-imports': unusedImports,
     },
     rules: {
       ...tseslint.configs.recommended[0].rules,
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': 'off',
+      'unused-imports/no-unused-imports': 'warn',
+      'unused-imports/no-unused-vars': ['warn', { args: 'after-used', argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },
 );

@@ -1,6 +1,5 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
 import { Conversation } from './conversation.entity';
 import { Message } from './message.entity';
 import { AgentFeedback } from './agent-feedback.entity';
@@ -31,6 +30,7 @@ import { BillingModule } from '../billing/billing.module';
 import { RegionsModule } from '../regions/regions.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { BusinessModule } from '../business/business.module';
+import { ScoringService } from './scoring.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Conversation, Message, AgentFeedback, Agent]), forwardRef(() => AgentsModule), forwardRef(() => LeadsModule), forwardRef(() => KnowledgeModule), forwardRef(() => ProductsModule), forwardRef(() => IntegrationsModule), forwardRef(() => FlowsModule), forwardRef(() => IntelligenceModule), forwardRef(() => BillingModule), forwardRef(() => RegionsModule), forwardRef(() => WebhooksModule), forwardRef(() => BusinessModule)],
@@ -48,6 +48,7 @@ import { BusinessModule } from '../business/business.module';
     OllamaProvider,
     ChatService,
     ChatEventsService,
+    ScoringService,
     ChatGateway,
   ],
   controllers: [ChatController, PublicController, AnalyticsController],

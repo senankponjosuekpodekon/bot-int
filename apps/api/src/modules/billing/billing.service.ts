@@ -1,10 +1,10 @@
-import { Injectable, Logger, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Subscription, SubscriptionStatus, PlanType, PLAN_LIMITS } from './subscription.entity';
 import { Conversation } from '../chat/conversation.entity';
-import { PaymentSDK, ManualPaymentRecord } from '@stiamond/payment-sdk';
+import { PaymentSDK } from '@stiamond/payment-sdk';
 
 @Injectable()
 export class BillingService {

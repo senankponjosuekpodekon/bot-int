@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { Repository } from 'typeorm';
 import { AdminService } from './admin.service';
 import { User, UserRole } from '../auth/user.entity';
 import { Tenant } from '../tenants/tenant.entity';

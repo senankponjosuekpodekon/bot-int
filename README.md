@@ -366,6 +366,10 @@ docker compose --profile production up  # adds nginx (TLS on :443)
 
 PgBouncer credentials are generated at container start from `DB_USER`/`DB_PASSWORD` — no secrets in `pgbouncer/` (see `entrypoint-userlist.sh`). DB/Redis/API/Web ports bind to `127.0.0.1`; nginx terminates TLS and proxies `/api/` (WebSocket + SSE) and the web app.
 
+### Frontend data fetching
+
+Server state uses TanStack Query (`QueryProvider` in `src/app/layout.tsx`). Pages are migrated incrementally — see `dashboard/leads`, `dashboard/products`, `dashboard/analytics` for the pattern: `useQuery(['key', params], () => api.x())` for reads, `useMutation` + `invalidateQueries` for writes, `setQueryData` for optimistic updates. Remaining pages still use manual `useEffect` + `fetch` triplets — migrate them when touched.
+
 ## Roadmap
 
 See [TODO.md](./TODO.md) for the detailed task list.

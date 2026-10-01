@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Package, Plus, Search, Trash2, Pencil, Upload, X, RefreshCw, History, ChevronDown, ChevronUp, LayoutGrid, List, Database } from 'lucide-react';
 import { productsApi, agentsApi, type Agent } from '@/lib/api';
 
@@ -21,15 +22,28 @@ interface Product {
 const PAGE_SIZE = 20;
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
-  const [categories, setCategories] = useState<string[]>([]);
-  const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState('');
+  const queryClient = useQueryClient();
+  const { data: productsBundle, isLoading: loading, refetch } = useQuery({
+    queryKey: ['products', search, category, selectedAgent, page],
+    queryFn: async () => {
+      const [data, cats] = await Promise.all([
+        productsApi.list({ search, category: category || undefined, page, limit: PAGE_SIZE, agentId: selectedAgent || undefined }),
+        productsApi.categories(selectedAgent || undefined),
+      ]);
+      return { products: data.data as Product[], total: data.total as number, categories: cats as string[] };
+    },
+  });
+  const products = productsBundle?.products || [];
+  const total = productsBundle?.total || 0;
+  const categories = productsBundle?.categories || [];
+  const { data: agents = [] } = useQuery<Agent[]>({
+    queryKey: ['agents', 'all'],
+    queryFn: () => agentsApi.list({ limit: 100 }).then((r: any) => r?.data || []),
+  });
   const [view, setView] = useState<'grid' | 'list'>('list');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -38,10 +52,6 @@ export default function ProductsPage() {
   const [importInitialConfig, setImportInitialConfig] = useState<{ storeDomain?: string; agentId?: string; csvUrl?: string; format?: string } | undefined>();
   const [showHistory, setShowHistory] = useState(false);
   const [showSources, setShowSources] = useState(false);
-  const [importSources, setImportSources] = useState<any[]>([]);
-  const [importHistory, setImportHistory] = useState<any[]>([]);
-  const [importHistoryTotal, setImportHistoryTotal] = useState(0);
-  const [importHistoryLoading, setImportHistoryLoading] = useState(false);
   const [selectedImport, setSelectedImport] = useState<any | null>(null);
   const [editing, setEditing] = useState<Product | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -80,61 +90,22 @@ export default function ProductsPage() {
     }
   };
 
-  const loadAgents = useCallback(async () => {
-    try {
-      const response = await agentsApi.list({ limit: 100 });
-      setAgents(response?.data || []);
-    } catch {
-      setAgents([]);
-    }
-  }, []);
-
-  const loadHistory = useCallback(async () => {
-    setImportHistoryLoading(true);
-    try {
-      const result = await productsApi.importHistory({ limit: 50 });
-      setImportHistory(result?.data || []);
-      setImportHistoryTotal(result?.total || 0);
-    } catch {
-      showToast('Erreur lors du chargement de l\'historique', 'error');
-    } finally {
-      setImportHistoryLoading(false);
-    }
-  }, []);
-
-  const loadSources = useCallback(async () => {
-    try {
-      const data = await productsApi.importSources();
-      setImportSources(data || []);
-    } catch {
-      showToast('Erreur lors du chargement des sources', 'error');
-    }
-  }, []);
-
-  useEffect(() => { loadAgents(); }, [loadAgents]);
-  useEffect(() => { if (showHistory) loadHistory(); }, [showHistory, loadHistory]);
-  useEffect(() => { if (showSources) loadSources(); }, [showSources, loadSources]);
-  useEffect(() => { loadSources(); }, [loadSources]);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [data, cats] = await Promise.all([
-        productsApi.list({ search, category: category || undefined, page, limit: PAGE_SIZE, agentId: selectedAgent || undefined }),
-        productsApi.categories(selectedAgent || undefined),
-      ]);
-      setProducts(data.data);
-      setTotal(data.total);
-      setCategories(cats);
-    } catch {
-      showToast('Erreur lors du chargement', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [search, category, selectedAgent, page]);
+  const { data: importHistoryBundle, isFetching: importHistoryLoading } = useQuery({
+    queryKey: ['products', 'import-history'],
+    queryFn: () => productsApi.importHistory({ limit: 50 }),
+    enabled: showHistory,
+  });
+  const { data: importSources = [] } = useQuery({
+    queryKey: ['products', 'import-sources'],
+    queryFn: () => productsApi.importSources().then((d: any) => d || []),
+  });
+  const load = () => {
+    refetch();
+    queryClient.invalidateQueries({ queryKey: ['products', 'import-history'] });
+    queryClient.invalidateQueries({ queryKey: ['products', 'import-sources'] });
+  };
 
   useEffect(() => { setPage(1); }, [search, category, selectedAgent]);
-  useEffect(() => { load(); }, [load]);
 
   const handleSave = async () => {
     if (!form.name || form.price < 0) { showToast('Nom et prix requis', 'error'); return; }
@@ -407,12 +378,12 @@ export default function ProductsPage() {
       {showHistory && (
         <HistoryModal
           onClose={() => { setShowHistory(false); setSelectedImport(null); }}
-          history={importHistory}
-          total={importHistoryTotal}
+          history={importHistoryBundle?.data || []}
+          total={importHistoryBundle?.total || 0}
           loading={importHistoryLoading}
           selected={selectedImport}
           onSelect={setSelectedImport}
-          onRefresh={loadHistory}
+          onRefresh={() => queryClient.invalidateQueries({ queryKey: ['products', 'import-history'] })}
           showToast={showToast}
           onReimport={(config) => { setShowHistory(false); setSelectedImport(null); setImportInitialTab(config.tab); setImportInitialConfig(config); setShowImport(true); }}
         />
@@ -422,7 +393,7 @@ export default function ProductsPage() {
         <SourcesModal
           onClose={() => setShowSources(false)}
           sources={importSources}
-          onRefresh={loadSources}
+          onRefresh={() => queryClient.invalidateQueries({ queryKey: ['products', 'import-sources'] })}
           showToast={showToast}
         />
       )}

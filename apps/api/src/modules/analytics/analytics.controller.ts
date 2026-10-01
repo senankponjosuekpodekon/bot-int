@@ -1,7 +1,7 @@
 import { Controller, Get, Query, Request, UseGuards } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { IsOptional, IsNumber } from 'class-validator';
+import { IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class TimelineDto {

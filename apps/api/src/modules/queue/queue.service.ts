@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { MetricsService } from '../../common/metrics.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, DataSource } from 'typeorm';
+import { Queue as BullQueue, Worker } from 'bullmq';
+import Redis from 'ioredis';
 import { JobEntity, JobStatus } from './job.entity';
 import { CryptoService } from '../../common/crypto.service';
 
@@ -18,6 +21,10 @@ export class QueueService {
   private baseIntervalMs = 5000;
   private maxIntervalMs = Number(process.env.QUEUE_POLL_MAX_INTERVAL_MS || 60000);
   private currentDelayMs = 0;
+  private redis: Redis | null = null;
+  private readonly bullQueues = new Map<string, BullQueue>();
+  private readonly workers = new Map<string, Worker>();
+  private backlogTimer: NodeJS.Timeout | null = null;
 
   constructor(
     @InjectRepository(JobEntity)
@@ -25,14 +32,74 @@ export class QueueService {
     private readonly dataSource: DataSource,
     private readonly crypto: CryptoService,
     private readonly metrics: MetricsService,
-  ) {}
+    config: ConfigService,
+  ) {
+    // BullMQ when REDIS_URL is configured (multi-instance safe); otherwise the
+    // DB-backed FOR UPDATE SKIP LOCKED poller below stays the fallback.
+    const redisUrl = config.get<string>('REDIS_URL');
+    if (redisUrl) {
+      this.redis = new Redis(redisUrl, { maxRetriesPerRequest: null });
+      this.logger.log('Queue backend: Redis (BullMQ)');
+    } else {
+      this.logger.log('Queue backend: Postgres polling (set REDIS_URL for BullMQ)');
+    }
+  }
+
+  private get useBull(): boolean {
+    return !!this.redis;
+  }
+
+  private bullQueue(name: string): BullQueue {
+    let q = this.bullQueues.get(name);
+    if (!q) {
+      q = new BullQueue(name, { connection: this.redis as Redis });
+      this.bullQueues.set(name, q);
+    }
+    return q;
+  }
 
   registerHandler(handler: JobHandler): void {
     this.handlers.set(handler.queue, handler);
+    if (this.useBull) {
+      const worker = new Worker(
+        handler.queue,
+        async (job) => {
+          const start = Date.now();
+          try {
+            const result = await handler.handle(job.data);
+            this.metrics.incCounter('queue_jobs_total', { queue: job.queueName, result: 'completed' });
+            this.metrics.observeDuration('queue_job_duration_ms', Date.now() - start, { queue: job.queueName });
+            return result;
+          } catch (err) {
+            this.metrics.incCounter('queue_jobs_total', { queue: job.queueName, result: 'failed' });
+            throw err;
+          }
+        },
+        { connection: this.redis as Redis, concurrency: Number(process.env.QUEUE_CONCURRENCY || 5) },
+      );
+      worker.on('error', (err) => this.logger.error(`Worker ${handler.queue} error: ${err?.message}`));
+      this.workers.set(handler.queue, worker);
+    }
     this.logger.log(`Registered handler for queue: ${handler.queue}`);
   }
 
   startWorker(intervalMs = 5000): void {
+    if (this.useBull) {
+      if (this.backlogTimer) return;
+      const sample = async () => {
+        for (const [name, q] of this.bullQueues) {
+          try {
+            const counts = await q.getJobCounts('waiting', 'delayed', 'active');
+            this.metrics.setGauge('queue_backlog', (counts.waiting || 0) + (counts.delayed || 0), { queue: name });
+          } catch { /* metrics are best-effort */ }
+        }
+      };
+      sample().catch(() => undefined);
+      this.backlogTimer = setInterval(sample, 15000);
+      this.backlogTimer.unref();
+      this.logger.log('BullMQ workers running (concurrency=' + (process.env.QUEUE_CONCURRENCY || 5) + ')');
+      return;
+    }
     if (this.pollTimer) return;
     this.baseIntervalMs = intervalMs;
     this.currentDelayMs = intervalMs;
@@ -59,14 +126,26 @@ export class QueueService {
     this.logger.log(`Queue worker started (base: ${intervalMs}ms, max backoff: ${this.maxIntervalMs}ms)`);
   }
 
-  stopWorker(): void {
+  async stopWorker(): Promise<void> {
     if (this.pollTimer) {
       clearInterval(this.pollTimer);
       this.pollTimer = null;
     }
+    if (this.backlogTimer) {
+      clearInterval(this.backlogTimer);
+      this.backlogTimer = null;
+    }
+    for (const worker of this.workers.values()) await worker.close().catch(() => undefined);
+    this.workers.clear();
+    for (const q of this.bullQueues.values()) await q.close().catch(() => undefined);
+    this.bullQueues.clear();
+    if (this.redis) {
+      await this.redis.quit().catch(() => undefined);
+      this.redis = null;
+    }
   }
 
-  async addWebhook(tenantId: string, event: string, payload: Record<string, any>): Promise<JobEntity> {
+  async addWebhook(tenantId: string, event: string, payload: Record<string, any>): Promise<JobEntity | null> {
     return this.enqueue('webhooks', 'webhook.trigger', { tenantId, event, payload }, tenantId);
   }
 
@@ -75,7 +154,7 @@ export class QueueService {
     shopDomain: string,
     accessToken: string,
     integrationType: 'shopify' | 'public_feed' = 'shopify',
-  ): Promise<JobEntity> {
+  ): Promise<JobEntity | null> {
     // Never persist plaintext credentials in jobs.data
     const encryptedToken = this.crypto.encrypt(accessToken);
     return this.enqueue('shopify-imports', 'shopify.import', { tenantId, shopDomain, accessToken: encryptedToken, integrationType }, tenantId);
@@ -87,7 +166,17 @@ export class QueueService {
     data: Record<string, any>,
     tenantId?: string,
     delayMs = 0,
-  ): Promise<JobEntity> {
+  ): Promise<JobEntity | null> {
+    if (this.useBull) {
+      await this.bullQueue(queue).add(name, { ...data, tenantId }, {
+        delay: delayMs,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: { age: 3600, count: 1000 },
+        removeOnFail: { age: 86400 },
+      });
+      return null;
+    }
     const availableAt = delayMs > 0 ? new Date(Date.now() + delayMs) : new Date();
     const job = this.jobRepo.create({
       queue,

@@ -32,8 +32,8 @@ export class RedisRateLimitStorage implements RateLimitStorage {
         retryStrategy: () => null,
       });
       this.enabled = true;
-    } catch (err) {
-      // eslint-disable-next-line no-console
+    } catch {
+       
       console.warn('ioredis not installed, falling back to in-memory rate limit');
     }
   }
@@ -58,7 +58,7 @@ export class RedisRateLimitStorage implements RateLimitStorage {
       await this.client.pexpire(redisKey, windowMs);
       return true;
     } catch (err) {
-      // eslint-disable-next-line no-console
+       
       console.warn('Redis rate limit failed, falling back to memory', err);
       return this.memoryFallback.isAllowed(key, limit, windowMs);
     }

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { FlowFieldType } from '../flows/chat-flow.entity';
 import { FlowsService } from '../flows/flows.service';
-import { Conversation, ConversationState } from './conversation.entity';
+import { Conversation } from './conversation.entity';
 
 export interface FlowData {
   id: string;
@@ -50,7 +50,7 @@ export class FormService {
     flow: FlowData,
     language = 'fr',
   ): Promise<FormResult> {
-    const { currentStep = 0, collectedFields = {}, missingFields = [] } = conversation.formState || {};
+    const { currentStep = 0, collectedFields = {} } = conversation.formState || {};
     const field = flow.fields[currentStep];
     if (!field) {
       return this.completeFlow(tenantId, conversation, flow, collectedFields, language);
@@ -92,7 +92,7 @@ export class FormService {
     conversation: Conversation,
     flow: FlowData,
     collectedFields: Record<string, string>,
-    language: string,
+    _language: string,
   ): Promise<FormResult> {
     const result = await this.flowsService.processFlowResponse(tenantId, conversation.id, flow.id, collectedFields);
     return {

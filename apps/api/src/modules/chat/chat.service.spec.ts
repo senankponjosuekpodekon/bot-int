@@ -1,15 +1,15 @@
 import { NotFoundException } from '@nestjs/common';
 import { ObjectLiteral, Repository } from 'typeorm';
 import { ChatService } from './chat.service';
-import { Conversation, ConversationChannel, ConversationStatus } from './conversation.entity';
+import { Conversation, ConversationStatus } from './conversation.entity';
 import { Message, MessageRole } from './message.entity';
 import { LLMService } from './llm.service';
 import { AgentsService } from '../agents/agents.service';
 import { LeadsService } from '../leads/leads.service';
 import { LeadTagService } from '../leads/lead-tag.service';
+import { ScoringService } from './scoring.service';
 import { Agent } from '../agents/agent.entity';
 import { Lead } from '../leads/lead.entity';
-import { AgentFeedback } from './agent-feedback.entity';
 
 type RepositoryMock<T extends ObjectLiteral> = Partial<Record<keyof Repository<T>, jest.Mock>>;
 
@@ -71,6 +71,7 @@ describe('ChatService', () => {
       { create: jest.fn().mockResolvedValue(undefined) } as any, // pendingActionService
       { resolveActiveAgent: jest.fn().mockImplementation((_t, a) => Promise.resolve(a)) } as any, // agentOrchestrationService
       chatEvents as any,
+      new ScoringService(),
     );
   });
 

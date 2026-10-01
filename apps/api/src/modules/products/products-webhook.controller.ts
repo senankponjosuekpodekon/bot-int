@@ -37,7 +37,7 @@ export class ProductsWebhookController {
     @Param('tenantId') tenantId: string,
     @Headers() headers: any,
     @Body() body: any,
-    @Req() req: Request,
+    @Req() _req: Request,
   ) {
     const hmacHeader = headers['x-shopify-hmac-sha256'];
     if (!hmacHeader || !this.verifyShopifyWebhook(JSON.stringify(body), hmacHeader)) {

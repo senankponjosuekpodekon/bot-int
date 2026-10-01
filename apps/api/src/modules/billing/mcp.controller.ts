@@ -1,10 +1,9 @@
-import { Controller, Post, Body, Headers, Req, Res, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, Headers, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ChatService } from '../chat/chat.service';
 import { AgentsService } from '../agents/agents.service';
 import { ApiKeyService } from '../billing/api-key.service';
 import { BillingService } from '../billing/billing.service';
-import { PLAN_LIMITS, PlanType } from '../billing/subscription.entity';
 
 @Controller('mcp')
 export class McpController {

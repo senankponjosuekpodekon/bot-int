@@ -8,7 +8,6 @@ import {
   Delete,
   Request,
   UseGuards,
-  Res,
   NotFoundException,
 } from '@nestjs/common';
 import { SiteService } from './site.service';

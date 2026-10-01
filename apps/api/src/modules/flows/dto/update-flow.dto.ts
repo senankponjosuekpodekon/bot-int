@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsArray, IsOptional, IsBoolean, IsObject, ValidateNested, IsEnum } from 'class-validator';
+import { IsString, IsArray, IsOptional, IsBoolean, ValidateNested, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { FlowFieldType } from '../chat-flow.entity';
 

@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, MoreThan } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Insight, InsightType } from './insight.entity';
 import { ConversationAnalytics } from './conversation-analytics.entity';
 import { PlatformInsight, PlatformMetricType } from './platform-insight.entity';
-import { Message, MessageRole } from '../chat/message.entity';
+import { Message } from '../chat/message.entity';
 import { Conversation } from '../chat/conversation.entity';
 import { Lead, LeadStatus } from '../leads/lead.entity';
 import { Agent } from '../agents/agent.entity';
@@ -252,7 +252,6 @@ export class IntelligenceService {
       if (converted.length < 2) continue;
 
       const convertedWith = converted.filter((l) => l.email);
-      const convertedWithout = converted.filter((l) => !l.email);
       const emailConversionRate = converted.length > 0
         ? Math.round((convertedWith.length / converted.length) * 100)
         : 0;
@@ -319,7 +318,7 @@ export class IntelligenceService {
   async autoEnrichKnowledge(tenantId: string, keyword: string): Promise<{ added: boolean; message: string }> {
     try {
       const searchUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent(keyword + ' definition explication')}`;
-      const result = await this.knowledgeService.addUrl(tenantId, searchUrl);
+      await this.knowledgeService.addUrl(tenantId, searchUrl);
       await this.resolveInsightsByKeyword(tenantId, keyword);
       return { added: true, message: `Contenu sur "${keyword}" ajouté à la base de connaissances` };
     } catch (err: any) {
@@ -623,6 +622,7 @@ export class IntelligenceService {
               avgScoreConverted: avgScoreConverted.toFixed(1),
               avgScoreLost: avgScoreLost.toFixed(1),
               emailRate,
+              scoreDelta,
               phoneRate,
               adjustments,
             },
