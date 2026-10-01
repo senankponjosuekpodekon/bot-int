@@ -9,6 +9,11 @@ export class WhatsAppAdapter implements ChannelAdapter {
   constructor(private readonly mediaParserService: MediaParserService) {}
 
   async normalize(tenantId: string, payload: any): Promise<NormalizedMessage | null> {
+    const all = await this.normalizeAll(tenantId, payload);
+    return all[0] || null;
+  }
+
+  async normalizeAll(tenantId: string, payload: any): Promise<NormalizedMessage[]> {
     const entries = payload?.entry || [];
     const messages: NormalizedMessage[] = [];
 
@@ -41,6 +46,6 @@ export class WhatsAppAdapter implements ChannelAdapter {
       }
     }
 
-    return messages[0] || null;
+    return messages;
   }
 }

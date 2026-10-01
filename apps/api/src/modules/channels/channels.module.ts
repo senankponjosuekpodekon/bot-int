@@ -7,6 +7,7 @@ import { ChatModule } from '../chat/chat.module';
 import { AgentsModule } from '../agents/agents.module';
 import { BillingModule } from '../billing/billing.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
+import { IntegrationsModule } from '../integrations/integrations.module';
 import { Agent } from '../agents/agent.entity';
 
 @Module({
@@ -16,6 +17,7 @@ import { Agent } from '../agents/agent.entity';
     AgentsModule,
     BillingModule,
     WebhooksModule,
+    forwardRef(() => IntegrationsModule),
   ],
   controllers: [ChannelsController, ChannelsWebhookController],
   providers: [ChannelAdapterService],

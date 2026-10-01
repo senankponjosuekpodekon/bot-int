@@ -7,22 +7,28 @@ export class InstagramChannelAdapter implements ChannelAdapter {
 
   constructor(private readonly config?: ConfigService) {}
 
-  async normalize(_tenantId: string, payload: any): Promise<NormalizedMessage | null> {
-    const entry = payload?.entry?.[0];
-    const messaging = entry?.messaging?.[0];
-    if (!messaging?.message?.text) {
-      return null;
-    }
+  async normalize(tenantId: string, payload: any): Promise<NormalizedMessage | null> {
+    const all = await this.normalizeAll(tenantId, payload);
+    return all[0] || null;
+  }
 
-    return {
-      visitorId: String(messaging.sender.id),
-      text: String(messaging.message.text),
-      channel: this.channel,
-      metadata: {
-        messageId: messaging.message.mid,
-        timestamp: messaging.timestamp,
-      },
-    };
+  async normalizeAll(_tenantId: string, payload: any): Promise<NormalizedMessage[]> {
+    const messages: NormalizedMessage[] = [];
+    for (const entry of payload?.entry || []) {
+      for (const event of entry?.messaging || []) {
+        if (!event?.message?.text) continue;
+        messages.push({
+          visitorId: String(event.sender.id),
+          text: String(event.message.text),
+          channel: this.channel,
+          metadata: {
+            messageId: event.message.mid,
+            timestamp: event.timestamp,
+          },
+        });
+      }
+    }
+    return messages;
   }
 
   getChallengeResponse(query: Record<string, any>): string | null {

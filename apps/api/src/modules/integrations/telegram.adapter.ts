@@ -40,4 +40,9 @@ export class TelegramAdapter implements ChannelAdapter {
       metadata: { telegramMessageId: message.message_id, from },
     };
   }
+
+  async normalizeAll(tenantId: string, payload: any): Promise<NormalizedMessage[]> {
+    const msg = await this.normalize(tenantId, payload);
+    return msg ? [msg] : [];
+  }
 }

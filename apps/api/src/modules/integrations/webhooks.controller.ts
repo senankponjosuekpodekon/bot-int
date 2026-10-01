@@ -100,11 +100,11 @@ export class WebhooksController {
     }
 
     try {
-      const normalized = await this.whatsappAdapter.normalize(tenantId, body);
-      if (normalized) {
-        await this.processIncomingMessage(tenantId, normalized, agentId);
+      const normalized = await this.whatsappAdapter.normalizeAll(tenantId, body);
+      for (const msg of normalized) {
+        await this.processIncomingMessage(tenantId, msg, agentId);
       }
-      return { status: 'ok' };
+      return { status: 'ok', processed: normalized.length };
     } catch (err: any) {
       this.logger.error(`WhatsApp webhook error: ${err?.message}`);
       return { status: 'error' };
@@ -153,11 +153,11 @@ export class WebhooksController {
     }
 
     try {
-      const normalized = await this.instagramAdapter.normalize(tenantId, body);
-      if (normalized) {
-        await this.processIncomingMessage(tenantId, normalized, agentId);
+      const normalized = await this.instagramAdapter.normalizeAll(tenantId, body);
+      for (const msg of normalized) {
+        await this.processIncomingMessage(tenantId, msg, agentId);
       }
-      return { status: 'ok' };
+      return { status: 'ok', processed: normalized.length };
     } catch (err: any) {
       this.logger.error(`Instagram webhook error: ${err?.message}`);
       return { status: 'error' };
@@ -210,11 +210,11 @@ export class WebhooksController {
     }
 
     try {
-      const normalized = await this.telegramAdapter.normalize(tenantId, body);
-      if (normalized) {
-        await this.processIncomingMessage(tenantId, normalized, agentId);
+      const normalized = await this.telegramAdapter.normalizeAll(tenantId, body);
+      for (const msg of normalized) {
+        await this.processIncomingMessage(tenantId, msg, agentId);
       }
-      return { status: 'ok' };
+      return { status: 'ok', processed: normalized.length };
     } catch (err: any) {
       this.logger.error(`Telegram webhook error: ${err?.message}`);
       return { status: 'error' };

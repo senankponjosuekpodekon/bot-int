@@ -13,7 +13,8 @@ describe('ChannelAdapterService', () => {
     mockAgentRepo = { findOne: jest.fn() };
     mockChatService = { sendMessage: jest.fn() };
     mockConfig = { get: jest.fn() };
-    service = new ChannelAdapterService(mockAgentRepo, mockChatService, mockConfig);
+    const mockIntegrations = { sendWhatsApp: jest.fn(), sendInstagram: jest.fn(), sendTelegram: jest.fn(), sendSMS: jest.fn(), sendEmail: jest.fn() };
+    service = new ChannelAdapterService(mockAgentRepo, mockChatService, mockConfig, mockIntegrations as any);
   });
 
   it('lists supported channels', () => {

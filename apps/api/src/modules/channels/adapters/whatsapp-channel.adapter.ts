@@ -7,26 +7,31 @@ export class WhatsAppChannelAdapter implements ChannelAdapter {
 
   constructor(private readonly config?: ConfigService) {}
 
-  async normalize(_tenantId: string, payload: any): Promise<NormalizedMessage | null> {
-    const entry = payload?.entry?.[0];
-    const change = entry?.changes?.[0]?.value;
-    const message = change?.messages?.[0];
-    if (!message || message.type !== 'text') {
-      return null;
-    }
-    const text = message.text?.body;
-    if (!text) return null;
+  async normalize(tenantId: string, payload: any): Promise<NormalizedMessage | null> {
+    const all = await this.normalizeAll(tenantId, payload);
+    return all[0] || null;
+  }
 
-    return {
-      visitorId: String(message.from),
-      text: String(text),
-      channel: this.channel,
-      metadata: {
-        messageId: message.id,
-        timestamp: message.timestamp,
-        phoneNumberId: change?.metadata?.phone_number_id,
-      },
-    };
+  async normalizeAll(_tenantId: string, payload: any): Promise<NormalizedMessage[]> {
+    const messages: NormalizedMessage[] = [];
+    for (const entry of payload?.entry || []) {
+      for (const change of entry?.changes || []) {
+        for (const message of change?.value?.messages || []) {
+          if (message.type !== 'text' || !message.text?.body) continue;
+          messages.push({
+            visitorId: String(message.from),
+            text: String(message.text.body),
+            channel: this.channel,
+            metadata: {
+              messageId: message.id,
+              timestamp: message.timestamp,
+              phoneNumberId: change?.value?.metadata?.phone_number_id,
+            },
+          });
+        }
+      }
+    }
+    return messages;
   }
 
   getChallengeResponse(query: Record<string, any>): string | null {
