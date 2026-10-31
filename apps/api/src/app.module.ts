@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './modules/auth/auth.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { AgentsModule } from './modules/agents/agents.module';
@@ -11,6 +13,7 @@ import { LeadsModule } from './modules/leads/leads.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -19,7 +22,7 @@ import { LeadsModule } from './modules/leads/leads.module';
         host: config.get('DB_HOST', 'localhost'),
         port: config.get<number>('DB_PORT', 5432),
         username: config.get('DB_USER', 'postgres'),
-        password: config.get('DB_PASSWORD', 'postgres'),
+        password: config.getOrThrow('DB_PASSWORD'),
         database: config.get('DB_NAME', 'stiamond_agent'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: config.get('NODE_ENV') !== 'production',
@@ -33,5 +36,6 @@ import { LeadsModule } from './modules/leads/leads.module';
     KnowledgeModule,
     LeadsModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

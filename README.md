@@ -190,6 +190,9 @@ DB_NAME=stiamond_agent
 
 JWT_SECRET=your_very_long_random_secret_here
 
+# Comma-separated origins allowed by CORS
+CORS_ORIGINS=http://localhost:3000
+
 OLLAMA_URL=http://localhost:11434
 OLLAMA_MODEL=llama3.2
 ```
@@ -204,6 +207,14 @@ OLLAMA_MODEL=llama3.2
 |---|---|---|
 | POST | `/api/auth/register` | Create tenant + admin user |
 | POST | `/api/auth/login` | Get JWT token |
+
+> `JWT_SECRET` and `DB_PASSWORD` are required — the API refuses to start without them. Auth endpoints are rate-limited to 5 requests/minute.
+
+### Tenants
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/tenants/me` | Get the current user's tenant |
 
 ### Agents
 
