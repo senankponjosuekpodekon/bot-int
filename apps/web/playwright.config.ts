@@ -18,10 +18,11 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'chrome',
+      // Bundled chromium keeps E2E working anywhere `playwright install` ran;
+      // channel 'chrome' required a system Google Chrome install.
+      name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        channel: 'chrome',
       },
     },
   ],
