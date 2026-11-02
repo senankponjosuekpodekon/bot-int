@@ -5,7 +5,7 @@ import {
   CallHandler,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Request } from 'express';
+import type { Request } from 'express';;
 import { GdprService } from './gdpr.service';
 import { AuditAction } from './audit-log.entity';
 

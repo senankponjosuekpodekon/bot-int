@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { LLM_PROVIDER, LLMProvider, LLMMessage, LLMChatResult } from './llm-provider.interface';
+import type { LLMProvider, LLMMessage, LLMChatResult } from './llm-provider.interface';
+import { LLM_PROVIDER } from './llm-provider.interface';;
 
 @Injectable()
 export class LLMService {

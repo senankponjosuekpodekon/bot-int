@@ -5,7 +5,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';;
 
 const REFRESH_COOKIE = 'stiamond_refresh';
 const REFRESH_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7d, matches refresh rotation

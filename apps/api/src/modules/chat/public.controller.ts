@@ -1,6 +1,6 @@
 import { Controller, Get, NotFoundException, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Response } from 'express';
+import type { Response } from 'express';;
 
 const ADMIN_HTML = `<!doctype html>
 <html lang="fr">

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OllamaProvider } from './providers/ollama.provider';
-import { LLMMessage } from './llm-provider.interface';
+import type { LLMMessage } from './llm-provider.interface';;
 
 export type OllamaMessage = LLMMessage;
 

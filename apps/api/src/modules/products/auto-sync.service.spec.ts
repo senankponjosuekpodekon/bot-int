@@ -1,3 +1,4 @@
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 import { AutoSyncService } from './auto-sync.service';
 import { ProductImportSource } from './product-import-source.entity';
 import { Integration } from '../integrations/integration.entity';

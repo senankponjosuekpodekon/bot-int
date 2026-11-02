@@ -1,5 +1,6 @@
 import { Injectable, Logger, NestMiddleware } from '@nestjs/common';
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
+import { NextFunction } from 'express';;
 
 const SENSITIVE_KEYS = [
   'password', 'token', 'access_token', 'refresh_token', 'secret', 'apiKey',

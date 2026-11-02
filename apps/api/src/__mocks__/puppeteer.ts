@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 export const launch = jest.fn().mockResolvedValue({
   newPage: jest.fn().mockResolvedValue({
     goto: jest.fn(),

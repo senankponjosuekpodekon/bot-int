@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { LLMProvider, LLMMessage, LLMChatResult } from '../llm-provider.interface';
+import type { LLMProvider, LLMMessage, LLMChatResult } from '../llm-provider.interface';;
 
 @Injectable()
 export class OllamaProvider implements LLMProvider {

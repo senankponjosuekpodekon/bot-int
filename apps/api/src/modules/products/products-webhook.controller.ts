@@ -1,7 +1,7 @@
 import { Body, Controller, Headers, Param, Post, Req, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
-import { Request } from 'express';
+import type { Request } from 'express';;
 import { ProductsService } from './products.service';
 import { SurveysService } from '../surveys/surveys.service';
 

@@ -1,18 +1,11 @@
-import {
-  Controller,
-  Get,
-  Delete,
-  Request,
-  UseGuards,
-  Res,
-  Query,
-} from '@nestjs/common';
+import { Request } from '@nestjs/common';
+import { Controller, Get, Delete, UseGuards, Res, Query } from '@nestjs/common';;
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../auth/user.entity';
 import { GdprService } from './gdpr.service';
-import { Response } from 'express';
+import type { Response } from 'express';;
 
 @ApiTags('gdpr')
 @ApiBearerAuth()

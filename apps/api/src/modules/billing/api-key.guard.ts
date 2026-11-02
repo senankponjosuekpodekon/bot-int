@@ -7,9 +7,10 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { Request } from 'express';
+import type { Request } from 'express';;
 import { ApiKeyService } from './api-key.service';
-import { RateLimitStorage, RATE_LIMIT_STORAGE } from './rate-limit.storage';
+import type { RateLimitStorage } from './rate-limit.storage';
+import { RATE_LIMIT_STORAGE } from './rate-limit.storage';;
 
 @Injectable()
 export class ApiKeyGuard implements CanActivate {

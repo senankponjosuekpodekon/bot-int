@@ -1,17 +1,5 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Query,
-  Request,
-  UploadedFile,
-  UseGuards,
-  UseInterceptors,
-  BadRequestException,
-} from '@nestjs/common';
+import { Request } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, UploadedFile, UseGuards, UseInterceptors, BadRequestException } from '@nestjs/common';;
 import { FileInterceptor } from '@nestjs/platform-express';
 import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsUrl, IsUUID } from 'class-validator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';

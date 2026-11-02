@@ -1,7 +1,8 @@
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 import { Test } from '@nestjs/testing';
 import { GdprController } from './gdpr.controller';
 import { GdprService } from './gdpr.service';
-import { Response } from 'express';
+import type { Response } from 'express';;
 
 describe('GdprController', () => {
   let controller: GdprController;

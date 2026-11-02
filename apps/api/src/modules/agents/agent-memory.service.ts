@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AgentMemory, MemoryScope } from './agent-memory.entity';
 import { LLMService } from '../chat/llm.service';
-import { LLMMessage } from '../chat/llm-provider.interface';
+import type { LLMMessage } from '../chat/llm-provider.interface';;
 
 const MEMORY_TTL_DAYS = 90;
 const LOW_IMPORTANCE_THRESHOLD = 0.5;

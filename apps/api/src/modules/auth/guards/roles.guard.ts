@@ -6,7 +6,7 @@ import {
   SetMetadata,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Request } from 'express';
+import type { Request } from 'express';;
 import { UserRole } from '../user.entity';
 
 export const ROLES_KEY = 'roles';

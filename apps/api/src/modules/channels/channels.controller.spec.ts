@@ -1,3 +1,4 @@
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 import { Test } from '@nestjs/testing';
 import { CanActivate } from '@nestjs/common';
 import { ChannelsController } from './channels.controller';

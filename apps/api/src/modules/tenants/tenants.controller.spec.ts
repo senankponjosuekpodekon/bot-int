@@ -1,3 +1,4 @@
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 import { ForbiddenException } from '@nestjs/common';
 import { TenantsController } from './tenants.controller';
 import { UserRole } from '../auth/user.entity';

@@ -1,6 +1,6 @@
 import { Controller, Get, Header, NotFoundException, Req, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Request } from 'express';
+import type { Request } from 'express';;
 import { MetricsService } from './metrics.service';
 
 // GET /api/metrics — Prometheus exposition. Protected by METRICS_TOKEN (Bearer);

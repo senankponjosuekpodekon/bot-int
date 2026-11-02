@@ -1,6 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, Request, UseGuards } from '@nestjs/common';
+import { Request } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common';;
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { Response } from 'express';
+import type { Response } from 'express';;
 import { Type } from 'class-transformer';
 import { LeadsService } from './leads.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';

@@ -5,7 +5,7 @@ import { SurveysService } from '../surveys/surveys.service';
 import { SurveyType } from '../surveys/survey.entity';
 import { ChatEventsService } from '../chat/chat-events.service';
 import { IsNotEmpty, IsOptional, IsString, IsArray, MaxLength } from 'class-validator';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';;
 import { EMBED_SCRIPT } from './embed-script';
 import { TurnstileService } from '../../common/turnstile.service';
 

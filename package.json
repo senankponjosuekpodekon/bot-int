@@ -21,6 +21,7 @@
   "overrides": {
     "postcss": "^8.5.20",
     "multer": "^2.5.0",
+    "typescript": "^5.4.0",
     "next@16.2.10": {
       "postcss": "^8.5.20"
     }
@@ -31,6 +32,6 @@
     "npm": ">=10.0.0"
   },
   "dependencies": {
-    "@nestjs/platform-express": "^11.1.28"
+    "@nestjs/platform-express": "^12.0.0"
   }
 }

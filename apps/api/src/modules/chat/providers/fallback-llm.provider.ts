@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { LLMProvider, LLMMessage, LLMChatResult } from '../llm-provider.interface';
+import type { LLMProvider, LLMMessage, LLMChatResult } from '../llm-provider.interface';;
 import { OpenAIProvider } from './openai.provider';
 import { OllamaProvider } from './ollama.provider';
 import { MetricsService } from '../../../common/metrics.service';

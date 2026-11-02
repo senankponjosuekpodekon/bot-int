@@ -1,19 +1,26 @@
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { ObjectLiteral, Repository } from 'typeorm';
-import * as bcrypt from 'bcryptjs';
-import { AuthService } from './auth.service';
 import { Tenant } from '../tenants/tenant.entity';
 import { User } from './user.entity';
 import { RefreshToken } from './refresh-token.entity';
 import { TenantsService } from '../tenants/tenants.service';
 
-jest.mock('bcryptjs', () => ({
+// ESM: jest.mock doesn't hoist/transform — mock the module explicitly and
+// import the service + bcrypt afterwards via dynamic import.
+jest.unstable_mockModule('bcryptjs', () => ({
+  default: {
+    hash: jest.fn().mockResolvedValue('hashed-secret'),
+    compare: jest.fn().mockResolvedValue(true),
+  },
   hash: jest.fn().mockResolvedValue('hashed-secret'),
   compare: jest.fn().mockResolvedValue(true),
 }));
 
+const { AuthService } = await import('./auth.service');
+const bcrypt = await import('bcryptjs');
 import { SessionService } from './session.service';
 
 type RepositoryMock<T extends ObjectLiteral> = Partial<Record<keyof Repository<T>, jest.Mock>>;
@@ -125,7 +132,7 @@ describe('AuthService', () => {
 
   it('throws UnauthorizedException when password is invalid', async () => {
     userRepo.findOne?.mockResolvedValue({ id: 'user-1', tenantId: 'tenant-1', password: 'hashed' });
-    (bcrypt.compare as jest.Mock).mockResolvedValueOnce(false);
+    ((bcrypt as any).compare as jest.Mock).mockResolvedValueOnce(false);
 
     await expect(
       service.login({ email: 'ceo@acme.io', password: 'wrong-pass' }),

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { LLMService } from './llm.service';
-import { LLMMessage } from './llm-provider.interface';
+import type { LLMMessage } from './llm-provider.interface';;
 
 export type Sentiment = 'positive' | 'neutral' | 'negative' | 'frustrated' | 'angry';
 

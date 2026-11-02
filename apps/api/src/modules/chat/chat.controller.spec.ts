@@ -1,3 +1,4 @@
+import { jest, describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';

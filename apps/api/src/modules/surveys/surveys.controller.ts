@@ -1,22 +1,11 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  Request,
-  Res,
-  UseGuards,
-} from '@nestjs/common';
+import { Request } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common';;
 import { SurveysService } from './surveys.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SurveyType } from './survey.entity';
 import { IsBoolean, IsEnum, IsNotEmpty, IsObject, IsOptional, IsString, IsArray } from 'class-validator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { Response } from 'express';
+import type { Response } from 'express';;
 import { SendSurveyEmailDto } from './dto/send-survey-email.dto';
 
 class CreateSurveyDto {
