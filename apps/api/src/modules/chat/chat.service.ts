@@ -664,7 +664,9 @@ export class ChatService {
 
     const priceSignal = /\b(budget|prix|co[uû]t|offre|devis|proposition|tarif|combien|solution)\b/i.test(userMessage);
 
-    const generated = await this.generateReply({
+    let generated: { finalReply: string; usage: { prompt: number; completion: number; total: number }; discoveryRedirect: boolean };
+    try {
+      generated = await this.generateReply({
       conversation,
       activeAgent,
       tenantId,
@@ -680,6 +682,27 @@ export class ChatService {
       callbacks,
       priceSignal,
     });
+    } catch (err: any) {
+      // LLM unavailable (all providers down / breaker open): degrade to a
+      // human-handoff reply instead of surfacing a 500 to the widget.
+      this.logger.error(
+        JSON.stringify({
+          debug: 'LLM_UNAVAILABLE',
+          conversationId: conversation.id,
+          agentId,
+          reason: err?.message,
+        }),
+      );
+      conversation.status = ConversationStatus.HANDED_OFF;
+      conversation.state = ConversationState.ANSWERING;
+      generated = {
+        finalReply: conversation.language === 'en'
+          ? "Our assistant is temporarily unavailable. A human advisor will get back to you shortly."
+          : "Notre assistant est momentanément indisponible. Un conseiller humain vous répondra très vite.",
+        usage: { prompt: 0, completion: 0, total: 0 },
+        discoveryRedirect: false,
+      };
+    }
 
     return this.postProcessReply({
       finalReply: generated.finalReply,
