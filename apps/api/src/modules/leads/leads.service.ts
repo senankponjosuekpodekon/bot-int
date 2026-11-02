@@ -23,8 +23,8 @@ export class LeadsService {
     tenantId: string,
     params?: { status?: LeadStatus; tag?: string; search?: string; page?: number; limit?: number; businessId?: string },
   ): Promise<PaginatedResult<Lead>> {
-    const page = params?.page ?? 1;
-    const limit = params?.limit ?? 20;
+    const page = Math.max(1, params?.page ?? 1);
+    const limit = Math.min(Math.max(1, params?.limit ?? 20), 100);
 
     const qb = this.leadRepo
       .createQueryBuilder('lead')

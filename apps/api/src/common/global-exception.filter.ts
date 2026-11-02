@@ -35,12 +35,33 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         details = r.details;
       }
     } else if (exception instanceof Error) {
-      message = exception.message;
-      this.logger.error(
-        `Unhandled exception: ${exception.message}`,
-        exception.stack,
-      );
-      captureException(exception, { path: request.url, method: request.method });
+      // Map well-known client-side failures to proper 4xx codes instead of 500.
+      const msg = exception.message || '';
+      const type = (exception as any).type;
+      if (type === 'entity.too.large' || msg.includes('request entity too large')) {
+        status = HttpStatus.PAYLOAD_TOO_LARGE;
+        error = 'PAYLOAD_TOO_LARGE';
+        message = 'Request entity too large';
+      } else if (
+        msg.includes('invalid input syntax for type uuid') ||
+        msg.includes('invalid input syntax for type integer') ||
+        msg.includes('invalid input syntax for type bigint')
+      ) {
+        status = HttpStatus.BAD_REQUEST;
+        error = 'BAD_REQUEST';
+        message = 'Invalid identifier or parameter format';
+      } else if (msg.includes('not allowed by CORS')) {
+        status = HttpStatus.FORBIDDEN;
+        error = 'FORBIDDEN';
+        message = msg;
+      } else {
+        message = msg;
+        this.logger.error(
+          `Unhandled exception: ${exception.message}`,
+          exception.stack,
+        );
+        captureException(exception, { path: request.url, method: request.method });
+      }
     } else {
       this.logger.error('Unknown exception', JSON.stringify(exception));
       captureException(new Error('Unknown exception'), { raw: JSON.stringify(exception), path: request.url });

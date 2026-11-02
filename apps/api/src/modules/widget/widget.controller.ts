@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Req, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { WidgetService } from './widget.service';
 import { SurveysService } from '../surveys/surveys.service';
@@ -65,13 +65,13 @@ export class WidgetController {
   }
 
   @Get('history/:id')
-  history(@Param('id') id: string, @Query('visitorId') visitorId: string) {
+  history(@Param('id', ParseUUIDPipe) id: string, @Query('visitorId') visitorId: string) {
     return this.service.resolvePublicHistory(id, visitorId);
   }
 
   @Get('events/:conversationId')
   async streamEvents(
-    @Param('conversationId') id: string,
+    @Param('conversationId', ParseUUIDPipe) id: string,
     @Query('visitorId') visitorId: string | undefined,
     @Res() res: Response,
   ) {
@@ -101,7 +101,7 @@ export class WidgetController {
 
   @Post('typing/:conversationId')
   async visitorTyping(
-    @Param('conversationId') id: string,
+    @Param('conversationId', ParseUUIDPipe) id: string,
     @Body() body: { who?: string; visitorId?: string },
   ) {
     await this.service.assertPublicConversation(id, body?.visitorId);

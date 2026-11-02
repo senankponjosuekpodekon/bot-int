@@ -18,6 +18,8 @@ export class AgentsService {
   }
 
   async findByTenant(tenantId: string, page = 1, limit = 20, user?: { id: string; role: UserRole }): Promise<PaginatedResult<Agent>> {
+    page = Math.max(1, page);
+    limit = Math.min(Math.max(1, limit), 100);
     const where: any = { tenantId };
     if (user?.role === UserRole.OPERATOR) {
       where.operatorId = user.id;
