@@ -1,11 +1,12 @@
 import { jest } from '@jest/globals';
-export const launch = jest.fn().mockResolvedValue({
-  newPage: jest.fn().mockResolvedValue({
-    goto: jest.fn(),
-    content: jest.fn().mockResolvedValue('<html></html>'),
-    close: jest.fn(),
+type AnyFn = (...args: any[]) => any;
+export const launch = jest.fn<AnyFn>().mockResolvedValue({
+  newPage: jest.fn<AnyFn>().mockResolvedValue({
+    goto: jest.fn<AnyFn>(),
+    content: jest.fn<AnyFn>().mockResolvedValue('<html></html>'),
+    close: jest.fn<AnyFn>(),
   }),
-  close: jest.fn(),
+  close: jest.fn<AnyFn>(),
 });
 
 export default { launch };

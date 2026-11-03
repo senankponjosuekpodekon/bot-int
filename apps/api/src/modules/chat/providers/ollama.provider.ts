@@ -41,7 +41,7 @@ export class OllamaProvider implements LLMProvider {
     try {
       const response = await axios.post(`${this.baseUrl}/api/chat`, {
         model: this.model,
-        messages,
+        messages: this.normalizeTurnOrder(messages),
         stream: false,
         options: { num_ctx: 4096 },
       }, { headers: this.authHeaders, timeout: this.timeoutMs });
@@ -63,7 +63,7 @@ export class OllamaProvider implements LLMProvider {
     try {
       const response = await axios.post(`${this.baseUrl}/api/chat`, {
         model: this.model,
-        messages,
+        messages: this.normalizeTurnOrder(messages),
         stream: true,
         options: { num_ctx: 4096 },
       }, { headers: this.authHeaders, responseType: 'stream', timeout: this.timeoutMs });
@@ -91,6 +91,19 @@ export class OllamaProvider implements LLMProvider {
       this.logger.error('Ollama stream failed', error?.message);
       throw new Error('AI streaming unavailable');
     }
+  }
+
+  // llama3.x chat templates emit an empty reply when the last turn is a
+  // system message. Appended post-processing system blocks must precede
+  // the final user turn for generation to produce content.
+  private normalizeTurnOrder(messages: LLMMessage[]): LLMMessage[] {
+    const lastUserIdx = messages.map((m) => m.role).lastIndexOf('user');
+    if (lastUserIdx === -1 || lastUserIdx === messages.length - 1) return messages;
+    const trailing = messages.slice(lastUserIdx + 1);
+    const hoisted = trailing.filter((m) => m.role === 'system');
+    const rest = trailing.filter((m) => m.role !== 'system');
+    if (!hoisted.length) return messages;
+    return [...messages.slice(0, lastUserIdx), ...hoisted, messages[lastUserIdx], ...rest];
   }
 
   async embed(text: string, _options?: { task?: string }): Promise<number[]> {
