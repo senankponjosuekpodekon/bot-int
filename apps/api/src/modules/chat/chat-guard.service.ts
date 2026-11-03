@@ -83,8 +83,9 @@ export class ChatGuardService {
     return null;
   }
 
-  assertCriticalFactsGrounded(reply: string, products: any[]): void {
+  assertCriticalFactsGrounded(reply: string, products: any[], knowledgeContext = ''): void {
     if (!reply) return;
+    this.assertPoliciesGrounded(reply, knowledgeContext);
     const priceRegex = /\b(\d+(?:[.,]\d{1,2})?)\s*(?:€|EUR|euros?)\b/gi;
     const matches = Array.from(reply.matchAll(priceRegex) || []);
     if (matches.length === 0) return;
@@ -102,6 +103,38 @@ export class ChatGuardService {
       if (!isGrounded) {
         throw new Error(`Price ${price} not found in grounded products`);
       }
+    }
+  }
+
+  // A reply that states a concrete policy detail (deadline, free, total)
+  // about returns/refunds/shipping/warranty/payment must be grounded:
+  // - every numeric detail ("30 jours") must literally appear in the
+  //   knowledge text — the model happily swaps the real deadline for a
+  //   plausible one;
+  // - non-numeric policy adjectives (gratuit, offert, inclus…) require the
+  //   policy domain to be present in the knowledge context at all.
+  private assertPoliciesGrounded(reply: string, knowledgeContext: string): void {
+    const policyTopic = /(retour|rembourse|échange|echange|livraison|expédition|expedition|garantie|annulation|paiement|facturation)/i;
+    if (!policyTopic.test(reply)) return;
+
+    const policyDetail = /(\d+\s*(?:jours?|days?|semaines?|weeks?|mois|months?|heures?|hours?)|gratuit(?:e)?s?|offert(?:e)?s?|illimité|illimitee|inclus(?:e)?|totale?|totalement|intégralement|integralement|systématiquement|systematiquement)/i;
+    if (!policyDetail.test(reply)) return;
+
+    const numericDetails = reply.matchAll(
+      /\d+(?:[.,]\d+)?\s*(?:jours?|days?|semaines?|weeks?|mois|months?|heures?|hours?)/gi,
+    );
+    for (const m of numericDetails) {
+      const num = (m[0].match(/\d+(?:[.,]\d+)?/) || [''])[0].replace(',', '.');
+      if (!num) continue;
+      const pattern = new RegExp(`\\b${num.replace('.', '[.,]')}\\b`);
+      if (!pattern.test(knowledgeContext)) {
+        throw new Error(`Policy detail "${m[0]}" not grounded in knowledge context`);
+      }
+    }
+
+    const policyAdjective = /gratuit(?:e)?s?|offert(?:e)?s?|illimité|illimitee|inclus(?:e)?|totale?|totalement|intégralement|integralement|systématiquement|systematiquement/i;
+    if (policyAdjective.test(reply) && !policyTopic.test(knowledgeContext)) {
+      throw new Error('Policy claim not grounded in knowledge context');
     }
   }
 

@@ -73,6 +73,7 @@ const MARKDOWN_STYLE = `Format de réponse : tu écris comme dans une vraie conv
 const KNOWLEDGE_GROUNDING = `Règle de fiabilité (knowledge grounding) — à respecter strictement :
 - N'affirme JAMAIS un chiffre, un pourcentage, une statistique client, une garantie (SLA, RGPD, remboursement, délai, certification) ou une caractéristique technique précise si elle ne provient pas explicitement du contexte fourni ci-dessous (base de connaissances, catalogue produits, profil du lead, résultats d'outils).
 - Si l'information demandée n'est pas dans le contexte fourni, dis clairement que tu ne disposes pas de cette information précise et propose de mettre en relation avec un conseiller humain. Ne devine jamais, n'invente jamais, n'extrapole jamais une donnée chiffrée ou contractuelle.
+- N'affirme JAMAIS une politique ou une procédure (retour, échange, remboursement, livraison, expédition, garantie, SAV, moyens de paiement acceptés, annulation, délai de traitement) si elle ne provient pas explicitement du contexte fourni. Une politique plausible n'est pas une politique réelle : si elle n'est pas en base de connaissances, propose de vérifier avec un conseiller au lieu de la décrire.
 - Quand tu t'appuies sur la base de connaissances, mentionne la source et la date de création du document indiquées dans le contexte. Si l'information est partielle, incertaine ou ancienne, exprime ton degré de confiance sans enjoliver.
 - Tu peux parler de bénéfices généraux (gain de temps, disponibilité 24/7, réduction de charge) sans donner de chiffre précis si aucun chiffre n'est fourni dans le contexte.
 - Cette règle s'applique aussi aux exemples sectoriels et aux bénéfices annoncés : ne cites jamais +35%, ROI doublé, 40% de paniers récupérés, ou tout autre chiffre similaire sans source fiable et datée dans le contexte.`;
@@ -114,6 +115,15 @@ const INDUSTRY_PROMPTS: Record<string, string> = {
   restaurant: `Tu conseilles un restaurant / traiteur / food service. Qualifie: type d'établissement, volume de couverts/commandes, canaux de réservation/livraison, personnel, besoin en prise de RDV ou commande. Ne donne pas de chiffre d'affaire sans données.`,
   hotel: `Tu conseilles un hôtel / hébergement. Qualifie: nombre de chambres, taux d'occupation, canaux de réservation, saisonnalité, besoin en conciergerie / SAV. Ne promets pas de taux de conversion.`,
 };
+
+// Industries dont l'agent sert des consommateurs (B2C) : le pipeline de
+// découverte B2B (secteur/problème avant le prix) ne s'applique pas —
+// le client attend une réponse directe adossée à la base de connaissances.
+const B2C_INDUSTRIES = new Set([
+  'ecommerce', 'e-commerce', 'retail', 'boutique', 'commerce', 'shop',
+  'restaurant', 'hotel', 'b2c', 'consumer', 'food', 'hospitality',
+  'fashion', 'mode', 'beauty', 'beaute', 'pharmacy', 'pharmacie',
+]);
 
 const INDUSTRY_PROMPT_FALLBACK = (industry?: string) =>
   industry
@@ -1185,7 +1195,7 @@ export class ChatService {
           conversationId: conversation.id,
         }),
       );
-    } else if (priceSignal && (!discoveryFacts.industry || !discoveryFacts.problem)) {
+    } else if (priceSignal && !B2C_INDUSTRIES.has((activeAgent.industry || '').toLowerCase().trim()) && (!discoveryFacts.industry || !discoveryFacts.problem)) {
       conversation.funnelStage = FunnelStage.AWARENESS;
       conversation.intentScore = Math.min(conversation.intentScore, 20);
       discoveryRedirect = true;
@@ -1272,7 +1282,7 @@ export class ChatService {
       }
 
       try {
-        this.chatGuards.assertCriticalFactsGrounded(finalReply, carouselProducts);
+        this.chatGuards.assertCriticalFactsGrounded(finalReply, carouselProducts, relevantContext.join('\n'));
       } catch (err: any) {
         this.logger.error(
           JSON.stringify({
