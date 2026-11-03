@@ -75,7 +75,14 @@ export class OperatorService {
       }
     } catch (err: any) {
       this.logger.error(`Operator reply failed to reach ${channel} recipient ${to}: ${err?.message}`);
-      // keep the saved message — the error is logged, not fatal to the operator
+      // Persist the failure on the operator message so it surfaces in
+      // /admin/delivery-errors and the conversation audit trail.
+      try {
+        saved.metadata = { ...(saved.metadata || {}), sendError: err?.message, sendFailedAt: new Date().toISOString() };
+        await this.msgRepo.save(saved);
+      } catch {
+        // best-effort
+      }
     }
     return saved;
   }
