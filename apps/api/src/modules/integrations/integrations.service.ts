@@ -21,6 +21,10 @@ export class IntegrationsService {
     private readonly config: ConfigService,
   ) {}
 
+  private get graphVersion(): string {
+    return this.config.get<string>('META_GRAPH_VERSION', 'v21.0');
+  }
+
   private encryptConfig(config: Record<string, any>): Record<string, any> {
     if (!config || typeof config !== 'object') return config;
     const encrypted: Record<string, any> = {};
@@ -116,7 +120,7 @@ export class IntegrationsService {
   async subscribeWabaToApp(wabaId: string, accessToken: string): Promise<boolean> {
     try {
       await axios.post(
-        `https://graph.facebook.com/v21.0/${wabaId}/subscribed_apps`,
+        `https://graph.facebook.com/${this.graphVersion}/${wabaId}/subscribed_apps`,
         {},
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
@@ -166,7 +170,7 @@ export class IntegrationsService {
       throw new BadRequestException('META_APP_ID / META_APP_SECRET are not configured on the API');
     }
 
-    const { data } = await axios.get('https://graph.facebook.com/v21.0/oauth/access_token', {
+    const { data } = await axios.get('https://graph.facebook.com/${this.graphVersion}/oauth/access_token', {
       params: { client_id: appId, client_secret: appSecret, code: params.code },
     });
     const accessToken = data?.access_token;
@@ -322,7 +326,7 @@ export class IntegrationsService {
     const { phoneNumberId, accessToken } = integration.config;
     try {
       await axios.post(
-        `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`,
+        `https://graph.facebook.com/${this.graphVersion}/${phoneNumberId}/messages`,
         {
           messaging_product: 'whatsapp',
           to,
@@ -353,7 +357,7 @@ export class IntegrationsService {
     const { accessToken } = integration.config;
     try {
       await axios.post(
-        'https://graph.facebook.com/v18.0/me/messages',
+        'https://graph.facebook.com/${this.graphVersion}/me/messages',
         {
           recipient: { id: recipientId },
           messaging_type: 'RESPONSE',
