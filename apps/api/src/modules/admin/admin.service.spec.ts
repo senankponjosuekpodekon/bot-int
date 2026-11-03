@@ -9,6 +9,7 @@ import { Subscription } from '../billing/subscription.entity';
 import { Conversation } from '../chat/conversation.entity';
 import { Agent } from '../agents/agent.entity';
 import { Lead } from '../leads/lead.entity';
+import { Message } from '../chat/message.entity';
 
 describe('AdminService', () => {
   let service: AdminService;
@@ -30,6 +31,7 @@ describe('AdminService', () => {
         { provide: getRepositoryToken(Conversation), useValue: mockConvRepo },
         { provide: getRepositoryToken(Agent), useValue: mockAgentRepo },
         { provide: getRepositoryToken(Lead), useValue: mockLeadRepo },
+        { provide: getRepositoryToken(Message), useValue: {} },
         { provide: DataSource, useValue: { transaction: jest.fn(async (cb: any) => cb({ getRepository: () => ({}), query: jest.fn() })) } },
       ],
     }).compile();
