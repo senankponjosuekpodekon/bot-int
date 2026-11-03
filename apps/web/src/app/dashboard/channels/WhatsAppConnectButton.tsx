@@ -48,7 +48,20 @@ export default function WhatsAppConnectButton({ onDone }: { onDone?: () => void 
     setLoading(true);
     sessionInfo.current = {};
     window.FB.login(
-      async (response: any) => {
+      (response: any) => {
+        // FB.login requires a synchronous callback — async work goes in a helper.
+        void handleLoginResponse(response);
+      },
+      {
+        config_id: configId,
+        response_type: 'code',
+        override_default_response_type: true,
+        extras: { setup: {}, featureType: '', sessionInfoVersion: '3' },
+      } as any,
+    );
+  };
+
+  const handleLoginResponse = async (response: any) => {
         const code = response?.authResponse?.code;
         if (!code) {
           setLoading(false);
@@ -67,14 +80,6 @@ export default function WhatsAppConnectButton({ onDone }: { onDone?: () => void 
         } finally {
           setLoading(false);
         }
-      },
-      {
-        config_id: configId,
-        response_type: 'code',
-        override_default_response_type: true,
-        extras: { setup: {}, featureType: '', sessionInfoVersion: '3' },
-      } as any,
-    );
   };
 
   return (
