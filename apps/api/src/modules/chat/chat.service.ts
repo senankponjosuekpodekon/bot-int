@@ -727,7 +727,27 @@ export class ChatService {
       conversationId,
       callbacks,
       priceSignal,
-    });
+      }).catch((firstErr: any) => {
+        // One automatic retry before degrading: remote LLM calls (Ollama)
+        // occasionally hit the timeout once and succeed right after.
+        this.logger.warn(`LLM first attempt failed (${firstErr?.message}) — retrying once`);
+        return this.generateReply({
+          conversation,
+          activeAgent,
+          tenantId,
+          agentId,
+          visitorId,
+          userMessage,
+          activeBusinessId,
+          personalityConfig,
+          currentLead,
+          promptContext,
+          intentResult,
+          conversationId,
+          callbacks,
+          priceSignal,
+        });
+      });
     } catch (err: any) {
       // LLM unavailable (all providers down / breaker open): degrade to a
       // human-handoff reply instead of surfacing a 500 to the widget.
