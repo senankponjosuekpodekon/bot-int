@@ -8,7 +8,7 @@ export default tseslint.config(
   },
   {
     files: ['src/**/*.ts'],
-    ignores: ['src/**/*.spec.ts'],
+    ignores: ['src/**/*.spec.ts', 'src/__mocks__'],
     languageOptions: {
       parser,
       parserOptions: {
@@ -34,7 +34,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/**/*.spec.ts'],
+    files: ['src/**/*.spec.ts', 'src/__mocks__/**/*.ts'],
     languageOptions: {
       parser,
       parserOptions: {

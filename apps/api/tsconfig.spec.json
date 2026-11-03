@@ -17,9 +17,19 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
-    "types": ["node", "jest"],
+    "types": [
+      "node",
+      "jest"
+    ],
     "isolatedModules": true
   },
-  "include": ["src/**/*.spec.ts", "jest.config.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*.spec.ts",
+    "src/__mocks__",
+    "jest.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
