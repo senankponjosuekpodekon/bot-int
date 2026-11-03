@@ -292,7 +292,7 @@ export class IntegrationsService {
         this.logger.log(`Email sent to ${to} via Resend`);
       } catch (err: any) {
         this.logger.error(`Resend email failed: ${err?.message}`);
-        throw new Error(`Email send failed: ${err?.message}`);
+        throw new Error(`Email send failed: ${err?.response?.data?.message || err?.message}`);
       }
     } else if (provider === 'sendgrid') {
       try {
@@ -309,7 +309,7 @@ export class IntegrationsService {
         this.logger.log(`Email sent to ${to} via SendGrid`);
       } catch (err: any) {
         this.logger.error(`SendGrid email failed: ${err?.message}`);
-        throw new Error(`Email send failed: ${err?.message}`);
+        throw new Error(`Email send failed: ${err?.response?.data?.message || err?.message}`);
       }
     } else {
       this.logger.warn(`Unknown email provider: ${provider}`);
@@ -343,7 +343,7 @@ export class IntegrationsService {
       this.logger.log(`WhatsApp message sent to ${to}`);
     } catch (err: any) {
       this.logger.error(`WhatsApp send failed: ${err?.response?.data?.error?.message || err?.message}`);
-      throw new Error(`WhatsApp send failed: ${err?.message}`);
+      throw new Error(`WhatsApp send failed: ${err?.response?.data?.error?.message || err?.message}`);
     }
   }
 
@@ -371,7 +371,7 @@ export class IntegrationsService {
       this.logger.log(`Instagram message sent to ${recipientId}`);
     } catch (err: any) {
       this.logger.error(`Instagram send failed: ${err?.response?.data?.error?.message || err?.message}`);
-      throw new Error(`Instagram send failed: ${err?.message}`);
+      throw new Error(`Instagram send failed: ${err?.response?.data?.error?.message || err?.message}`);
     }
   }
 
@@ -395,7 +395,7 @@ export class IntegrationsService {
       this.logger.log(`Telegram message sent to ${chatId}`);
     } catch (err: any) {
       this.logger.error(`Telegram send failed: ${err?.response?.data?.description || err?.message}`);
-      throw new Error(`Telegram send failed: ${err?.message}`);
+      throw new Error(`Telegram send failed: ${err?.response?.data?.description || err?.message}`);
     }
   }
 
@@ -423,7 +423,7 @@ export class IntegrationsService {
       this.logger.log(`SMS sent to ${to}`);
     } catch (err: any) {
       this.logger.error(`Twilio SMS failed: ${err?.response?.data?.message || err?.message}`);
-      throw new Error(`SMS send failed: ${err?.message}`);
+      throw new Error(`SMS send failed: ${err?.response?.data?.message || err?.message}`);
     }
   }
 
