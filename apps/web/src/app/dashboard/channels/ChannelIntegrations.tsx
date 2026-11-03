@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Save, Trash2, Plus, Loader2, Check, X, Copy, Link2 } from 'lucide-react';
 import { integrationsApi, tenantApi } from '@/lib/api';
 import { toast } from 'sonner';
+import WhatsAppConnectButton from './WhatsAppConnectButton';
 
 interface Integration {
   id?: string;
@@ -230,6 +231,9 @@ export default function ChannelIntegrations() {
                     </button>
                   </div>
                 </div>
+              )}
+              {type === 'whatsapp' && (
+                <WhatsAppConnectButton onDone={() => queryClient.invalidateQueries({ queryKey: ['integrations'] })} />
               )}
               {type === 'telegram' && existing?.enabled && (
                 <button

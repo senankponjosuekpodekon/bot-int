@@ -16,6 +16,12 @@ class ToggleDto {
   @IsBoolean() enabled: boolean;
 }
 
+class EmbeddedSignupDto {
+  @IsString() @IsNotEmpty() code: string;
+  @IsString() @IsOptional() phoneNumberId?: string;
+  @IsString() @IsOptional() wabaId?: string;
+}
+
 class StripePaymentDto {
   @IsString() @IsNotEmpty() productId: string;
   @IsString() @IsNotEmpty() productName: string;
@@ -89,6 +95,14 @@ export class IntegrationsController {
   @ApiResponse({ status: 200, description: 'Email sent' })
   sendEmail(@Request() req, @Body() dto: EmailDto) {
     return this.service.sendEmail(req.user.tenantId, dto.to, dto.subject, dto.body);
+  }
+
+  @Post('whatsapp/embedded-signup')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Complete WhatsApp Embedded Signup (exchange OAuth code for a permanent token)' })
+  @ApiResponse({ status: 201, description: 'WhatsApp integration configured' })
+  embeddedSignup(@Request() req, @Body() dto: EmbeddedSignupDto) {
+    return this.service.completeWhatsAppEmbeddedSignup(req.user.tenantId, dto);
   }
 
   @Post('whatsapp/send')

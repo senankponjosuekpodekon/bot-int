@@ -52,6 +52,12 @@ services:
       - key: SUPER_ADMIN_EMAIL
         sync: false
         optional: true
+      - key: META_APP_ID
+        sync: false
+        optional: true
+      - key: META_APP_SECRET
+        sync: false
+        optional: true
 
 databases:
   - name: stiamond-pg

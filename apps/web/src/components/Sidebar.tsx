@@ -37,11 +37,22 @@ const adminNav = [
   { href: '/dashboard/admin', label: 'Super Admin', icon: Crown },
 ];
 
+function jwtRole(token: string | null): string | null {
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload?.role ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout, refreshToken } = useAuthStore();
+  const { logout, refreshToken, accessToken } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const isSuperAdmin = jwtRole(accessToken) === 'super_admin';
 
   const handleLogout = async () => {
     try {
@@ -109,7 +120,7 @@ export default function Sidebar() {
             {label}
           </Link>
         ))}
-        {adminNav.map(({ href, label, icon: Icon }) => (
+        {isSuperAdmin && adminNav.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}

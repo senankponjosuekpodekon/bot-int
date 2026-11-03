@@ -1,6 +1,8 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomBytes } from 'crypto';
 import { Integration } from './integration.entity';
 import axios from 'axios';
 import { CryptoService } from '../../common/crypto.service';
@@ -16,6 +18,7 @@ export class IntegrationsService {
     @InjectRepository(Integration)
     private readonly repo: Repository<Integration>,
     private readonly crypto: CryptoService,
+    private readonly config: ConfigService,
   ) {}
 
   private encryptConfig(config: Record<string, any>): Record<string, any> {
@@ -117,6 +120,40 @@ export class IntegrationsService {
     }
     const integration = this.repo.create({ tenantId, type, config: this.encryptConfig(cleaned), enabled: true });
     return this.repo.save(integration);
+  }
+
+  // Embedded Signup: exchange the OAuth `code` returned by Meta's hosted
+  // flow for a permanent-scoped access token, then store the WhatsApp
+  // integration for this tenant. The Meta app's own secret lives in env
+  // (META_APP_SECRET) — the webhook signature check already falls back to it.
+  async completeWhatsAppEmbeddedSignup(
+    tenantId: string,
+    params: { code: string; phoneNumberId?: string; wabaId?: string },
+  ): Promise<Integration> {
+    const appId = this.config.get<string>('META_APP_ID');
+    const appSecret = this.config.get<string>('META_APP_SECRET');
+    if (!appId || !appSecret) {
+      throw new BadRequestException('META_APP_ID / META_APP_SECRET are not configured on the API');
+    }
+
+    const { data } = await axios.get('https://graph.facebook.com/v21.0/oauth/access_token', {
+      params: { client_id: appId, client_secret: appSecret, code: params.code },
+    });
+    const accessToken = data?.access_token;
+    if (!accessToken) {
+      throw new BadRequestException('Meta did not return an access token');
+    }
+
+    const config: Record<string, any> = {
+      accessToken,
+      verifyToken: `stiamond-wa-${randomBytes(12).toString('hex')}`,
+    };
+    if (params.phoneNumberId) config.phoneNumberId = params.phoneNumberId;
+    if (params.wabaId) config.wabaId = params.wabaId;
+
+    const integration = await this.upsert(tenantId, 'whatsapp', config);
+    this.logger.log(`WhatsApp embedded signup completed for tenant ${tenantId} (phoneNumberId=${params.phoneNumberId ?? 'unset'})`);
+    return this.withMaskedConfig(integration) as Integration;
   }
 
   async toggle(tenantId: string, type: string, enabled: boolean): Promise<Integration> {

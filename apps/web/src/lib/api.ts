@@ -312,6 +312,8 @@ export const integrationsApi = {
   upsert: (type: string, config: Record<string, any>) => api.post('/integrations', { type, config }).then((r) => r.data),
   toggle: (type: string, enabled: boolean) => api.patch(`/integrations/${type}`, { enabled }).then((r) => r.data),
   remove: (type: string) => api.delete(`/integrations/${type}`).then((r) => r.data),
+  whatsappEmbeddedSignup: (data: { code: string; phoneNumberId?: string; wabaId?: string }) =>
+    api.post('/integrations/whatsapp/embedded-signup', data).then((r) => r.data),
   createPaymentLink: (productId: string, productName: string, amount: number, currency?: string) =>
     api.post('/integrations/stripe/payment-link', { productId, productName, amount, currency }).then((r) => r.data),
   calendlyEvents: () => api.get('/integrations/calendly/events').then((r) => r.data),
