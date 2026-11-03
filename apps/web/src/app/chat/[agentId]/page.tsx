@@ -166,7 +166,7 @@ export default function PublicChatPage() {
         setConversationId(data.conversationId);
         if (typeof window !== 'undefined') localStorage.setItem(`stiamond_conversation_${agentId}`, data.conversationId);
       }
-      setMessages((m) => [...m, { role: 'agent', text: data.reply, products: data.products }]);
+      if (data.reply) setMessages((m) => [...m, { role: 'agent', text: data.reply, products: data.products }]);
     } catch {
       setMessages((m) => [...m, { role: 'agent', text: 'Désolé, une erreur est survenue. Réessayez dans un instant.' }]);
     }

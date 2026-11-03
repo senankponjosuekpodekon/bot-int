@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { adminApi } from '@/lib/api';
 
-type Tab = 'overview' | 'tenants' | 'users' | 'conversations';
+type Tab = 'overview' | 'tenants' | 'users' | 'conversations' | 'delivery';
 
 export default function AdminPage() {
   const queryClient = useQueryClient();
@@ -38,6 +38,13 @@ export default function AdminPage() {
     enabled: tab === 'conversations',
   });
   const conversations: any[] = conversationsData?.data || [];
+  const { data: deliveryErrorsData } = useQuery({
+    queryKey: ['admin', 'delivery-errors'],
+    queryFn: () => adminApi.deliveryErrors(50),
+    enabled: tab === 'delivery',
+    refetchInterval: 30000,
+  });
+  const deliveryErrors: any[] = deliveryErrorsData || [];
 
   const toggleTenantMutation = useMutation({
     mutationFn: (id: string) => adminApi.toggleTenant(id),
@@ -82,6 +89,7 @@ export default function AdminPage() {
     { id: 'tenants', label: 'Tenants', icon: Building2 },
     { id: 'users', label: 'Utilisateurs', icon: Users },
     { id: 'conversations', label: 'Conversations', icon: MessageSquare },
+    { id: 'delivery', label: 'Livraisons', icon: AlertCircle },
   ];
 
   return (
@@ -316,6 +324,48 @@ export default function AdminPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Conversations */}
+      {tab === 'delivery' && (
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden overflow-x-auto">
+          {deliveryErrors.length === 0 ? (
+            <div className="p-8 text-center text-gray-500 text-sm">
+              Aucune erreur de livraison récente — tous les messages sortants sont passés.
+            </div>
+          ) : (
+          <table className="w-full min-w-[720px] text-sm">
+            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+              <tr>
+                <th className="text-left px-4 py-3">Date</th>
+                <th className="text-left px-4 py-3">Canal</th>
+                <th className="text-left px-4 py-3">Destinataire</th>
+                <th className="text-left px-4 py-3">Conversation</th>
+                <th className="text-left px-4 py-3">Tenant</th>
+                <th className="text-left px-4 py-3">Erreur</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {deliveryErrors.map((e) => (
+                <tr key={e.messageId} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
+                    {new Date(e.sendFailedAt || e.createdAt).toLocaleString('fr-FR')}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-xs font-medium text-gray-700 capitalize">{e.channel || '—'}</span>
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{e.visitorId || '—'}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{e.conversationId?.substring(0, 8)}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{e.tenantId?.substring(0, 8)}</td>
+                  <td className="px-4 py-3 text-xs text-red-600 max-w-[280px] truncate" title={e.sendError}>
+                    {e.sendError}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          )}
         </div>
       )}
 

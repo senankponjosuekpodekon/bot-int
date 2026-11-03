@@ -407,7 +407,9 @@ export class WebhooksController {
 
     // Send reply back through the channel — surface failures in the webhook
     // response so "agent replied but the number didn't receive" is diagnosable.
+    // An empty reply (e.g. suppressed duplicate handoff notice) is not sent.
     try {
+      if (result.reply) {
       if (normalized.channel === 'whatsapp') {
         await this.integrationsService.sendWhatsApp(tenantId, normalized.metadata?.from, result.reply);
       } else if (normalized.channel === 'instagram') {
@@ -420,6 +422,7 @@ export class WebhooksController {
         await this.integrationsService.sendEmail(tenantId, normalized.metadata?.from, replySubject, result.reply);
       } else if (normalized.channel === 'sms') {
         await this.integrationsService.sendSMS(tenantId, normalized.metadata?.from, result.reply);
+      }
       }
       this.lastSendError = undefined;
     } catch (err: any) {

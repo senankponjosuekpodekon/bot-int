@@ -484,4 +484,6 @@ export const adminApi = {
   resetPassword: (id: string, password: string) => api.post(`/admin/users/${id}/reset-password`, { password }).then((r) => r.data),
   conversations: (page = 1, limit = 20, tenantId?: string) =>
     api.get('/admin/conversations', { params: { page, limit, tenantId } }).then((r) => r.data),
+  deliveryErrors: (limit = 50) =>
+    api.get('/admin/delivery-errors', { params: { limit } }).then((r) => r.data),
 };

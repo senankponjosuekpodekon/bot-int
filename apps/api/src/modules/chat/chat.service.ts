@@ -495,15 +495,27 @@ export class ChatService {
         conversation.language === 'en'
           ? "You are connected with a human agent. Please wait for the operator's response."
           : "Vous êtes en relation avec un conseiller humain. Veuillez attendre sa réponse.";
-      await this.msgRepo.save(
-        this.msgRepo.create({
-          conversationId: conversation.id,
-          role: MessageRole.ASSISTANT,
-          content: waitingReply,
-        }),
-      );
+      // Send the handoff notice once: while the conversation stays handed off,
+      // don't spam a duplicate notice on every inbound client message.
+      const lastAssistant = await this.msgRepo.findOne({
+        where: { conversationId: conversation.id, role: MessageRole.ASSISTANT },
+        order: { createdAt: 'DESC' },
+      });
+      const alreadyNotified =
+        lastAssistant?.metadata?.handoffNotice === true ||
+        lastAssistant?.content === waitingReply;
+      if (!alreadyNotified) {
+        await this.msgRepo.save(
+          this.msgRepo.create({
+            conversationId: conversation.id,
+            role: MessageRole.ASSISTANT,
+            content: waitingReply,
+            metadata: { handoffNotice: true },
+          }),
+        );
+      }
       return {
-        reply: waitingReply,
+        reply: alreadyNotified ? '' : waitingReply,
         conversationId: conversation.id,
         leadId: conversation.leadId,
         flow: null,
