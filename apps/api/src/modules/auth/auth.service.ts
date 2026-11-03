@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   ConflictException,
   ForbiddenException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -20,7 +21,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { SessionService } from './session.service';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   constructor(
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
@@ -32,6 +33,23 @@ export class AuthService {
     private readonly sessionService: SessionService,
     private readonly dataSource: DataSource,
   ) {}
+
+  // Bootstrap: promote the platform owner to super_admin. Set via
+  // SUPER_ADMIN_EMAIL — matches an existing user or applies at register time.
+  async onModuleInit() {
+    const email = this.config.get<string>('SUPER_ADMIN_EMAIL');
+    if (!email) return;
+    const user = await this.userRepo.findOne({ where: { email } });
+    if (user && user.role !== UserRole.SUPER_ADMIN) {
+      user.role = UserRole.SUPER_ADMIN;
+      await this.userRepo.save(user);
+    }
+  }
+
+  private isSuperAdminEmail(email: string): boolean {
+    const configured = this.config.get<string>('SUPER_ADMIN_EMAIL');
+    return !!configured && configured.toLowerCase() === email.toLowerCase();
+  }
 
   async register(dto: RegisterDto) {
     const existingTenant = await this.tenantsService.findByEmail(dto.email);
@@ -57,7 +75,7 @@ export class AuthService {
           email: dto.email,
           password: hashedPassword,
           tenantId: tenant.id,
-          role: UserRole.ADMIN,
+          role: this.isSuperAdminEmail(dto.email) ? UserRole.SUPER_ADMIN : UserRole.ADMIN,
         }),
       );
       return { tenant, user };

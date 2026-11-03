@@ -49,6 +49,9 @@ services:
       - key: SENTRY_DSN
         sync: false
         optional: true
+      - key: SUPER_ADMIN_EMAIL
+        sync: false
+        optional: true
 
 databases:
   - name: stiamond-pg
