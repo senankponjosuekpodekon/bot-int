@@ -385,6 +385,12 @@ export class ChatService {
       if (existing) {
         conversation = existing;
         isReturningVisitor = true;
+        // Rows created before channel stamping default to 'web' — stamp the real
+        // messaging channel on reuse so operator replies can be delivered.
+        if (channel && existing.channel !== channel) {
+          existing.channel = channel;
+          await this.convRepo.save(existing);
+        }
       }
     }
 

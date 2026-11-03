@@ -15,6 +15,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Agent } from '../agents/agent.entity';
 import { Integration } from './integration.entity';
+import { ConversationChannel } from '../chat/conversation.entity';
 
 @Controller('webhooks')
 export class WebhooksController {
@@ -395,6 +396,10 @@ export class WebhooksController {
       undefined,
       normalized.visitorId,
       true,
+      undefined,
+      undefined,
+      undefined,
+      normalized.channel as ConversationChannel,
     );
 
     // Send reply back through the channel — surface failures in the webhook
