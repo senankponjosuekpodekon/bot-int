@@ -51,9 +51,15 @@ export class OperatorService {
 
     // Deliver the operator reply through the conversation's outbound channel —
     // without this the dashboard message stays DB-side and the WhatsApp client
-    // never sees it.
-    const channel = conversation.channel;
+    // never sees it. Legacy rows have channel='web': fall back to inferring the
+    // channel from the visitorId prefix (whatsapp_/instagram_/telegram_/email_/sms_).
     const visitorId = conversation.visitorId || '';
+    const inferred = visitorId.split('_')[0];
+    const channel = (conversation.channel && conversation.channel !== ConversationChannel.WEB)
+      ? conversation.channel
+      : (Object.values(ConversationChannel) as string[]).includes(inferred)
+      ? (inferred as ConversationChannel)
+      : conversation.channel;
     const to = visitorId.includes('_') ? visitorId.slice(visitorId.indexOf('_') + 1) : visitorId;
     try {
       if (channel === ConversationChannel.WHATSAPP) {
