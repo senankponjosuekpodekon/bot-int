@@ -60,7 +60,7 @@ jobs:
       - name: Type check API
         run: cd apps/api && npx tsc --noEmit -p tsconfig.json
 
-      - run: cd apps/api && npx jest --passWithNoTests --forceExit
+      - run: cd apps/api && NODE_OPTIONS=--experimental-vm-modules npx jest --passWithNoTests --forceExit
 
   build:
     runs-on: ubuntu-latest

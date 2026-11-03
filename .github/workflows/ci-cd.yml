@@ -59,7 +59,7 @@ jobs:
 
       - name: Run API tests
         run: |
-          cd apps/api && npx jest --passWithNoTests --forceExit
+          cd apps/api && NODE_OPTIONS=--experimental-vm-modules npx jest --passWithNoTests --forceExit
 
       - name: Build API
         run: cd apps/api && npx nest build
