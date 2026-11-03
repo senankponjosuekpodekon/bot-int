@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Inject, forwardRef, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, In } from 'typeorm';
 import { Conversation, ConversationStatus, ConversationState, FunnelStage, AcquisitionChannel, ConversationChannel } from './conversation.entity';
 import { Message, MessageRole } from './message.entity';
 import { AgentFeedback } from './agent-feedback.entity';
@@ -370,7 +370,25 @@ export class ChatService {
       });
       if (!conversation) throw new NotFoundException('Conversation not found');
       if (conversation.agentId !== agentId) throw new NotFoundException('Conversation not found');
-    } else {
+    } else if (visitorId) {
+      // A channel visitor messaging again rejoins its open conversation — a
+      // WhatsApp thread is one ongoing conversation, not a new one per message.
+      const existing = await this.convRepo.findOne({
+        where: {
+          agentId,
+          tenantId,
+          visitorId,
+          status: In([ConversationStatus.OPEN, ConversationStatus.HANDED_OFF]),
+        },
+        order: { createdAt: 'DESC' },
+      });
+      if (existing) {
+        conversation = existing;
+        isReturningVisitor = true;
+      }
+    }
+
+    if (!conversation) {
       // Check for returning visitor (cross-conversation memory)
       if (visitorId) {
         const previousConvs = await this.convRepo.find({

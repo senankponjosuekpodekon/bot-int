@@ -101,7 +101,7 @@ export class WebhooksController {
           }
         }
       }
-      return { status: 'ok', processed };
+      return this.lastSendError ? { status: 'ok', processed, sendError: this.lastSendError } : { status: 'ok', processed };
     } catch (err: any) {
       this.logger.error(`WhatsApp centralized webhook error: ${err?.message}`);
       return { status: 'error' };
@@ -154,7 +154,7 @@ export class WebhooksController {
       for (const msg of normalized) {
         await this.processIncomingMessage(tenantId, msg, agentId);
       }
-      return { status: 'ok', processed: normalized.length };
+      return this.lastSendError ? { status: 'ok', processed: normalized.length, sendError: this.lastSendError } : { status: 'ok', processed: normalized.length };
     } catch (err: any) {
       this.logger.error(`WhatsApp webhook error: ${err?.message}`);
       return { status: 'error' };
@@ -392,7 +392,8 @@ export class WebhooksController {
       true,
     );
 
-    // Send reply back through the channel
+    // Send reply back through the channel — surface failures in the webhook
+    // response so "agent replied but the number didn't receive" is diagnosable.
     try {
       if (normalized.channel === 'whatsapp') {
         await this.integrationsService.sendWhatsApp(tenantId, normalized.metadata?.from, result.reply);
@@ -407,8 +408,12 @@ export class WebhooksController {
       } else if (normalized.channel === 'sms') {
         await this.integrationsService.sendSMS(tenantId, normalized.metadata?.from, result.reply);
       }
+      this.lastSendError = undefined;
     } catch (err: any) {
+      this.lastSendError = `${normalized.channel}: ${err?.message}`;
       this.logger.error(`Failed to send reply via ${normalized.channel}: ${err?.message}`);
     }
   }
+
+  private lastSendError: string | undefined;
 }
