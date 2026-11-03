@@ -9,10 +9,11 @@ import { WhatsAppAdapter } from './whatsapp.adapter';
 import { TelegramAdapter } from './telegram.adapter';
 import { InstagramAdapter } from './instagram.adapter';
 import { Agent } from '../agents/agent.entity';
+import { Message } from '../chat/message.entity';
 import { ChatModule } from '../chat/chat.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Integration, Agent]), forwardRef(() => ChatModule)],
+  imports: [TypeOrmModule.forFeature([Integration, Agent, Message]), forwardRef(() => ChatModule)],
   providers: [IntegrationsService, MediaParserService, WhatsAppAdapter, TelegramAdapter, InstagramAdapter],
   controllers: [IntegrationsController, WebhooksController],
   exports: [IntegrationsService],

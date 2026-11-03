@@ -16,6 +16,7 @@ import { Repository } from 'typeorm';
 import { Agent } from '../agents/agent.entity';
 import { Integration } from './integration.entity';
 import { ConversationChannel } from '../chat/conversation.entity';
+import { Message, MessageRole } from '../chat/message.entity';
 
 @Controller('webhooks')
 export class WebhooksController {
@@ -30,6 +31,8 @@ export class WebhooksController {
     private readonly config: ConfigService,
     @InjectRepository(Agent)
     private readonly agentRepo: Repository<Agent>,
+    @InjectRepository(Message)
+    private readonly msgRepo: Repository<Message>,
   ) {}
 
   private async requireIntegration(tenantId: string, type: string): Promise<Integration> {
@@ -422,6 +425,20 @@ export class WebhooksController {
     } catch (err: any) {
       this.lastSendError = `${normalized.channel}: ${err?.message}`;
       this.logger.error(`Failed to send reply via ${normalized.channel}: ${err?.message}`);
+      // Persist the delivery failure on the assistant message so it shows in
+      // the conversation audit trail and admin views.
+      try {
+        const last = await this.msgRepo.findOne({
+          where: { conversationId: result.conversationId, role: MessageRole.ASSISTANT },
+          order: { createdAt: 'DESC' },
+        });
+        if (last) {
+          last.metadata = { ...(last.metadata || {}), sendError: err?.message, sendFailedAt: new Date().toISOString() };
+          await this.msgRepo.save(last);
+        }
+      } catch {
+        // best-effort audit trail — never break the webhook ack
+      }
     }
   }
 

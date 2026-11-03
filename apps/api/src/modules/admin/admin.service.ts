@@ -5,6 +5,7 @@ import { User, UserRole } from '../auth/user.entity';
 import { Tenant } from '../tenants/tenant.entity';
 import { Subscription, PlanType, SubscriptionStatus } from '../billing/subscription.entity';
 import { Conversation } from '../chat/conversation.entity';
+import { Message } from '../chat/message.entity';
 import { Agent } from '../agents/agent.entity';
 import { Lead } from '../leads/lead.entity';
 import * as bcrypt from 'bcryptjs';
@@ -24,6 +25,8 @@ export class AdminService {
     private readonly agentRepo: Repository<Agent>,
     @InjectRepository(Lead)
     private readonly leadRepo: Repository<Lead>,
+    @InjectRepository(Message)
+    private readonly msgRepo: Repository<Message>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -325,6 +328,27 @@ export class AdminService {
 
     const [data, total] = await qb.getManyAndCount();
     return { data, total, page, limit };
+  }
+
+  // ─── Channel delivery errors (super-admin observability) ───
+  async listDeliveryErrors(limit = 50) {
+    const rows = await this.msgRepo
+      .createQueryBuilder('m')
+      .leftJoinAndSelect('m.conversation', 'conv')
+      .where(`m.metadata->>'sendError' IS NOT NULL`)
+      .orderBy('m.createdAt', 'DESC')
+      .take(limit)
+      .getMany();
+    return rows.map((m) => ({
+      messageId: m.id,
+      conversationId: m.conversationId,
+      tenantId: (m as any).conversation?.tenantId,
+      channel: (m as any).conversation?.channel,
+      visitorId: (m as any).conversation?.visitorId,
+      sendError: m.metadata?.sendError,
+      sendFailedAt: m.metadata?.sendFailedAt,
+      createdAt: m.createdAt,
+    }));
   }
 
   private getPlanPrice(plan: PlanType): number {

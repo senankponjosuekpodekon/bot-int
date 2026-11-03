@@ -10,10 +10,11 @@ import { Subscription } from '../billing/subscription.entity';
 import { Conversation } from '../chat/conversation.entity';
 import { Agent } from '../agents/agent.entity';
 import { Lead } from '../leads/lead.entity';
+import { Message } from '../chat/message.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Tenant, Subscription, Conversation, Agent, Lead]),
+    TypeOrmModule.forFeature([User, Tenant, Subscription, Conversation, Agent, Lead, Message]),
     JwtModule.registerAsync({
       useFactory: () => ({
         secret:

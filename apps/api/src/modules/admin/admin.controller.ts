@@ -171,4 +171,12 @@ export class AdminController {
       tenantId,
     );
   }
+
+  // ─── Channel delivery errors ───
+  @Get('delivery-errors')
+  @ApiOperation({ summary: 'List recent channel delivery failures across tenants' })
+  @ApiResponse({ status: 200, description: 'Latest sendError records' })
+  listDeliveryErrors(@Query('limit') limit?: string) {
+    return this.adminService.listDeliveryErrors(limit ? parseInt(limit) : 50);
+  }
 }
