@@ -36,7 +36,10 @@ services:
           name: stiamond-pg
           property: connectionString
       - key: REDIS_URL
-        sync: false
+        fromService:
+          type: keyvalue
+          name: stiamond-redis
+          property: connectionString
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGINS
@@ -52,3 +55,9 @@ databases:
     databaseName: stiamond
     user: stiamond
     plan: free
+
+  - name: stiamond-redis
+    type: keyvalue
+    plan: free
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
