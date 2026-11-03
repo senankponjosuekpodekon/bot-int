@@ -207,7 +207,7 @@ export class WebhooksController {
       for (const msg of normalized) {
         await this.processIncomingMessage(tenantId, msg, agentId);
       }
-      return { status: 'ok', processed: normalized.length };
+      return this.lastSendError ? { status: 'ok', processed: normalized.length, sendError: this.lastSendError } : { status: 'ok', processed: normalized.length };
     } catch (err: any) {
       this.logger.error(`Instagram webhook error: ${err?.message}`);
       return { status: 'error' };
@@ -230,7 +230,10 @@ export class WebhooksController {
     const webhookSecret = randomBytes(24).toString('hex');
     await this.integrationsService.upsert(tenantId, 'telegram', { webhookSecret });
 
-    const baseUrl = `${httpReq.protocol}://${httpReq.get('host')}/api/webhooks/telegram/${tenantId}`;
+    // Behind a TLS-terminating proxy (Render), req.protocol is 'http' while the
+    // public URL is 'https' — Telegram rejects non-HTTPS webhook URLs.
+    const proto = httpReq.get('x-forwarded-proto')?.split(',')[0]?.trim() || httpReq.protocol;
+    const baseUrl = `${proto}://${httpReq.get('host')}/api/webhooks/telegram/${tenantId}`;
     try {
       await axios.post(`https://api.telegram.org/bot${botToken}/setWebhook`, {
         url: baseUrl,
@@ -264,7 +267,7 @@ export class WebhooksController {
       for (const msg of normalized) {
         await this.processIncomingMessage(tenantId, msg, agentId);
       }
-      return { status: 'ok', processed: normalized.length };
+      return this.lastSendError ? { status: 'ok', processed: normalized.length, sendError: this.lastSendError } : { status: 'ok', processed: normalized.length };
     } catch (err: any) {
       this.logger.error(`Telegram webhook error: ${err?.message}`);
       return { status: 'error' };
@@ -307,7 +310,7 @@ export class WebhooksController {
           agentId,
         );
       }
-      return { status: 'ok' };
+      return this.lastSendError ? { status: 'ok', sendError: this.lastSendError } : { status: 'ok' };
     } catch (err: any) {
       this.logger.error(`Email webhook error: ${err?.message}`);
       return { status: 'error' };
@@ -349,7 +352,7 @@ export class WebhooksController {
           agentId,
         );
       }
-      return { status: 'ok' };
+      return this.lastSendError ? { status: 'ok', sendError: this.lastSendError } : { status: 'ok' };
     } catch (err: any) {
       this.logger.error(`SMS webhook error: ${err?.message}`);
       return { status: 'error' };
@@ -358,7 +361,9 @@ export class WebhooksController {
 
   // Twilio request validation: base64(HMAC-SHA1(authToken, url + sortedParamKeyValueConcat))
   private verifyTwilioSignature(req: ExpressRequest, authToken: string, signature: string, params: Record<string, any>): boolean {
-    const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+    // Twilio signs the external https URL — honor x-forwarded-proto behind a proxy.
+    const proto = req.get('x-forwarded-proto')?.split(',')[0]?.trim() || req.protocol;
+    const url = `${proto}://${req.get('host')}${req.originalUrl}`;
     const data = Object.keys(params || {})
       .sort()
       .reduce((acc, key) => acc + key + params[key], url);
@@ -400,7 +405,7 @@ export class WebhooksController {
       } else if (normalized.channel === 'instagram') {
         await this.integrationsService.sendInstagram(tenantId, normalized.metadata?.from, result.reply);
       } else if (normalized.channel === 'telegram') {
-        await this.integrationsService.sendTelegram(tenantId, normalized.metadata?.from, result.reply);
+        await this.integrationsService.sendTelegram(tenantId, normalized.metadata?.chatId ?? normalized.metadata?.from, result.reply);
       } else if (normalized.channel === 'email') {
         const subject = normalized.metadata?.subject || 'Re:';
         const replySubject = subject.toLowerCase().startsWith('re:') ? subject : `Re: ${subject}`;

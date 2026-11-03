@@ -13,6 +13,9 @@ export class TelegramAdapter implements ChannelAdapter {
     if (!message) return null;
 
     const from = message.from?.id?.toString() || 'unknown';
+    // Replies must go to the chat, not the sender — in groups chat.id differs
+    // from from.id (otherwise the bot DMs the user instead of answering the group).
+    const chatId = message.chat?.id?.toString() || from;
     let text = message.text || '';
 
     if (!text) {
@@ -37,7 +40,7 @@ export class TelegramAdapter implements ChannelAdapter {
       visitorId: `${this.channel}_${from}`,
       text,
       channel: this.channel,
-      metadata: { telegramMessageId: message.message_id, from },
+      metadata: { telegramMessageId: message.message_id, from, chatId },
     };
   }
 
