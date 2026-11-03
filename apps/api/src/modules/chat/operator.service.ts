@@ -1,11 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Conversation, ConversationState, ConversationStatus } from './conversation.entity';
+import { Conversation, ConversationChannel, ConversationState, ConversationStatus } from './conversation.entity';
 import { Message, MessageRole } from './message.entity';
 import { ChatEventsService } from './chat-events.service';
 import { LLMService } from './llm.service';
 import { OllamaMessage } from './ollama.service';
+import { IntegrationsService } from '../integrations/integrations.service';
 
 // Human-in-the-loop operations: operator replies, take/release handoff, and
 // LLM-suggested replies for the operator console.
@@ -18,7 +19,10 @@ export class OperatorService {
     private readonly msgRepo: Repository<Message>,
     private readonly chatEvents: ChatEventsService,
     private readonly llmService: LLMService,
+    private readonly integrationsService: IntegrationsService,
   ) {}
+
+  private readonly logger = new Logger(OperatorService.name);
 
   async operatorReply(conversationId: string, tenantId: string, content: string): Promise<Message> {
     const conversation = await this.convRepo.findOne({
@@ -44,6 +48,29 @@ export class OperatorService {
       metadata: { isOperator: true },
       createdAt: saved.createdAt,
     });
+
+    // Deliver the operator reply through the conversation's outbound channel —
+    // without this the dashboard message stays DB-side and the WhatsApp client
+    // never sees it.
+    const channel = conversation.channel;
+    const visitorId = conversation.visitorId || '';
+    const to = visitorId.includes('_') ? visitorId.slice(visitorId.indexOf('_') + 1) : visitorId;
+    try {
+      if (channel === ConversationChannel.WHATSAPP) {
+        await this.integrationsService.sendWhatsApp(tenantId, to, content);
+      } else if (channel === ConversationChannel.INSTAGRAM) {
+        await this.integrationsService.sendInstagram(tenantId, to, content);
+      } else if (channel === ConversationChannel.TELEGRAM) {
+        await this.integrationsService.sendTelegram(tenantId, to, content);
+      } else if (channel === ConversationChannel.EMAIL) {
+        await this.integrationsService.sendEmail(tenantId, to, 'Support', content);
+      } else if (channel === ConversationChannel.SMS) {
+        await this.integrationsService.sendSMS(tenantId, to, content);
+      }
+    } catch (err: any) {
+      this.logger.error(`Operator reply failed to reach ${channel} recipient ${to}: ${err?.message}`);
+      // keep the saved message — the error is logged, not fatal to the operator
+    }
     return saved;
   }
 
