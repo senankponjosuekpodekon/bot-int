@@ -96,6 +96,7 @@ export default function OperatorPage() {
       const data = await chatApi.conversations({ status: filter || undefined, limit: 50 });
       return data.data || data;
     },
+    refetchInterval: 10000, // poll so inbound channel messages appear without a manual refresh
   });
 
   const { data: messages = [], isError: historyError } = useQuery<Message[]>({
