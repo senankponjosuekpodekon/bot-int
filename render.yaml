@@ -58,6 +58,9 @@ services:
       - key: META_APP_SECRET
         sync: false
         optional: true
+      - key: META_VERIFY_TOKEN
+        sync: false
+        optional: true
 
 databases:
   - name: stiamond-pg

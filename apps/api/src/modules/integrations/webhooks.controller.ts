@@ -45,6 +45,69 @@ export class WebhooksController {
     return ba.length === bb.length && timingSafeEqual(ba, bb);
   }
 
+  // App-level WhatsApp webhook (centralized, set once in the Meta console).
+  // Verification: one shared token from META_VERIFY_TOKEN — same for all tenants.
+  @Get('whatsapp')
+  async verifyWhatsAppCentral(
+    @Query('hub.mode') mode: string,
+    @Query('hub.verify_token') token: string,
+    @Query('hub.challenge') challenge: string,
+  ) {
+    const expectedToken = this.config.get<string>('META_VERIFY_TOKEN');
+    if (mode === 'subscribe' && expectedToken && this.safeEqual(token || '', expectedToken)) {
+      this.logger.log('WhatsApp centralized webhook verified');
+      return challenge;
+    }
+    throw new ForbiddenException('Verification failed');
+  }
+
+  // App-level WhatsApp incoming — routes each change to the tenant owning the
+  // phone_number_id in the payload. Requires META_APP_SECRET in env.
+  @Post('whatsapp')
+  async receiveWhatsAppCentral(
+    @Body() body: any,
+    @Headers('x-hub-signature-256') signature: string | undefined,
+    @Req() req: RawBodyRequest<ExpressRequest>,
+    @Query('agentId') agentId?: string,
+  ) {
+    const appSecret = this.config.get<string>('META_APP_SECRET');
+    if (!appSecret) {
+      this.logger.error('WhatsApp centralized webhook rejected: META_APP_SECRET is not configured');
+      throw new UnauthorizedException('WhatsApp appSecret is not configured');
+    }
+    const rawBody = req.rawBody?.toString() || JSON.stringify(body);
+    const expected = `sha256=${createHmac('sha256', appSecret).update(rawBody, 'utf8').digest('hex')}`;
+    if (!signature || !this.safeEqual(signature, expected)) {
+      throw new UnauthorizedException('Invalid WhatsApp webhook signature');
+    }
+
+    let processed = 0;
+    try {
+      for (const entry of body?.entry || []) {
+        for (const change of entry?.changes || []) {
+          const phoneNumberId = change?.value?.metadata?.phone_number_id;
+          const integration = await this.integrationsService.findWhatsAppByPhoneNumberId(phoneNumberId);
+          if (!integration) {
+            if (change?.value?.messages?.length) {
+              this.logger.warn(`WhatsApp webhook: no enabled integration for phone_number_id ${phoneNumberId}`);
+            }
+            continue;
+          }
+          const tenantPayload = { object: body.object, entry: [{ ...entry, changes: [change] }] };
+          const normalized = await this.whatsappAdapter.normalizeAll(integration.tenantId, tenantPayload);
+          for (const msg of normalized) {
+            await this.processIncomingMessage(integration.tenantId, msg, agentId);
+            processed++;
+          }
+        }
+      }
+      return { status: 'ok', processed };
+    } catch (err: any) {
+      this.logger.error(`WhatsApp centralized webhook error: ${err?.message}`);
+      return { status: 'error' };
+    }
+  }
+
   // WhatsApp Business API webhook verification (Meta challenge)
   @Get('whatsapp/:tenantId')
   async verifyWhatsApp(

@@ -98,6 +98,36 @@ export class IntegrationsService {
     return this.withDecryptedConfig(result);
   }
 
+  // Centralized webhook routing: a Meta app-level webhook carries messages for
+  // every subscribed WABA — resolve the tenant by the payload's phone_number_id.
+  async findWhatsAppByPhoneNumberId(phoneNumberId: string): Promise<Integration | null> {
+    if (!phoneNumberId) return null;
+    const row = await this.repo
+      .createQueryBuilder('i')
+      .where(`i.type = 'whatsapp'`)
+      .andWhere(`i.enabled = true`)
+      .andWhere(`i.config->>'phoneNumberId' = :pid`, { pid: String(phoneNumberId) })
+      .getOne();
+    return this.withDecryptedConfig(row);
+  }
+
+  // Subscribe a WABA to this app so Meta pushes its webhooks to the app-level
+  // callback URL — removes any per-tenant webhook configuration for the client.
+  async subscribeWabaToApp(wabaId: string, accessToken: string): Promise<boolean> {
+    try {
+      await axios.post(
+        `https://graph.facebook.com/v21.0/${wabaId}/subscribed_apps`,
+        {},
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      this.logger.log(`WABA ${wabaId} subscribed to app webhooks`);
+      return true;
+    } catch (err: any) {
+      this.logger.error(`subscribed_apps failed for WABA ${wabaId}: ${err?.response?.data?.error?.message || err?.message}`);
+      return false;
+    }
+  }
+
   private stripMaskedConfig(config: Record<string, any>): Record<string, any> {
     if (!config || typeof config !== 'object') return config;
     const cleaned: Record<string, any> = {};
@@ -152,6 +182,16 @@ export class IntegrationsService {
     if (params.wabaId) config.wabaId = params.wabaId;
 
     const integration = await this.upsert(tenantId, 'whatsapp', config);
+
+    // Auto-subscribe the WABA to this app's webhooks so the client has zero
+    // Meta-console configuration to do after the onboarding flow.
+    if (params.wabaId) {
+      const subscribed = await this.subscribeWabaToApp(params.wabaId, accessToken);
+      if (subscribed) {
+        await this.upsert(tenantId, 'whatsapp', { wabaSubscribed: true });
+      }
+    }
+
     this.logger.log(`WhatsApp embedded signup completed for tenant ${tenantId} (phoneNumberId=${params.phoneNumberId ?? 'unset'})`);
     return this.withMaskedConfig(integration) as Integration;
   }
