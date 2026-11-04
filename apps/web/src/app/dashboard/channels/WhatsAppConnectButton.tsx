@@ -56,7 +56,7 @@ export default function WhatsAppConnectButton({ onDone }: { onDone?: () => void 
         config_id: configId,
         response_type: 'code',
         override_default_response_type: true,
-        extras: { setup: {}, featureType: 'whatsapp_business_app_onboarding', sessionInfoVersion: '3' },
+        extras: { setup: {}, featureType: '', sessionInfoVersion: '3' },
       } as any,
     );
   };
