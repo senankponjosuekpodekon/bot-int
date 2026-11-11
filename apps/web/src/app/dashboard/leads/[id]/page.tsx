@@ -21,16 +21,18 @@ import {
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useUiLocale } from '@/lib/ui-locale';
 
 const STATUS_OPTIONS = [
-  { value: 'new', label: 'Nouveau', badge: 'bg-blue-100 text-blue-700' },
-  { value: 'contacted', label: 'Contacté', badge: 'bg-amber-100 text-amber-700' },
-  { value: 'qualified', label: 'Qualifié', badge: 'bg-purple-100 text-purple-700' },
-  { value: 'converted', label: 'Converti', badge: 'bg-green-100 text-green-700' },
-  { value: 'lost', label: 'Perdu', badge: 'bg-gray-100 text-gray-500' },
+  { value: 'new', badge: 'bg-blue-100 text-blue-700' },
+  { value: 'contacted', badge: 'bg-amber-100 text-amber-700' },
+  { value: 'qualified', badge: 'bg-purple-100 text-purple-700' },
+  { value: 'converted', badge: 'bg-green-100 text-green-700' },
+  { value: 'lost', badge: 'bg-gray-100 text-gray-500' },
 ];
 
 export default function LeadDetailPage() {
+  const { t } = useUiLocale();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -65,10 +67,10 @@ export default function LeadDetailPage() {
       queryClient.setQueryData<any>(['lead', id], (old: any) => (old ? { ...old, status } : old));
       return { previous };
     },
-    onSuccess: () => toast.success('Statut mis à jour'),
+    onSuccess: () => toast.success(t('leadd.toast.statusUpdated')),
     onError: (_err, _status, ctx) => {
       queryClient.setQueryData(['lead', id], ctx?.previous);
-      toast.error('Impossible de mettre à jour le statut');
+      toast.error(t('leadd.toast.statusError'));
     },
   });
   const savingStatus = updateStatus.isPending;
@@ -80,9 +82,9 @@ export default function LeadDetailPage() {
         old ? { ...old, tags: [...(old.tags || []), tag] } : old,
       );
       setNewTag('');
-      toast.success('Tag ajouté');
+      toast.success(t('leadd.toast.tagAdded'));
     },
-    onError: () => toast.error('Impossible d\'ajouter le tag'),
+    onError: () => toast.error(t('leadd.toast.tagError')),
   });
 
   const removeTag = useMutation({
@@ -91,9 +93,9 @@ export default function LeadDetailPage() {
       queryClient.setQueryData<any>(['lead', id], (old: any) =>
         old ? { ...old, tags: (old.tags || []).filter((t: string) => t !== tag) } : old,
       );
-      toast.success('Tag supprimé');
+      toast.success(t('leadd.toast.tagRemoved'));
     },
-    onError: () => toast.error('Impossible de supprimer le tag'),
+    onError: () => toast.error(t('leadd.toast.tagRemoveError')),
   });
 
   const addComment = useMutation({
@@ -101,9 +103,9 @@ export default function LeadDetailPage() {
     onSuccess: (comment) => {
       queryClient.setQueryData<any[]>(['lead', id, 'comments'], (old = []) => [comment, ...old]);
       setNewComment('');
-      toast.success('Commentaire ajouté');
+      toast.success(t('leadd.toast.commentAdded'));
     },
-    onError: () => toast.error('Impossible d\'ajouter le commentaire'),
+    onError: () => toast.error(t('leadd.toast.commentError')),
   });
   const savingComment = addComment.isPending;
 
@@ -113,9 +115,9 @@ export default function LeadDetailPage() {
       queryClient.setQueryData<any[]>(['lead', id, 'comments'], (old = []) =>
         old.filter((c) => c.id !== commentId),
       );
-      toast.success('Commentaire supprimé');
+      toast.success(t('leadd.toast.commentDeleted'));
     },
-    onError: () => toast.error('Suppression impossible'),
+    onError: () => toast.error(t('leadd.toast.deleteError')),
   });
 
   const handleStatusChange = (status: string) => {
@@ -148,10 +150,10 @@ export default function LeadDetailPage() {
       const data = await chatApi.exportTranscript(conversationId);
       const lines = data.messages.map((m: any) => {
         const time = new Date(m.createdAt).toLocaleString('fr-FR');
-        const role = m.role === 'user' ? 'Visiteur' : 'Agent';
+        const role = m.role === 'user' ? t('leadd.export.visitor') : t('leadd.export.agent');
         return `[${time}] ${role}: ${m.content}`;
       });
-      const header = `Transcript de conversation\nID: ${data.conversation.id}\nDate: ${new Date(data.conversation.createdAt).toLocaleString('fr-FR')}\nStatut: ${data.conversation.status}\n\n${'='.repeat(60)}\n\n`;
+      const header = `${t('leadd.export.header')}\n${t('leadd.export.id')}: ${data.conversation.id}\n${t('leadd.export.date')}: ${new Date(data.conversation.createdAt).toLocaleString('fr-FR')}\n${t('leadd.export.status')}: ${data.conversation.status}\n\n${'='.repeat(60)}\n\n`;
       const blob = new Blob([header + lines.join('\n\n')], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -159,16 +161,16 @@ export default function LeadDetailPage() {
       a.download = `transcript-${conversationId.slice(0, 8)}.txt`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Transcript exporté');
+      toast.success(t('leadd.toast.exported'));
     } catch {
-      toast.error('Export impossible');
+      toast.error(t('leadd.toast.exportError'));
     }
   };
 
   if (loading) {
     return (
       <div className="p-4 lg:p-8">
-        <div className="text-center py-12 text-gray-400">Chargement...</div>
+        <div className="text-center py-12 text-gray-400">{t('common.loading')}</div>
       </div>
     );
   }
@@ -177,7 +179,7 @@ export default function LeadDetailPage() {
     return (
       <div className="p-4 lg:p-8">
         <div className="card p-12 text-center">
-          <p className="text-gray-500 font-medium">Lead introuvable</p>
+          <p className="text-gray-500 font-medium">{t('leadd.notFound')}</p>
         </div>
       </div>
     );
@@ -192,16 +194,16 @@ export default function LeadDetailPage() {
         className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        Retour aux leads
+        {t('leadd.back')}
       </button>
 
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{lead.name || 'Sans nom'}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{lead.name || t('leadd.unnamed')}</h1>
           <p className="text-sm text-gray-400 mt-1">#{lead.id.slice(0, 8)}</p>
         </div>
         <span className={`text-xs px-3 py-1 rounded-full font-medium ${statusOption?.badge}`}>
-          {statusOption?.label}
+          {statusOption ? t(`leadd.status.${statusOption.value}`) : lead.status}
         </span>
       </div>
 
@@ -209,7 +211,7 @@ export default function LeadDetailPage() {
         {/* Left column — Contact info + tags */}
         <div className="space-y-4 lg:space-y-6">
           <div className="card p-4 lg:p-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">Coordonnées</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">{t('leadd.contact')}</h2>
             <div className="space-y-3">
               {lead.email && (
                 <div className="flex items-center gap-3 text-sm">
@@ -242,7 +244,7 @@ export default function LeadDetailPage() {
 
           <div className="card p-4 lg:p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-900">Score</h2>
+              <h2 className="text-sm font-semibold text-gray-900">{t('leadd.score')}</h2>
               <TrendingUp className="w-4 h-4 text-primary-600" />
             </div>
             <div className="flex items-center gap-3">
@@ -257,7 +259,7 @@ export default function LeadDetailPage() {
           </div>
 
           <div className="card p-4 lg:p-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">Tags</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">{t('leadd.tags')}</h2>
             <div className="flex flex-wrap gap-2 mb-3">
               {(lead.tags || []).map((tag: string) => (
                 <span
@@ -271,7 +273,7 @@ export default function LeadDetailPage() {
                 </span>
               ))}
               {(lead.tags || []).length === 0 && (
-                <p className="text-sm text-gray-400">Aucun tag</p>
+                <p className="text-sm text-gray-400">{t('leadd.tags.empty')}</p>
               )}
             </div>
             <div className="flex gap-2">
@@ -285,7 +287,7 @@ export default function LeadDetailPage() {
                     handleAddTag();
                   }
                 }}
-                placeholder="Ajouter un tag..."
+                placeholder={t('leadd.tags.placeholder')}
               />
               <button type="button" className="btn-secondary px-3" onClick={handleAddTag}>
                 <Plus className="w-4 h-4" />
@@ -297,9 +299,9 @@ export default function LeadDetailPage() {
         {/* Right column — Status + Timeline */}
         <div className="lg:col-span-2 space-y-4 lg:space-y-6">
           <div className="card p-4 lg:p-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">Statut du lead</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">{t('leadd.status.title')}</h2>
             <div className="flex flex-wrap gap-2">
-              {STATUS_OPTIONS.map(({ value, label, badge }) => (
+              {STATUS_OPTIONS.map(({ value, badge }) => (
                 <button
                   key={value}
                   onClick={() => handleStatusChange(value)}
@@ -310,25 +312,25 @@ export default function LeadDetailPage() {
                       : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
                   }`}
                 >
-                  {label}
+                  {t(`leadd.status.${value}`)}
                 </button>
               ))}
             </div>
           </div>
 
           <div className="card p-4 lg:p-6">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">Timeline</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">{t('leadd.timeline')}</h2>
             <div className="space-y-4">
               <TimelineItem
                 icon={Clock}
-                title="Lead créé"
+                title={t('leadd.timeline.created')}
                 date={lead.createdAt}
                 color="bg-blue-500"
               />
               {lead.updatedAt && lead.updatedAt !== lead.createdAt && (
                 <TimelineItem
                   icon={Clock}
-                  title="Dernière modification"
+                  title={t('leadd.timeline.updated')}
                   date={lead.updatedAt}
                   color="bg-amber-500"
                 />
@@ -340,7 +342,7 @@ export default function LeadDetailPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <a href={`/dashboard/chat?conversationId=${conv.id}`} className="text-sm font-medium text-gray-900 hover:text-primary-600">
-                      Conversation {conv.status || ''}
+                      {t('leadd.conversation')} {conv.status || ''}
                     </a>
                     <p className="text-xs text-gray-400 mt-0.5">
                       {new Date(conv.createdAt).toLocaleString('fr-FR', {
@@ -355,7 +357,7 @@ export default function LeadDetailPage() {
                   <button
                     onClick={() => handleExportTranscript(conv.id)}
                     className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                    title="Exporter le transcript"
+                    title={t('leadd.exportTitle')}
                   >
                     <Download className="w-4 h-4" />
                   </button>
@@ -368,7 +370,7 @@ export default function LeadDetailPage() {
           <div className="card p-4 lg:p-6">
             <div className="flex items-center gap-2 mb-4">
               <MessageCircle className="w-4 h-4 text-primary-600" />
-              <h2 className="text-sm font-semibold text-gray-900">Commentaires</h2>
+              <h2 className="text-sm font-semibold text-gray-900">{t('leadd.comments')}</h2>
               {comments.length > 0 && (
                 <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{comments.length}</span>
               )}
@@ -380,7 +382,7 @@ export default function LeadDetailPage() {
                   className="input flex-1 text-sm"
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Ajouter un commentaire..."
+                  placeholder={t('leadd.comments.placeholder')}
                   disabled={savingComment}
                 />
                 <button type="submit" className="btn-primary px-3" disabled={savingComment || !newComment.trim()}>
@@ -390,7 +392,7 @@ export default function LeadDetailPage() {
             </form>
 
             {comments.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-4">Aucun commentaire pour ce lead</p>
+              <p className="text-sm text-gray-400 text-center py-4">{t('leadd.comments.empty')}</p>
             ) : (
               <div className="space-y-3">
                 {comments.map((comment) => (
