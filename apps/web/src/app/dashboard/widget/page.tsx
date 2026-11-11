@@ -16,7 +16,8 @@ export default function WidgetConfigPage() {
   const [position, setPosition] = useState('bottom-right');
   const [copied, setCopied] = useState(false);
 
-  const apiUrl = typeof window !== 'undefined' ? `${window.location.origin.replace(/:\d+$/, ':3001')}/api` : 'http://localhost:3001/api';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL
+    || (typeof window !== 'undefined' ? `${window.location.origin.replace(/:\d+$/, ':3001')}/api` : 'http://localhost:3001/api');
 
   const embedCode = selectedAgent
     ? `<script src="${apiUrl}/widget/embed.js"
