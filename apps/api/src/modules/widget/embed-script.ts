@@ -52,27 +52,30 @@ export const EMBED_SCRIPT = `
     document.head.appendChild(s);
   }
   // Runs an invisible Turnstile challenge, then calls done(token|null).
+  // Waits on the config fetch first: without it tsSiteKey may not be set yet.
   function runTurnstile(done) {
-    loadTurnstile(function(ts) {
-      if (!ts) return done(null);
-      var holder = document.createElement('div');
-      holder.style.display = 'none';
-      document.body.appendChild(holder);
-      var finished = false;
-      function finish(t) { if (finished) return; finished = true; try { ts.remove(holder); } catch(e) {} done(t); }
-      try {
-        var wid = ts.render(holder, {
-          sitekey: tsSiteKey,
-          size: 'invisible',
-          callback: function(t) { finish(t); },
-          'error-callback': function() { finish(null); },
-          'timeout-callback': function() { finish(null); }
-        });
-        ts.execute(wid);
-      } catch(e) { finish(null); }
+    configPromise.then(function() {
+      loadTurnstile(function(ts) {
+        if (!ts) return done(null);
+        var holder = document.createElement('div');
+        holder.style.display = 'none';
+        document.body.appendChild(holder);
+        var finished = false;
+        function finish(t) { if (finished) return; finished = true; try { ts.remove(holder); } catch(e) {} done(t); }
+        try {
+          var wid = ts.render(holder, {
+            sitekey: tsSiteKey,
+            size: 'invisible',
+            callback: function(t) { finish(t); },
+            'error-callback': function() { finish(null); },
+            'timeout-callback': function() { finish(null); }
+          });
+          ts.execute(wid);
+        } catch(e) { finish(null); }
+      });
     });
   }
-  fetch(apiUrl + '/widget/config/' + agentId)
+  var configPromise = fetch(apiUrl + '/widget/config/' + agentId)
     .then(function(r) { return r.json(); })
     .then(function(cfg) { if (cfg && cfg.turnstileSiteKey) tsSiteKey = cfg.turnstileSiteKey; })
     .catch(function() {});
