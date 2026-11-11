@@ -479,21 +479,20 @@ export class KnowledgeService implements OnModuleInit {
       .createQueryBuilder('doc')
       .where('doc.tenantId = :tenantId', { tenantId });
 
-    if (businessId) {
-      qb.andWhere('doc.businessId = :businessId', { businessId })
-        .andWhere(
-          new Brackets((sub) => {
-            sub
-              .where('doc.scope = :business', { business: KnowledgeScope.BUSINESS })
-              .orWhere('(doc.scope = :agent AND doc.agentId = :agentId)', {
-                agent: KnowledgeScope.AGENT,
-                agentId: agentId || '',
-              });
-          }),
-        );
-    } else if (agentId) {
-      qb.andWhere('doc.agentId = :agentId', { agentId });
-    }
+    qb.andWhere(
+      new Brackets((sub) => {
+        sub
+          .where('doc.shared = true')
+          .orWhere('(doc.scope = :business AND doc.businessId = :businessId)', {
+            business: KnowledgeScope.BUSINESS,
+            businessId: businessId || '',
+          })
+          .orWhere('(doc.scope = :agent AND doc.agentId = :agentId)', {
+            agent: KnowledgeScope.AGENT,
+            agentId: agentId || '',
+          });
+      }),
+    );
 
     if (query.trim()) {
       qb.andWhere('doc.content ILIKE :query', { query: `%${query}%` });
@@ -520,25 +519,9 @@ export class KnowledgeService implements OnModuleInit {
            WHERE doc."tenantId" = $1
              AND chunk.embedding_vector IS NOT NULL
              AND (chunk.embedding_vector <=> $2::vector) <= $3`;
-        const params: (string | number)[] = [tenantId, embeddingStr, maxDistance];
-        let paramIndex = 3;
-        if (businessId) {
-          paramIndex += 1;
-          sql += ` AND doc."businessId" = $${paramIndex}`;
-          params.push(businessId);
-          if (agentId) {
-            paramIndex += 1;
-            sql += ` AND ((doc.scope = 'business') OR (doc.scope = 'agent' AND doc."agentId" = $${paramIndex}))`;
-            params.push(agentId);
-          } else {
-            sql += ` AND (doc.scope = 'business')`;
-          }
-        } else if (agentId) {
-          paramIndex += 1;
-          sql += ` AND doc."agentId" = $${paramIndex}`;
-          params.push(agentId);
-        }
-        paramIndex += 1;
+        sql += ` AND (doc.shared = true OR (doc.scope = 'business' AND doc."businessId" = $4) OR (doc.scope = 'agent' AND doc."agentId" = $5))`;
+        const params: (string | number)[] = [tenantId, embeddingStr, maxDistance, businessId || '', agentId || ''];
+        let paramIndex = 6;
         params.push(MAX_SEARCH_RESULTS);
         sql += ` ORDER BY (chunk.embedding_vector <=> $2::vector) LIMIT $${paramIndex}`;
         const results = await this.dataSource.query(sql, params as any[]);
@@ -553,21 +536,20 @@ export class KnowledgeService implements OnModuleInit {
         .where('doc.tenantId = :tenantId', { tenantId })
         .andWhere('chunk.embedding IS NOT NULL');
 
-      if (businessId) {
-        chunksQb.andWhere('doc.businessId = :businessId', { businessId })
-          .andWhere(
-            new Brackets((sub) => {
-              sub
-                .where('doc.scope = :business', { business: KnowledgeScope.BUSINESS })
-                .orWhere('(doc.scope = :agent AND doc.agentId = :agentId)', {
-                  agent: KnowledgeScope.AGENT,
-                  agentId: agentId || '',
-                });
-            }),
-          );
-      } else if (agentId) {
-        chunksQb.andWhere('doc.agentId = :agentId', { agentId });
-      }
+      chunksQb.andWhere(
+        new Brackets((sub) => {
+          sub
+            .where('doc.shared = true')
+            .orWhere('(doc.scope = :business AND doc.businessId = :businessId)', {
+              business: KnowledgeScope.BUSINESS,
+              businessId: businessId || '',
+            })
+            .orWhere('(doc.scope = :agent AND doc.agentId = :agentId)', {
+              agent: KnowledgeScope.AGENT,
+              agentId: agentId || '',
+            });
+        }),
+      );
       const chunks = await chunksQb.getRawMany();
 
       if (chunks.length === 0) return [];

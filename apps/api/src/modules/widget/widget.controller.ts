@@ -4,7 +4,7 @@ import { WidgetService } from './widget.service';
 import { SurveysService } from '../surveys/surveys.service';
 import { SurveyType } from '../surveys/survey.entity';
 import { ChatEventsService } from '../chat/chat-events.service';
-import { IsNotEmpty, IsOptional, IsString, IsArray, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsArray, IsObject, MaxLength } from 'class-validator';
 import type { Request, Response } from 'express';;
 import { EMBED_SCRIPT } from './embed-script';
 import { TurnstileService } from '../../common/turnstile.service';
@@ -21,6 +21,8 @@ class PublicSendMessageDto {
   @IsOptional() utmParams?: { source?: string; medium?: string; campaign?: string; term?: string; content?: string };
   @IsString() @IsOptional() referrerUrl?: string;
   @IsString() @IsOptional() landingPageUrl?: string;
+  @IsObject() @IsOptional() clientInfo?: Record<string, any>;
+  @IsObject() @IsOptional() metadata?: Record<string, any>;
   @IsString() @IsOptional() turnstileToken?: string;
 }
 
