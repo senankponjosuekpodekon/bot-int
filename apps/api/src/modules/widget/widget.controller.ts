@@ -55,13 +55,15 @@ export class WidgetController {
   ) {}
 
   @Get('config/:agentId')
-  getConfig(@Param('agentId') agentId: string) {
+  async getConfig(@Param('agentId') agentId: string, @Req() req: Request) {
+    await this.service.assertDomainAllowed(agentId, req);
     return this.service.getPublicConfig(agentId);
   }
 
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   @Post('send')
   async send(@Body() dto: PublicSendMessageDto, @Req() req: Request) {
+    await this.service.assertDomainAllowed(dto.agentId, req);
     await this.turnstile.verify(dto.turnstileToken, req.ip);
     return this.service.sendPublicMessage(dto.agentId, dto.message, dto.visitorId, dto.conversationId, dto.utmParams, dto.referrerUrl, dto.landingPageUrl);
   }
@@ -180,6 +182,7 @@ export class WidgetController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('flow-response')
   async flowResponse(@Body() dto: PublicFlowResponseDto, @Req() req: Request) {
+    await this.service.assertDomainAllowed(dto.agentId, req);
     await this.turnstile.verify(dto.turnstileToken, req.ip);
     return this.service.submitFlowResponse(dto.agentId, dto.conversationId, dto.flowId, dto.responses, dto.visitorId);
   }
@@ -192,7 +195,8 @@ export class WidgetController {
   }
 
   @Get('survey/:agentId')
-  async getActiveSurvey(@Param('agentId') agentId: string) {
+  async getActiveSurvey(@Param('agentId') agentId: string, @Req() req: Request) {
+    await this.service.assertDomainAllowed(agentId, req);
     const config = await this.service.getAgentConfig(agentId);
     const survey = await this.surveysService.getActiveByType(config.tenantId, SurveyType.PRE_PURCHASE, agentId);
     return survey || { active: false };
@@ -201,6 +205,7 @@ export class WidgetController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('survey/submit')
   async submitSurvey(@Body() dto: PublicSurveySubmitDto, @Req() req: Request) {
+    if (dto.agentId) await this.service.assertDomainAllowed(dto.agentId, req);
     await this.turnstile.verify(dto.turnstileToken, req.ip);
     const config = await this.service.getAgentConfig(dto.agentId || '');
     return this.surveysService.submit(config.tenantId, dto.surveyId, dto.answers, {

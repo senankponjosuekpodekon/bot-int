@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import type { Request } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Agent } from '../agents/agent.entity';
@@ -32,6 +33,39 @@ export class WidgetService {
     const agent = await this.agentRepo.findOne({ where: { id: agentId, isActive: true } });
     if (!agent) throw new NotFoundException('Agent not found');
     return agent;
+  }
+
+  private static isDomainAllowed(patterns: string[], host: string): boolean {
+    const h = host.toLowerCase();
+    return patterns.some((p) => {
+      const pattern = (p || '').trim().toLowerCase();
+      if (!pattern) return false;
+      if (pattern === '*') return true;
+      if (pattern.startsWith('*.')) {
+        const base = pattern.slice(2);
+        return h === base || h.endsWith('.' + base);
+      }
+      return h === pattern;
+    });
+  }
+
+  // Rejects public widget calls coming from a domain not in agent.allowedDomains.
+  // Empty/null list = unrestricted (backward compatible).
+  async assertDomainAllowed(agentId: string, req: Request): Promise<void> {
+    const agent = await this.loadAgent(agentId);
+    const allowed = agent.allowedDomains;
+    if (!allowed || allowed.length === 0) return;
+
+    const origin = (req.headers.origin as string) || (req.headers.referer as string) || '';
+    let host = '';
+    try {
+      host = new URL(origin).hostname;
+    } catch {
+      host = '';
+    }
+    if (!host || !WidgetService.isDomainAllowed(allowed, host)) {
+      throw new ForbiddenException('Domaine non autorisé pour cet agent');
+    }
   }
 
   // Public-facing widget config — never expose systemPrompt or tenant internals.

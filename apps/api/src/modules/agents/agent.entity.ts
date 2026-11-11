@@ -56,6 +56,11 @@ export class Agent {
   @Column({ type: 'jsonb', nullable: true })
   iceBreakers: string[];
 
+  // Domain allowlist for the public widget. Empty/null = all domains allowed.
+  // Entries may be exact hosts ('shop.example.com') or wildcards ('*.example.com').
+  @Column({ type: 'jsonb', nullable: true })
+  allowedDomains?: string[];
+
   @Column({ default: true })
   isActive: boolean;
 

@@ -28,6 +28,10 @@ export class UpdateAgentDto {
   @IsOptional()
   iceBreakers?: string[];
 
+  @IsArray()
+  @IsOptional()
+  allowedDomains?: string[];
+
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;

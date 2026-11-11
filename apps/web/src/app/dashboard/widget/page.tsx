@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Code2, Copy, Check, ExternalLink, Settings as SettingsIcon } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Code2, Copy, Check, ShieldCheck } from 'lucide-react';
+import { toast } from 'sonner';
 import { agentsApi } from '@/lib/api';
 
 export default function WidgetConfigPage() {
@@ -15,6 +16,19 @@ export default function WidgetConfigPage() {
   const [customTitle, setCustomTitle] = useState('Chat IA');
   const [position, setPosition] = useState('bottom-right');
   const [copied, setCopied] = useState(false);
+  const queryClient = useQueryClient();
+  const agent = agents.find((a: any) => a.id === selectedAgent);
+  const [domainsDraft, setDomainsDraft] = useState<string | null>(null);
+  const domainsValue = domainsDraft ?? (agent?.allowedDomains || []).join(', ');
+  const saveDomains = useMutation({
+    mutationFn: (list: string[]) => agentsApi.update(selectedAgent, { allowedDomains: list }),
+    onSuccess: () => {
+      toast.success('Domaines autorisés enregistrés');
+      setDomainsDraft(null);
+      queryClient.invalidateQueries({ queryKey: ['widget-config', 'agents'] });
+    },
+    onError: () => toast.error('Impossible d’enregistrer les domaines'),
+  });
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL
     || (typeof window !== 'undefined' ? `${window.location.origin.replace(/:\d+$/, ':3001')}/api` : 'http://localhost:3001/api');
@@ -92,6 +106,40 @@ export default function WidgetConfigPage() {
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Sécurité — domaines autorisés */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 mb-6">
+        <h2 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-primary-600" /> Domaines autorisés
+        </h2>
+        <p className="text-xs text-gray-500 mb-3">
+          Limitez les sites où votre chatbot peut être intégré. Vide = tous les domaines autorisés.
+          Séparez par des virgules ; <code className="bg-gray-100 px-1 rounded">*.mondomaine.com</code> couvre les sous-domaines.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            value={domainsValue}
+            onChange={(e) => setDomainsDraft(e.target.value)}
+            placeholder="maboutique.com, www.maboutique.com"
+            className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"
+            disabled={!selectedAgent}
+          />
+          <button
+            onClick={() =>
+              saveDomains.mutate(
+                domainsValue
+                  .split(',')
+                  .map((d) => d.trim())
+                  .filter(Boolean),
+              )
+            }
+            disabled={!selectedAgent || saveDomains.isPending}
+            className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
+          >
+            {saveDomains.isPending ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
         </div>
       </div>
 
