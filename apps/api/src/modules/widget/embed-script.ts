@@ -139,12 +139,12 @@ export const EMBED_SCRIPT = `
   function formatAgent(text) {
     function inline(s) {
       return s
-        .replace(/\*\*\*(.*?)\*\*\*/g, '<b><i>$1</i></b>')
-        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+        .replace(/\\*\\*\\*(.*?)\\*\\*\\*/g, '<b><i>$1</i></b>')
+        .replace(/\\*\\*(.*?)\\*\\*/g, '<b>$1</b>')
         .replace(/__(.*?)__/g, '<b>$1</b>')
-        .replace(/\*(.*?)\*/g, '<i>$1</i>')
+        .replace(/\\*(.*?)\\*/g, '<i>$1</i>')
         .replace(/_(.*?)_/g, '<i>$1</i>')
-        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href=$2 target=_blank>$1</a>');
+        .replace(/\\[(.*?)\\]\\((.*?)\\)/g, '<a href=$2 target=_blank>$1</a>');
     }
     var lines = text.split('\\n').filter(function(l) { return l.trim() !== ''; });
     if (lines.length > 1) {
