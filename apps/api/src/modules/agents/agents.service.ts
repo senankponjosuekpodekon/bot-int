@@ -4,12 +4,14 @@ import { Repository } from 'typeorm';
 import { Agent } from './agent.entity';
 import { UserRole } from '../auth/user.entity';
 import { PaginatedResult } from '../../common/pagination.dto';
+import { TurnstileService } from '../../common/turnstile.service';
 
 @Injectable()
 export class AgentsService {
   constructor(
     @InjectRepository(Agent)
     private readonly agentRepo: Repository<Agent>,
+    private readonly turnstile: TurnstileService,
   ) {}
 
   async create(tenantId: string, data: Partial<Agent>): Promise<Agent> {
@@ -41,6 +43,11 @@ export class AgentsService {
 
   async update(id: string, tenantId: string, data: Partial<Agent>): Promise<Agent> {
     await this.agentRepo.update({ id, tenantId }, data);
+    if (data.allowedDomains?.length) {
+      // Register embed domains on the platform Turnstile widget so the
+      // challenge keeps working on them. Fire-and-forget: never blocks save.
+      void this.turnstile.syncDomainsToWidget(data.allowedDomains);
+    }
     return this.findById(id, tenantId);
   }
 

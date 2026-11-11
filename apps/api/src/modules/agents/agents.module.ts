@@ -12,6 +12,7 @@ import { PendingActionService } from './pending-action.service';
 import { AgentOrchestrationService } from './agent-orchestration.service';
 import { AgentPolicyService } from './agent-policy.service';
 import { AgentsController } from './agents.controller';
+import { TurnstileService } from '../../common/turnstile.service';
 import { ChatModule } from '../chat/chat.module';
 import { ProductsModule } from '../products/products.module';
 
@@ -21,7 +22,7 @@ import { ProductsModule } from '../products/products.module';
     ProductsModule,
     forwardRef(() => ChatModule),
   ],
-  providers: [AgentsService, AgentMemoryService, AgentToolsService, AgentWorkflowService, PendingActionService, AgentOrchestrationService, AgentPolicyService],
+  providers: [AgentsService, AgentMemoryService, AgentToolsService, AgentWorkflowService, PendingActionService, AgentOrchestrationService, AgentPolicyService, TurnstileService],
   controllers: [AgentsController],
   exports: [AgentsService, AgentMemoryService, AgentToolsService, AgentWorkflowService, PendingActionService, AgentOrchestrationService, AgentPolicyService],
 })

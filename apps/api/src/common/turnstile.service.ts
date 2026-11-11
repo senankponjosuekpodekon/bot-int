@@ -20,6 +20,42 @@ export class TurnstileService {
     return !!this.secret;
   }
 
+  // Adds hostnames to the Turnstile widget's domain list via the Cloudflare
+  // API so newly registered customer domains keep passing the challenge.
+  // No-op unless CF_API_TOKEN and CF_ACCOUNT_ID are set; never throws.
+  async syncDomainsToWidget(hostnames: string[]): Promise<void> {
+    const token = this.config.get<string>('CF_API_TOKEN');
+    const accountId = this.config.get<string>('CF_ACCOUNT_ID');
+    const widgetId =
+      this.config.get<string>('TURNSTILE_WIDGET_ID') ||
+      this.config.get<string>('TURNSTILE_SITE_KEY');
+    if (!token || !accountId || !widgetId || !hostnames?.length) return;
+    const wanted = [
+      ...new Set(
+        hostnames
+          .map((h) => h.trim().toLowerCase().replace(/^\*\./, ''))
+          .filter((h) => h && h !== '*'),
+      ),
+    ];
+    if (!wanted.length) return;
+    try {
+      const api = axios.create({
+        baseURL: `https://api.cloudflare.com/client/v4/accounts/${accountId}/challenges/widgets`,
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 8000,
+      });
+      const { data } = await api.get(`/${widgetId}`);
+      const current: string[] = data?.result?.domains || [];
+      const merged = [...new Set([...current, ...wanted])];
+      if (merged.length === current.length) return;
+      // Never remove: another tenant may still embed on an old domain.
+      await api.put(`/${widgetId}`, { domains: merged });
+      this.logger.log(`Turnstile widget domains synced (+${merged.length - current.length}): ${wanted.join(', ')}`);
+    } catch (e) {
+      this.logger.error(`Turnstile domain sync failed: ${e.message}`);
+    }
+  }
+
   async verify(token: string | undefined, remoteIp?: string): Promise<void> {
     if (!this.secret) return;
     if (!token) {
