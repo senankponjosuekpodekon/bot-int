@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { chatApi, leadsApi, agentsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
+import { useUiLocale } from '@/lib/ui-locale';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -50,26 +51,13 @@ interface PendingAction {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  open: 'Ouverte',
-  handed_off: 'Transférée',
-  closed: 'Fermée',
-};
-
-const renderPairs = (obj?: Record<string, any> | null) => {
-  if (!obj || Object.keys(obj).length === 0) return <span className="text-gray-400 italic">Aucune donnée</span>;
-  return (
-    <div className="grid grid-cols-2 gap-1 text-xs">
-      {Object.entries(obj).map(([k, v]) => (
-        <div key={k} className="contents">
-          <span className="text-gray-500 truncate" title={k}>{k}</span>
-          <span className="text-gray-800 truncate" title={String(v)}>{String(v)}</span>
-        </div>
-      ))}
-    </div>
-  );
+  open: 'op.status.open',
+  handed_off: 'op.status.handedOff',
+  closed: 'op.status.closed',
 };
 
 export default function OperatorPage() {
+  const { t, locale } = useUiLocale();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Conversation | null>(null);
   const [reply, setReply] = useState('');
@@ -82,6 +70,20 @@ export default function OperatorPage() {
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const renderPairs = (obj?: Record<string, any> | null) => {
+    if (!obj || Object.keys(obj).length === 0) return <span className="text-gray-400 italic">{t('op.noData')}</span>;
+    return (
+      <div className="grid grid-cols-2 gap-1 text-xs">
+        {Object.entries(obj).map(([k, v]) => (
+          <div key={k} className="contents">
+            <span className="text-gray-500 truncate" title={k}>{k}</span>
+            <span className="text-gray-800 truncate" title={String(v)}>{String(v)}</span>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   const { data: pendingActions = [] } = useQuery<PendingAction[]>({
@@ -115,29 +117,29 @@ export default function OperatorPage() {
   });
 
   useEffect(() => {
-    if (conversationsError) showToast('Erreur lors du chargement', 'error');
+    if (conversationsError) showToast(t('op.loadError'), 'error');
   }, [conversationsError]);
 
   useEffect(() => {
-    if (historyError) showToast('Erreur lors du chargement de l\'historique', 'error');
+    if (historyError) showToast(t('op.historyError'), 'error');
   }, [historyError]);
 
   const approveAction = useMutation({
     mutationFn: (id: string) => agentsApi.approvePendingAction(id),
     onSuccess: () => {
-      showToast('Action approuvée');
+      showToast(t('op.approved'));
       queryClient.invalidateQueries({ queryKey: ['pending-actions'] });
     },
-    onError: () => showToast('Erreur', 'error'),
+    onError: () => showToast(t('op.error'), 'error'),
   });
 
   const rejectAction = useMutation({
     mutationFn: (id: string) => agentsApi.rejectPendingAction(id),
     onSuccess: () => {
-      showToast('Action rejetée');
+      showToast(t('op.rejected'));
       queryClient.invalidateQueries({ queryKey: ['pending-actions'] });
     },
-    onError: () => showToast('Erreur', 'error'),
+    onError: () => showToast(t('op.error'), 'error'),
   });
 
   const handleApproveAction = (id: string) => approveAction.mutate(id);
@@ -208,47 +210,47 @@ export default function OperatorPage() {
       setReply('');
       queryClient.invalidateQueries({ queryKey: ['conversation-history', conversationId] });
     },
-    onError: () => showToast('Erreur lors de l\'envoi', 'error'),
+    onError: () => showToast(t('op.sendError'), 'error'),
   });
 
   const takeConversation = useMutation({
     mutationFn: (conversationId: string) => chatApi.take(conversationId),
     onSuccess: (_data, conversationId) => {
-      showToast('Conversation prise en charge');
+      showToast(t('op.taken'));
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       queryClient.invalidateQueries({ queryKey: ['conversation-history', conversationId] });
     },
-    onError: () => showToast('Erreur', 'error'),
+    onError: () => showToast(t('op.error'), 'error'),
   });
 
   const releaseConversation = useMutation({
     mutationFn: (conversationId: string) => chatApi.release(conversationId),
     onSuccess: (_data, conversationId) => {
-      showToast('Conversation rendue à l\'IA');
+      showToast(t('op.released'));
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       queryClient.invalidateQueries({ queryKey: ['conversation-history', conversationId] });
     },
-    onError: () => showToast('Erreur', 'error'),
+    onError: () => showToast(t('op.error'), 'error'),
   });
 
   const suggestReply = useMutation({
     mutationFn: (conversationId: string) => chatApi.suggest(conversationId),
     onSuccess: (data) => {
       setReply(data?.suggestion || '');
-      showToast('Suggestion IA insérée');
+      showToast(t('op.suggested'));
     },
-    onError: () => showToast('Erreur suggestion', 'error'),
+    onError: () => showToast(t('op.suggestError'), 'error'),
   });
   const suggesting = suggestReply.isPending;
 
   const closeConversation = useMutation({
     mutationFn: (conversationId: string) => chatApi.updateStatus(conversationId, 'closed'),
     onSuccess: () => {
-      showToast('Conversation fermée');
+      showToast(t('op.closed'));
       setSelected(null);
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
-    onError: () => showToast('Erreur', 'error'),
+    onError: () => showToast(t('op.error'), 'error'),
   });
 
   const handleSend = () => {
@@ -291,7 +293,7 @@ export default function OperatorPage() {
       <div className={`w-full lg:w-80 border-r border-gray-200 flex flex-col ${selected ? 'hidden lg:flex' : 'flex'}`}>
         <div className="p-4 border-b border-gray-200">
           <h1 className="text-lg font-bold flex items-center gap-2">
-            <Headphones className="w-5 h-5 text-primary-600" /> Opérateur
+            <Headphones className="w-5 h-5 text-primary-600" /> {t('op.title')}
           </h1>
           <div className="flex gap-1 mt-3">
             {['handed_off', 'open', 'closed', ''].map((s) => (
@@ -300,7 +302,7 @@ export default function OperatorPage() {
                 onClick={() => setFilter(s)}
                 className={`px-2 py-1 rounded-lg text-xs font-medium ${filter === s ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700'}`}
               >
-                {s === '' ? 'Tous' : STATUS_LABELS[s] || s}
+                {s === '' ? t('op.filterAll') : t(STATUS_LABELS[s] || s)}
               </button>
             ))}
           </div>
@@ -309,7 +311,7 @@ export default function OperatorPage() {
         {pendingActions.length > 0 && (
           <div className="border-b border-orange-200 bg-orange-50 p-3 space-y-2">
             <div className="flex items-center gap-1 text-xs font-semibold text-orange-800">
-              <ShieldAlert className="w-3.5 h-3.5" /> Actions en attente de validation ({pendingActions.length})
+              <ShieldAlert className="w-3.5 h-3.5" /> {t('op.pendingActions')} ({pendingActions.length})
             </div>
             {pendingActions.map((pa) => (
               <div key={pa.id} className="bg-white rounded-lg border border-orange-200 p-2 text-xs">
@@ -323,13 +325,13 @@ export default function OperatorPage() {
                     onClick={() => handleApproveAction(pa.id)}
                     className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-600 text-white text-[11px] font-medium hover:bg-green-700"
                   >
-                    <Check className="w-3 h-3" /> Approuver
+                    <Check className="w-3 h-3" /> {t('op.approve')}
                   </button>
                   <button
                     onClick={() => handleRejectAction(pa.id)}
                     className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-200 text-gray-700 text-[11px] font-medium hover:bg-gray-300"
                   >
-                    <X className="w-3 h-3" /> Rejeter
+                    <X className="w-3 h-3" /> {t('op.reject')}
                   </button>
                 </div>
               </div>
@@ -339,11 +341,11 @@ export default function OperatorPage() {
 
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="text-center py-8 text-gray-500 text-sm">Chargement...</div>
+            <div className="text-center py-8 text-gray-500 text-sm">{t('common.loading')}</div>
           ) : conversations.length === 0 ? (
             <div className="text-center py-8">
               <MessageSquare className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">Aucune conversation</p>
+              <p className="text-sm text-gray-500">{t('op.noConversations')}</p>
             </div>
           ) : (
             conversations.map((conv) => (
@@ -354,14 +356,14 @@ export default function OperatorPage() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-900 flex items-center gap-1">
-                    {conv.isHotLead && <span title="Lead chaud">🔥</span>}
-                    {conv.visitorId?.slice(0, 20) || 'Anonyme'}
+                    {conv.isHotLead && <span title={t('op.hotLead')}>🔥</span>}
+                    {conv.visitorId?.slice(0, 20) || t('op.anonymous')}
                   </span>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${conv.status === 'handed_off' ? 'bg-orange-100 text-orange-700' : conv.status === 'open' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                    {STATUS_LABELS[conv.status] || conv.status}
+                    {STATUS_LABELS[conv.status] ? t(STATUS_LABELS[conv.status]) : conv.status}
                   </span>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">{new Date(conv.updatedAt).toLocaleString('fr-FR')}</p>
+                <p className="text-xs text-gray-400 mt-1">{new Date(conv.updatedAt).toLocaleString(locale === 'en' ? 'en-US' : 'fr-FR')}</p>
               </button>
             ))
           )}
@@ -378,22 +380,22 @@ export default function OperatorPage() {
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <p className="font-medium text-gray-900">{lead?.name || selected.visitorId?.slice(0, 20) || 'Visiteur'}</p>
+                <p className="font-medium text-gray-900">{lead?.name || selected.visitorId?.slice(0, 20) || t('op.visitor')}</p>
                 <p className="text-xs text-gray-400">ID: {selected.id.slice(0, 8)}</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
               <button onClick={handleTakeOver} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-orange-50 text-orange-700 hover:bg-orange-100">
-                <Zap className="w-3 h-3" /> Prendre en charge
+                <Zap className="w-3 h-3" /> {t('op.takeOver')}
               </button>
               <button onClick={handleRelease} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100">
-                <RotateCcw className="w-3 h-3" /> Rendre à l'IA
+                <RotateCcw className="w-3 h-3" /> {t('op.release')}
               </button>
               <button onClick={handleSuggest} disabled={suggesting} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 disabled:opacity-50">
-                <Sparkles className="w-3 h-3" /> Suggérer
+                <Sparkles className="w-3 h-3" /> {t('op.suggest')}
               </button>
               <button onClick={handleClose} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">
-                Fermer
+                {t('op.close')}
               </button>
             </div>
           </div>
@@ -411,44 +413,44 @@ export default function OperatorPage() {
           {/* Conversation details */}
           <div className="p-3 border-b border-gray-200 bg-white">
             <div className="flex items-center gap-1 text-xs font-semibold text-gray-700 mb-2">
-              <Info className="w-3 h-3" /> Détails conversation
+              <Info className="w-3 h-3" /> {t('op.details')}
               {selected.isHotLead && (
-                <span className="ml-2 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold uppercase">🔥 Lead chaud</span>
+                <span className="ml-2 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold uppercase">🔥 {t('op.hotLead')}</span>
               )}
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 text-xs">
               <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-gray-500 mb-1 flex items-center gap-1"><Tag className="w-3 h-3" /> Statut</div>
+                <div className="text-gray-500 mb-1 flex items-center gap-1"><Tag className="w-3 h-3" /> {t('op.status')}</div>
                 <div className="font-medium text-gray-900">{selected.status} {selected.state ? `(${selected.state})` : ''}</div>
               </div>
               <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-gray-500 mb-1 flex items-center gap-1"><Globe className="w-3 h-3" /> Langue</div>
+                <div className="text-gray-500 mb-1 flex items-center gap-1"><Globe className="w-3 h-3" /> {t('op.language')}</div>
                 <div className="font-medium text-gray-900">{selected.language || '-'}</div>
               </div>
               <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-gray-500 mb-1 flex items-center gap-1"><Target className="w-3 h-3" /> Funnel</div>
+                <div className="text-gray-500 mb-1 flex items-center gap-1"><Target className="w-3 h-3" /> {t('op.funnel')}</div>
                 <div className="font-medium text-gray-900">{selected.funnelStage || '-'}</div>
               </div>
               <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-gray-500 mb-1 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> Intent</div>
+                <div className="text-gray-500 mb-1 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> {t('op.intent')}</div>
                 <div className="font-medium text-gray-900">{selected.intentScore ?? '-'}/100</div>
               </div>
               <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-gray-500 mb-1 flex items-center gap-1"><Target className="w-3 h-3" /> Fit</div>
+                <div className="text-gray-500 mb-1 flex items-center gap-1"><Target className="w-3 h-3" /> {t('op.fit')}</div>
                 <div className="font-medium text-gray-900">{selected.fitScore ?? '-'}/100</div>
               </div>
               <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-gray-500 mb-1 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> Achat</div>
+                <div className="text-gray-500 mb-1 flex items-center gap-1"><BarChart3 className="w-3 h-3" /> {t('op.purchase')}</div>
                 <div className="font-medium text-gray-900">{selected.purchaseProbability != null ? `${Math.round(selected.purchaseProbability * 100)}%` : '-'}</div>
               </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3 text-xs">
               <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-gray-500 mb-1">Client info</div>
+                <div className="text-gray-500 mb-1">{t('op.clientInfo')}</div>
                 {renderPairs(selected.clientInfo)}
               </div>
               <div className="bg-gray-50 rounded-lg p-2">
-                <div className="text-gray-500 mb-1">UTM / Acquisition</div>
+                <div className="text-gray-500 mb-1">{t('op.utm')}</div>
                 {renderPairs({ ...selected.utmParams, acquisitionChannel: selected.acquisitionChannel })}
               </div>
             </div>
@@ -457,19 +459,19 @@ export default function OperatorPage() {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
             {messages.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 text-sm">Aucun message</div>
+              <div className="text-center py-8 text-gray-500 text-sm">{t('op.noMessages')}</div>
             ) : (
               messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[70%] px-4 py-2 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-primary-600 text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm'}`}>
                     {msg.role === 'assistant' && msg.metadata?.isOperator && (
                       <span className="inline-flex items-center gap-1 text-[10px] font-medium text-orange-600 mb-1">
-                        <Headphones className="w-3 h-3" /> Opérateur
+                        <Headphones className="w-3 h-3" /> {t('op.title')}
                       </span>
                     )}
                     <p className="whitespace-pre-wrap">{msg.content}</p>
                     <p className={`text-xs mt-1 ${msg.role === 'user' ? 'text-primary-200' : 'text-gray-400'}`}>
-                      {new Date(msg.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(msg.createdAt).toLocaleTimeString(locale === 'en' ? 'en-US' : 'fr-FR', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                 </div>
@@ -478,7 +480,7 @@ export default function OperatorPage() {
             {visitorTyping && (
               <div className="flex justify-start">
                 <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-2 text-xs text-gray-500">
-                  Le visiteur est en train d'écrire...
+                  {t('op.visitorTyping')}
                 </div>
               </div>
             )}
@@ -490,11 +492,11 @@ export default function OperatorPage() {
               value={reply}
               onChange={(e) => handleReplyChange(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Répondre en tant qu'opérateur..."
+              placeholder={t('op.replyPlaceholder')}
               className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-sm outline-none focus:border-primary-500"
             />
             <button onClick={handleSend} className="flex items-center gap-1 px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">
-              <Send className="w-4 h-4" /> Envoyer
+              <Send className="w-4 h-4" /> {t('op.send')}
             </button>
           </div>
         </div>
@@ -502,7 +504,7 @@ export default function OperatorPage() {
         <div className="hidden lg:flex flex-1 items-center justify-center bg-gray-50">
           <div className="text-center">
             <Headphones className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">Sélectionnez une conversation pour commencer</p>
+            <p className="text-gray-500">{t('op.selectPrompt')}</p>
           </div>
         </div>
       )}

@@ -6,6 +6,7 @@ import { agentsApi, chatApi, leadsApi } from '@/lib/api';
 import { Send, Bot, User, RefreshCw, MessageSquare, ArrowUpRight, Info, Copy, CheckCircle2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import clsx from 'clsx';
+import { useUiLocale } from '@/lib/ui-locale';
 import Markdown from '@/components/Markdown';
 
 const CONVERSATION_PAGE_SIZE = 12;
@@ -25,25 +26,25 @@ const DEFAULT_FILTERS: ConversationFilters = {
 };
 
 const STATUS_FILTERS: Array<{ label: string; value: ConversationFilters['status'] }> = [
-  { label: 'Toutes', value: 'all' },
-  { label: 'Ouvertes', value: 'open' },
-  { label: 'Transférées', value: 'handed_off' },
-  { label: 'Closes', value: 'closed' },
+  { label: 'chat.filter.all', value: 'all' },
+  { label: 'chat.filter.open', value: 'open' },
+  { label: 'chat.filter.handedOff', value: 'handed_off' },
+  { label: 'chat.filter.closed', value: 'closed' },
 ];
 
 const HAS_LEAD_FILTERS: Array<{ label: string; value: ConversationFilters['hasLead'] }> = [
-  { label: 'Tous les leads', value: 'all' },
-  { label: 'Avec lead', value: 'with' },
-  { label: 'Sans lead', value: 'without' },
+  { label: 'chat.hasLead.all', value: 'all' },
+  { label: 'chat.hasLead.with', value: 'with' },
+  { label: 'chat.hasLead.without', value: 'without' },
 ];
 
 const LEAD_STATUS_OPTIONS: Array<{ label: string; value: ConversationFilters['leadStatus'] }> = [
-  { label: 'Statut du lead', value: 'all' },
-  { label: 'Nouveau', value: 'new' },
-  { label: 'Contacté', value: 'contacted' },
-  { label: 'Qualifié', value: 'qualified' },
-  { label: 'Converti', value: 'converted' },
-  { label: 'Perdu', value: 'lost' },
+  { label: 'chat.leadStatus.all', value: 'all' },
+  { label: 'chat.leadStatus.new', value: 'new' },
+  { label: 'chat.leadStatus.contacted', value: 'contacted' },
+  { label: 'chat.leadStatus.qualified', value: 'qualified' },
+  { label: 'chat.leadStatus.converted', value: 'converted' },
+  { label: 'chat.leadStatus.lost', value: 'lost' },
 ];
 
 interface Message {
@@ -59,6 +60,7 @@ interface ConversationsPage {
 }
 
 export default function ChatPage() {
+  const { t, locale } = useUiLocale();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [selectedAgent, setSelectedAgent] = useState('');
@@ -168,9 +170,9 @@ export default function ChatPage() {
     onError: () => {
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: "⚠️ Erreur — vérifiez qu'Ollama est démarré." },
+        { role: 'assistant', content: t('chat.ollamaError') },
       ]);
-      toast.error("Échec de l'envoi du message");
+      toast.error(t('chat.sendError'));
     },
   });
   const sending = sendMessage.isPending;
@@ -181,10 +183,10 @@ export default function ChatPage() {
     onSuccess: (_data, status) => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       toast.success(
-        status === 'closed' ? 'Conversation fermée' : 'Conversation ré-ouverte',
+        status === 'closed' ? t('chat.closedToast') : t('chat.reopenedToast'),
       );
     },
-    onError: () => toast.error('Impossible de mettre à jour le statut'),
+    onError: () => toast.error(t('chat.statusUpdateError')),
   });
   const statusUpdating = updateStatus.isPending;
 
@@ -192,14 +194,14 @@ export default function ChatPage() {
     mutationFn: ({ conversationId, leadId }: { conversationId: string; leadId: string }) =>
       chatApi.attachLead(conversationId, leadId),
     onSuccess: () => {
-      toast.success('Lead associé à la conversation');
+      toast.success(t('chat.leadAttached'));
       setSelectedLeadToAttach('');
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       if (selectedConversation) {
         queryClient.invalidateQueries({ queryKey: ['chat', 'history', selectedConversation] });
       }
     },
-    onError: () => toast.error("Impossible d'associer le lead"),
+    onError: () => toast.error(t('chat.leadAttachError')),
   });
   const attachingLead = attachLead.isPending;
 
@@ -211,8 +213,8 @@ export default function ChatPage() {
       correctedReply: string;
     }) => chatApi.feedback(data),
     onSuccess: () =>
-      toast.success("Correction enregistrée. L'agent apprendra de cette erreur."),
-    onError: () => toast.error("Erreur lors de l'enregistrement"),
+      toast.success(t('chat.feedbackSaved')),
+    onError: () => toast.error(t('chat.feedbackError')),
   });
 
   useEffect(() => {
@@ -220,15 +222,15 @@ export default function ChatPage() {
   }, [agents, selectedAgent]);
 
   useEffect(() => {
-    if (leadsQuery.isError) toast.error('Impossible de charger les leads');
+    if (leadsQuery.isError) toast.error(t('chat.leadsLoadError'));
   }, [leadsQuery.isError]);
 
   useEffect(() => {
-    if (conversationsQuery.isError) toast.error('Impossible de charger les conversations');
+    if (conversationsQuery.isError) toast.error(t('chat.conversationsLoadError'));
   }, [conversationsQuery.isError]);
 
   useEffect(() => {
-    if (historyQuery.isError) toast.error('Conversation introuvable');
+    if (historyQuery.isError) toast.error(t('chat.conversationNotFound'));
   }, [historyQuery.isError]);
 
   // Sync loaded history into the local message list
@@ -295,7 +297,7 @@ export default function ChatPage() {
     url.searchParams.set('conversationId', selectedConversation);
     await navigator.clipboard.writeText(url.toString());
     setCopiedConversationId(selectedConversation);
-    toast.success('Lien de conversation copié');
+    toast.success(t('chat.linkCopied'));
     setTimeout(() => {
       setCopiedConversationId(null);
     }, 3000);
@@ -336,7 +338,7 @@ export default function ChatPage() {
   const getAgentName = (agentId: string) => agents.find((a) => a.id === agentId)?.name || 'Agent';
 
   const formatConversationDate = (date: string) =>
-    new Date(date).toLocaleString('fr-FR', {
+    new Date(date).toLocaleString(locale === 'en' ? 'en-US' : 'fr-FR', {
       day: '2-digit',
       month: 'short',
       hour: '2-digit',
@@ -405,8 +407,8 @@ export default function ChatPage() {
     <div className="flex flex-col h-full p-4 lg:p-6 gap-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 flex-shrink-0">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Test des agents</h1>
-          <p className="text-gray-500 text-sm mt-1">Discutez avec vos agents en temps réel</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{t('chat.title')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('chat.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
           <select
@@ -424,7 +426,7 @@ export default function ChatPage() {
             ))}
           </select>
           <button onClick={handleNewConversation} className="btn-secondary text-sm">
-            Nouvelle conv.
+            {t('chat.newConversation')}
           </button>
         </div>
       </div>
@@ -433,13 +435,13 @@ export default function ChatPage() {
         <aside className="w-full lg:w-72 card p-4 flex flex-col">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-700">Conversations</p>
-              <p className="text-xs text-gray-400">{totalConversationsLabel} suivies</p>
+              <p className="text-sm font-medium text-gray-700">{t('chat.conversations')}</p>
+              <p className="text-xs text-gray-400">{totalConversationsLabel} {t('chat.tracked')}</p>
             </div>
             <button
               className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:border-primary-200 transition-colors"
               onClick={() => conversationsQuery.refetch()}
-              aria-label="Rafraîchir"
+              aria-label={t('chat.refresh')}
             >
               <RefreshCw className={clsx('w-4 h-4', { 'animate-spin': loadingConversations })} />
             </button>
@@ -453,19 +455,19 @@ export default function ChatPage() {
                 onChange={(e) => setCaptureLead(e.target.checked)}
                 className="rounded border-gray-300"
               />
-              Capturer automatiquement les leads
+              {t('chat.captureLeads')}
             </label>
           </div>
 
           <div className="mt-4 space-y-3 text-xs text-gray-500">
             <div className="flex items-center justify-between uppercase tracking-wide">
-              <span>Filtres</span>
+              <span>{t('chat.filters')}</span>
               <button
                 className={clsx('text-primary-600 transition-colors disabled:text-gray-300')}
                 disabled={filtersAreDefault}
                 onClick={resetFilters}
               >
-                Réinitialiser
+                {t('chat.reset')}
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -485,7 +487,7 @@ export default function ChatPage() {
                     }))
                   }
                 >
-                  {label}
+                  {t(label)}
                 </button>
               ))}
             </div>
@@ -499,7 +501,7 @@ export default function ChatPage() {
                 }))
               }
             >
-              <option value="all">Tous les agents</option>
+              <option value="all">{t('chat.allAgents')}</option>
               {agents.map((agent) => (
                 <option key={agent.id} value={agent.id}>
                   {agent.name}
@@ -518,7 +520,7 @@ export default function ChatPage() {
             >
               {LEAD_STATUS_OPTIONS.map(({ label, value }) => (
                 <option key={value} value={value}>
-                  {label}
+                  {t(label)}
                 </option>
               ))}
             </select>
@@ -534,7 +536,7 @@ export default function ChatPage() {
             >
               {HAS_LEAD_FILTERS.map(({ label, value }) => (
                 <option key={value} value={value}>
-                  {label}
+                  {t(label)}
                 </option>
               ))}
             </select>
@@ -549,7 +551,7 @@ export default function ChatPage() {
             ) : conversations.length === 0 ? (
               <div className="text-center text-gray-400 text-sm mt-12">
                 <MessageSquare className="w-8 h-8 mx-auto mb-3 text-gray-200" />
-                Aucune conversation pour l’instant
+                {t('chat.emptyConversations')}
               </div>
             ) : (
               conversations.map((conv) => (
@@ -565,16 +567,16 @@ export default function ChatPage() {
                 >
                   <p className="text-sm font-semibold text-gray-900">{getAgentName(conv.agentId)}</p>
                   <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                    {conv.visitorId ? `Visiteur #${conv.visitorId}` : 'Widget Web'} ·
+                    {conv.visitorId ? `${t('chat.visitor')} #${conv.visitorId}` : t('chat.widgetWeb')} ·
                     {formatConversationDate(conv.createdAt)}
                   </p>
                   {conv.lead && (
                     <div className="mt-2 flex items-center gap-2 text-xs">
                       <span className={clsx('px-2 py-1 rounded-full font-medium', leadStatusStyle(conv.lead.status))}>
-                        Lead {conv.lead.status}
+                        {t('chat.lead')} {conv.lead.status}
                       </span>
                       {conv.lead.metadata?.autoCaptured && (
-                        <span className="text-gray-400">Auto</span>
+                        <span className="text-gray-400">{t('chat.auto')}</span>
                       )}
                     </div>
                   )}
@@ -585,7 +587,7 @@ export default function ChatPage() {
               <div ref={loadMoreTriggerRef} className="h-6" />
             )}
             {loadingMoreConversations && (
-              <div className="text-center text-xs text-gray-400 py-2">Chargement…</div>
+              <div className="text-center text-xs text-gray-400 py-2">{t('common.loading')}</div>
             )}
           </div>
         </aside>
@@ -595,7 +597,7 @@ export default function ChatPage() {
             <div className="card p-4 flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Conversation #{selectedConversationData.id.slice(0, 8)}</p>
+                  <p className="text-sm text-gray-500">{t('chat.conversation')} #{selectedConversationData.id.slice(0, 8)}</p>
                   <p className="text-base font-semibold text-gray-900">
                     {getAgentName(selectedConversationData.agentId)}
                   </p>
@@ -603,7 +605,7 @@ export default function ChatPage() {
                 <div className="flex flex-col items-end gap-1 text-xs text-gray-500">
                   <div className="flex items-center gap-2">
                     <Info className="w-4 h-4" />
-                    {selectedConversationData.visitorId ? `Visiteur ${selectedConversationData.visitorId}` : 'Widget web'}
+                    {selectedConversationData.visitorId ? `${t('chat.visitor')} ${selectedConversationData.visitorId}` : t('chat.widgetWeb')}
                   </div>
                   <span
                     className={clsx(
@@ -616,10 +618,10 @@ export default function ChatPage() {
                     )}
                   >
                     {selectedConversationData.status === 'open'
-                      ? 'Ouverte'
+                      ? t('chat.status.open')
                       : selectedConversationData.status === 'handed_off'
-                      ? 'Transférée'
-                      : 'Clôturée'}
+                      ? t('chat.status.handedOff')
+                      : t('chat.status.closed')}
                   </span>
                 </div>
               </div>
@@ -633,7 +635,7 @@ export default function ChatPage() {
                   onClick={() => handleUpdateStatus(isConversationClosed ? 'open' : 'closed')}
                   disabled={statusUpdating}
                 >
-                  {isConversationClosed ? 'Ré-ouvrir' : 'Clôturer'}
+                  {isConversationClosed ? t('chat.reopen') : t('chat.close')}
                 </button>
                 <button
                   className="btn-tertiary text-xs flex items-center gap-1"
@@ -641,11 +643,11 @@ export default function ChatPage() {
                 >
                   {copiedConversationId === selectedConversation ? (
                     <>
-                      <CheckCircle2 className="w-3 h-3" /> Copié
+                      <CheckCircle2 className="w-3 h-3" /> {t('chat.copied')}
                     </>
                   ) : (
                     <>
-                      <Copy className="w-3 h-3" /> Copier le lien
+                      <Copy className="w-3 h-3" /> {t('chat.copyLink')}
                     </>
                   )}
                 </button>
@@ -654,30 +656,30 @@ export default function ChatPage() {
               {leadInfo ? (
                 <div className="flex flex-wrap items-center gap-3">
                   <span className={clsx('px-3 py-1 rounded-full text-xs font-medium', leadStatusStyle(leadInfo.status))}>
-                    Lead {leadInfo.status}
+                    {t('chat.lead')} {leadInfo.status}
                   </span>
                   <span className="text-sm text-gray-600">
-                    {leadInfo.email || leadInfo.phone || 'Coordonnées inconnues'}
+                    {leadInfo.email || leadInfo.phone || t('chat.unknownContact')}
                   </span>
                   {leadInfo.metadata?.autoCaptured && (
-                    <span className="text-xs text-gray-400">Capturé automatiquement</span>
+                    <span className="text-xs text-gray-400">{t('chat.autoCaptured')}</span>
                   )}
                   <button
                     onClick={openLeadDetails}
                     className="btn-secondary text-xs flex items-center gap-1"
                   >
-                    Ouvrir le lead <ArrowUpRight className="w-3 h-3" />
+                    {t('chat.openLead')} <ArrowUpRight className="w-3 h-3" />
                   </button>
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="text-gray-500">Aucun lead associé.</span>
+                  <span className="text-gray-500">{t('chat.noLead')}</span>
                   <select
                     className="input w-full sm:w-48 text-sm"
                     value={selectedLeadToAttach}
                     onChange={(e) => setSelectedLeadToAttach(e.target.value)}
                   >
-                    <option value="">Choisir un lead</option>
+                    <option value="">{t('chat.chooseLead')}</option>
                     {leads.map((lead) => (
                       <option key={lead.id} value={lead.id}>
                         {lead.name || lead.email || lead.phone || lead.id.slice(0, 6)}
@@ -689,7 +691,7 @@ export default function ChatPage() {
                     disabled={!selectedLeadToAttach || attachingLead}
                     className="btn-primary text-xs"
                   >
-                    {attachingLead ? 'Association...' : 'Associer ce lead'}
+                    {attachingLead ? t('chat.attaching') : t('chat.attachLead')}
                   </button>
                 </div>
               )}
@@ -698,13 +700,13 @@ export default function ChatPage() {
           <div className="flex-1 card overflow-y-auto p-4 space-y-4 min-h-0 relative">
             {loadingHistory && (
               <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center text-sm text-gray-500">
-                Chargement de l’historique…
+                {t('chat.loadingHistory')}
               </div>
             )}
             {messages.length === 0 && !loadingHistory && (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <Bot className="w-12 h-12 text-gray-200 mb-3" />
-                <p className="text-gray-400 text-sm">Sélectionnez une conversation ou envoyez un message</p>
+                <p className="text-gray-400 text-sm">{t('chat.emptyMessages')}</p>
               </div>
             )}
             {messages.map((msg, i) => (
@@ -738,7 +740,7 @@ export default function ChatPage() {
                   {msg.role === 'assistant' && selectedConversation && (
                     <button
                       onClick={() => {
-                        const corrected = prompt('Corrigez la réponse de l\'agent. Cette correction sera apprise par l\'IA:', msg.content);
+                        const corrected = prompt(t('chat.correctPrompt'), msg.content);
                         if (corrected && corrected.trim() !== msg.content) {
                           const prevMsg = messages[i - 1];
                           sendFeedback.mutate({
@@ -751,7 +753,7 @@ export default function ChatPage() {
                       }}
                       className="mt-2 flex items-center gap-1 text-xs text-gray-400 hover:text-primary-600"
                     >
-                      <Pencil className="w-3 h-3" /> Corriger
+                      <Pencil className="w-3 h-3" /> {t('chat.correct')}
                     </button>
                   )}
                 </div>
@@ -763,7 +765,7 @@ export default function ChatPage() {
                   <Bot className="w-4 h-4 text-gray-600" />
                 </div>
                 <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-tl-sm">
-                  <span className="text-gray-400 text-sm">En train de répondre...</span>
+                  <span className="text-gray-400 text-sm">{t('chat.responding')}</span>
                 </div>
               </div>
             )}
@@ -773,13 +775,13 @@ export default function ChatPage() {
           {isHandedOff && (
             <div className="card p-3 flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border-amber-100">
               <Info className="w-4 h-4 flex-shrink-0" />
-              Cette conversation a été transférée à un agent humain.
+              {t('chat.handedOffBanner')}
             </div>
           )}
 
           {messages.length === 0 && !loadingHistory && selectedAgent && (
             <div className="flex flex-wrap gap-2 px-1">
-              {(['Bonjour, j\'aimerais des informations', 'Quels sont vos tarifs ?', 'Je souhaite être contacté', '/help'] as string[]).map((ice) => (
+              {([t('chat.ice1'), t('chat.ice2'), t('chat.ice3'), '/help'] as string[]).map((ice) => (
                 <button
                   key={ice}
                   onClick={() => setInput(ice)}
@@ -798,14 +800,14 @@ export default function ChatPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Écrivez votre message... (/help pour les commandes)"
+              placeholder={t('chat.inputPlaceholder')}
               disabled={!selectedAgent || sending || isHandedOff}
             />
             <button
               onClick={handleSend}
               disabled={!input.trim() || !selectedAgent || sending || isHandedOff}
               className="btn-primary px-5 self-end"
-              aria-label="Envoyer"
+              aria-label={t('chat.send')}
             >
               <Send className="w-4 h-4" />
             </button>
