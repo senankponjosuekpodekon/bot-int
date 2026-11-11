@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Package, Plus, Search, Trash2, Pencil, Upload, X, RefreshCw, History, ChevronDown, ChevronUp, LayoutGrid, List, Database } from 'lucide-react';
 import { productsApi, agentsApi, type Agent } from '@/lib/api';
+import { useUiLocale } from '@/lib/ui-locale';
 
 interface Product {
   id: string;
@@ -22,6 +23,7 @@ interface Product {
 const PAGE_SIZE = 20;
 
 export default function ProductsPage() {
+  const { t } = useUiLocale();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
@@ -67,11 +69,11 @@ export default function ProductsPage() {
     setSyncing(true);
     try {
       const results = await productsApi.sync();
-      const summary = results.map((r: any) => `${r.type}: ${r.imported ?? r.error} ${r.imported ? 'importés' : ''}`).join(', ');
-      showToast(summary || 'Aucune intégration à synchroniser');
+      const summary = results.map((r: any) => `${r.type}: ${r.imported ?? r.error} ${r.imported ? t('prod.imported') : ''}`).join(', ');
+      showToast(summary || t('prod.toast.noIntegration'));
       load();
     } catch {
-      showToast('Erreur lors de la synchronisation', 'error');
+      showToast(t('prod.toast.syncError'), 'error');
     } finally {
       setSyncing(false);
     }
@@ -81,10 +83,10 @@ export default function ProductsPage() {
     setSyncing(true);
     try {
       const result = await productsApi.autoSync();
-      showToast(`${result.imported} produit(s) synchronisé(s) automatiquement`);
+      showToast(`${result.imported} ${t('prod.toast.autoSynced')}`);
       load();
     } catch {
-      showToast('Erreur lors de l\'auto-sync (configurez Shopify/WooCommerce d\'abord)', 'error');
+      showToast(t('prod.toast.autoSyncError'), 'error');
     } finally {
       setSyncing(false);
     }
@@ -108,32 +110,32 @@ export default function ProductsPage() {
   useEffect(() => { setPage(1); }, [search, category, selectedAgent]);
 
   const handleSave = async () => {
-    if (!form.name || form.price < 0) { showToast('Nom et prix requis', 'error'); return; }
+    if (!form.name || form.price < 0) { showToast(t('prod.toast.required'), 'error'); return; }
     try {
       if (editing) {
         await productsApi.update(editing.id, form);
-        showToast('Produit mis à jour');
+        showToast(t('prod.toast.updated'));
       } else {
         await productsApi.create(form);
-        showToast('Produit créé');
+        showToast(t('prod.toast.created'));
       }
       setShowForm(false);
       setEditing(null);
       setForm({ name: '', description: '', price: 0, currency: 'EUR', stock: 0, category: '', imageUrl: '', productUrl: '', agentId: '' });
       load();
     } catch {
-      showToast('Erreur lors de la sauvegarde', 'error');
+      showToast(t('prod.toast.saveError'), 'error');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer ce produit ?')) return;
+    if (!confirm(t('prod.confirmDelete'))) return;
     try {
       await productsApi.delete(id);
-      showToast('Produit supprimé');
+      showToast(t('prod.toast.deleted'));
       load();
     } catch {
-      showToast('Erreur lors de la suppression', 'error');
+      showToast(t('prod.toast.deleteError'), 'error');
     }
   };
 
@@ -148,14 +150,14 @@ export default function ProductsPage() {
 
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`Supprimer ${selectedIds.length} produit(s) ?`)) return;
+    if (!confirm(`${t('prod.confirmBulkDelete')} ${selectedIds.length}`)) return;
     try {
       await productsApi.bulkDelete(selectedIds);
-      showToast(`${selectedIds.length} produit(s) supprimé(s)`);
+      showToast(`${selectedIds.length} ${t('prod.toast.bulkDeleted')}`);
       setSelectedIds([]);
       load();
     } catch {
-      showToast('Erreur lors de la suppression groupée', 'error');
+      showToast(t('prod.toast.bulkDeleteError'), 'error');
     }
   };
 
@@ -169,35 +171,35 @@ export default function ProductsPage() {
     <div className="p-4 lg:p-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Produits</h1>
-          <p className="text-sm text-gray-500 mt-1">{total} produit{total > 1 ? 's' : ''} au catalogue</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{t('prod.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{total} {t('prod.inCatalog')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {selectedIds.length > 0 && (
             <button onClick={handleBulkDelete} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700">
-              <Trash2 className="w-4 h-4" /> Supprimer ({selectedIds.length})
+              <Trash2 className="w-4 h-4" /> {t('common.delete')} ({selectedIds.length})
             </button>
           )}
           <button onClick={handleSync} disabled={syncing} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
-            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> {syncing ? 'Sync...' : 'Synchroniser'}
+            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> {syncing ? 'Sync...' : t('prod.sync')}
           </button>
-          <button onClick={handleAutoSync} disabled={syncing} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-50 border border-primary-200 text-sm font-medium text-primary-700 hover:bg-primary-100 disabled:opacity-50" title="Synchronisation automatique depuis Shopify/WooCommerce (cron toutes les 6h)">
+          <button onClick={handleAutoSync} disabled={syncing} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-50 border border-primary-200 text-sm font-medium text-primary-700 hover:bg-primary-100 disabled:opacity-50" title={t('prod.autoSyncTitle')}>
             <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> Auto-sync
           </button>
           <button onClick={() => setShowHistory(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
-            <History className="w-4 h-4" /> Historique
+            <History className="w-4 h-4" /> {t('prod.history')}
           </button>
           <button onClick={() => setShowSources(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
-            <Database className="w-4 h-4" /> Sources
+            <Database className="w-4 h-4" /> {t('prod.sources')}
             {importSources.filter((s) => s.enabled).length > 0 && (
               <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-700 text-xs">{importSources.filter((s) => s.enabled).length}</span>
             )}
           </button>
           <button onClick={() => setShowImport(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
-            <Upload className="w-4 h-4" /> Importer
+            <Upload className="w-4 h-4" /> {t('prod.import')}
           </button>
           <button onClick={() => { setEditing(null); setForm({ name: '', description: '', price: 0, currency: 'EUR', stock: 0, category: '', imageUrl: '', productUrl: '', agentId: '' }); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">
-            <Plus className="w-4 h-4" /> Nouveau produit
+            <Plus className="w-4 h-4" /> {t('prod.new')}
           </button>
         </div>
       </div>
@@ -205,14 +207,14 @@ export default function ProductsPage() {
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher un produit..." className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-primary-500" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('prod.searchPlaceholder')} className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-primary-500" />
         </div>
         <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-300 text-sm">
-          <option value="">Toutes catégories</option>
+          <option value="">{t('prod.allCategories')}</option>
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         <select value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)} className="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-300 text-sm">
-          <option value="">Tous les agents</option>
+          <option value="">{t('prod.allAgents')}</option>
           {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
         <div className="flex rounded-lg border border-gray-300 overflow-hidden self-start">
@@ -222,11 +224,11 @@ export default function ProductsPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-500">Chargement...</div>
+        <div className="text-center py-12 text-gray-500">{t('common.loading')}</div>
       ) : products.length === 0 ? (
         <div className="text-center py-12">
           <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500">Aucun produit. Créez-en un ou importez depuis Shopify/WooCommerce.</p>
+          <p className="text-gray-500">{t('prod.empty')}</p>
         </div>
       ) : view === 'list' ? (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden overflow-x-auto">
@@ -236,12 +238,12 @@ export default function ProductsPage() {
                 <th className="text-left px-4 py-3 w-10">
                   <input type="checkbox" checked={isAllSelected} onChange={toggleAll} className="w-4 h-4 rounded border-gray-300" />
                 </th>
-                <th className="text-left px-4 py-3 w-14">Image</th>
-                <th className="text-left px-4 py-3">Produit</th>
+                <th className="text-left px-4 py-3 w-14">{t('prod.image')}</th>
+                <th className="text-left px-4 py-3">{t('prod.product')}</th>
                 <th className="text-left px-4 py-3 hidden md:table-cell">SKU</th>
-                <th className="text-left px-4 py-3 hidden sm:table-cell">Stock</th>
-                <th className="text-left px-4 py-3">Prix</th>
-                <th className="text-right px-4 py-3 w-24">Actions</th>
+                <th className="text-left px-4 py-3 hidden sm:table-cell">{t('prod.stock')}</th>
+                <th className="text-left px-4 py-3">{t('prod.price')}</th>
+                <th className="text-right px-4 py-3 w-24">{t('prod.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -260,7 +262,7 @@ export default function ProductsPage() {
                   <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{p.sku || '-'}</td>
                   <td className="px-4 py-3 hidden sm:table-cell">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${p.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {p.stock > 0 ? p.stock : 'Rupture'}
+                      {p.stock > 0 ? p.stock : t('prod.outOfStock')}
                     </span>
                   </td>
                   <td className="px-4 py-3 font-bold text-gray-900">
@@ -289,7 +291,7 @@ export default function ProductsPage() {
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-semibold text-gray-900 text-sm line-clamp-2">{p.name}</h3>
                   <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${p.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {p.stock > 0 ? p.stock : 'Rupture'}
+                    {p.stock > 0 ? p.stock : t('prod.outOfStock')}
                   </span>
                 </div>
                 {p.category && <span className="inline-block text-xs text-primary-600 mt-1">{p.category}</span>}
@@ -316,17 +318,17 @@ export default function ProductsPage() {
             disabled={page === 1}
             className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
-            Précédent
+            {t('agc.prev')}
           </button>
           <span className="text-sm text-gray-600">
-            Page {page} / {Math.ceil(total / PAGE_SIZE)} ({total} produits)
+            Page {page} / {Math.ceil(total / PAGE_SIZE)} ({total} {t('prod.products')})
           </span>
           <button
             onClick={() => setPage((p) => Math.min(Math.ceil(total / PAGE_SIZE), p + 1))}
             disabled={page >= Math.ceil(total / PAGE_SIZE)}
             className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
-            Suivant
+            {t('agc.next')}
           </button>
         </div>
       )}
@@ -335,30 +337,30 @@ export default function ProductsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowForm(false)}>
           <div className="bg-white rounded-2xl p-4 lg:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">{editing ? 'Modifier' : 'Nouveau'} produit</h2>
+              <h2 className="text-lg font-bold">{editing ? t('prod.edit') : t('prod.new')}</h2>
               <button onClick={() => setShowForm(false)} className="p-1 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-3">
-              <div><label className="text-sm font-medium text-gray-700">Nom *</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
-              <div><label className="text-sm font-medium text-gray-700">Description</label><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
+              <div><label className="text-sm font-medium text-gray-700">{t('agc.name')} *</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
+              <div><label className="text-sm font-medium text-gray-700">{t('prod.description')}</label><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <div><label className="text-sm font-medium text-gray-700">Prix *</label><input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
-                <div><label className="text-sm font-medium text-gray-700">Devise</label><select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"><option value="EUR">EUR</option><option value="USD">USD</option><option value="XOF">XOF</option></select></div>
+                <div><label className="text-sm font-medium text-gray-700">{t('prod.price')} *</label><input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
+                <div><label className="text-sm font-medium text-gray-700">{t('prod.currency')}</label><select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"><option value="EUR">EUR</option><option value="USD">USD</option><option value="XOF">XOF</option></select></div>
                 <div><label className="text-sm font-medium text-gray-700">Stock</label><input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: parseInt(e.target.value) || 0 })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><label className="text-sm font-medium text-gray-700">Catégorie</label><input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
+                <div><label className="text-sm font-medium text-gray-700">{t('prod.category')}</label><input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
                 <div><label className="text-sm font-medium text-gray-700">Image URL</label><input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
               </div>
               <div><label className="text-sm font-medium text-gray-700">URL produit</label><input value={form.productUrl} onChange={(e) => setForm({ ...form, productUrl: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
               <div>
-                <label className="text-sm font-medium text-gray-700">Agent assigné</label>
+                <label className="text-sm font-medium text-gray-700">{t('prod.assignedAgent')}</label>
                 <select value={form.agentId} onChange={(e) => setForm({ ...form, agentId: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                  <option value="">Partagé / tous les agents</option>
+                  <option value="">{t('prod.sharedAgents')}</option>
                   {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               </div>
-              <button onClick={handleSave} className="w-full py-2.5 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">{editing ? 'Mettre à jour' : 'Créer'}</button>
+              <button onClick={handleSave} className="w-full py-2.5 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">{editing ? t('common.save') : t('agc.create')}</button>
             </div>
           </div>
         </div>
@@ -413,6 +415,7 @@ function ImportModal({ onClose, onDone, showToast, agents, initialTab, initialCo
   initialTab?: 'feed' | 'csv' | 'csv_url' | 'gmc' | 'sitemap' | 'shopify' | 'woocommerce';
   initialConfig?: { storeDomain?: string; agentId?: string; csvUrl?: string; format?: string };
 }) {
+  const { t } = useUiLocale();
   const [tab, setTab] = useState<'feed' | 'csv' | 'csv_url' | 'gmc' | 'sitemap' | 'shopify' | 'woocommerce'>(initialTab || 'feed');
   const [loading, setLoading] = useState(false);
   const [feedUrl, setFeedUrl] = useState('');
@@ -457,12 +460,12 @@ function ImportModal({ onClose, onDone, showToast, agents, initialTab, initialCo
       const updated = result.updated ?? 0;
       const errors = result.errors ?? 0;
       const summary = result.scanned != null
-        ? `${result.scanned} URLs scannées, +${created} · ~${updated}${errors > 0 ? ` · ${errors} erreurs` : ''}`
-        : `+${created} créés · ~${updated} mis à jour${errors > 0 ? ` · ${errors} erreurs` : ''}`;
+        ? `${result.scanned} ${t('prod.scanned')}, +${created} · ~${updated}${errors > 0 ? ` · ${errors} ${t('prod.errors')}` : ''}`
+        : `+${created} ${t('prod.createdShort')} · ~${updated} ${t('prod.updatedShort')}${errors > 0 ? ` · ${errors} ${t('prod.errors')}` : ''}`;
       showToast(summary);
       onDone();
     } catch (err: any) {
-      showToast(err?.response?.data?.message || "Erreur lors de l'import", 'error');
+      showToast(err?.response?.data?.message || t('prod.toast.importError'), 'error');
     } finally {
       setLoading(false);
     }
@@ -480,9 +483,9 @@ function ImportModal({ onClose, onDone, showToast, agents, initialTab, initialCo
 
   const agentSelect = (
     <div>
-      <label className="text-sm font-medium text-gray-700">Agent assigné (optionnel)</label>
+      <label className="text-sm font-medium text-gray-700">{t('prod.assignedAgentOpt')}</label>
       <select value={importAgentId} onChange={(e) => setImportAgentId(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm">
-        <option value="">Partagé / tous les agents</option>
+        <option value="">{t('prod.sharedAgents')}</option>
         {agents?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
       </select>
     </div>
@@ -492,7 +495,7 @@ function ImportModal({ onClose, onDone, showToast, agents, initialTab, initialCo
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl p-4 lg:p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold">Importer des produits</h2>
+          <h2 className="text-lg font-bold">{t('prod.importTitle')}</h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
         </div>
         <div className="flex gap-1 mb-4 flex-wrap">
@@ -516,12 +519,12 @@ function ImportModal({ onClose, onDone, showToast, agents, initialTab, initialCo
             <div>
               <label className="text-sm font-medium text-gray-700">Coller le contenu CSV</label>
               <textarea value={csvText} onChange={(e) => setCsvText(e.target.value)} rows={6} placeholder="name,price,stock,category,description&#10;T-shirt,19.99,100,Vêtements,Coton bio" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm font-mono" />
-              <p className="text-xs text-gray-400 mt-1">Détection automatique du format (Shopify, WooCommerce, ou générique). Colonnes reconnues: name/title, price/prix, stock, category, description, sku, image.</p>
+              <p className="text-xs text-gray-400 mt-1">{t('prod.csvHint')}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Domaine Shopify (optionnel)</label>
               <input value={csvStoreDomain} onChange={(e) => setCsvStoreDomain(e.target.value)} placeholder="maboutique.myshopify.com" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
-              <p className="text-xs text-gray-400 mt-1">Permet de reconstruire l'URL produit complète (/products/handle).</p>
+              <p className="text-xs text-gray-400 mt-1">{t('prod.storeDomainHint')}</p>
             </div>
             {agentSelect}
           </div>
@@ -532,15 +535,15 @@ function ImportModal({ onClose, onDone, showToast, agents, initialTab, initialCo
             <div>
               <label className="text-sm font-medium text-gray-700">URL du fichier CSV</label>
               <input value={csvUrl} onChange={(e) => setCsvUrl(e.target.value)} placeholder="https://maboutique.com/produits.csv" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
-              <p className="text-xs text-gray-400 mt-1">Le fichier doit être accessible publiquement (hébergé sur un site, Google Sheets publique, etc.).</p>
+              <p className="text-xs text-gray-400 mt-1">{t('prod.csvUrlHint')}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700">Format (optionnel)</label>
               <select value={csvUrlFormat} onChange={(e) => setCsvUrlFormat(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm">
-                <option value="">Détection automatique</option>
+                <option value="">{t('prod.autoDetect')}</option>
                 <option value="shopify">Shopify</option>
                 <option value="woocommerce">WooCommerce</option>
-                <option value="generic">Générique</option>
+                <option value="generic">{t('prod.generic')}</option>
               </select>
             </div>
             <div>
@@ -570,9 +573,9 @@ function ImportModal({ onClose, onDone, showToast, agents, initialTab, initialCo
               <p className="text-xs text-gray-400 mt-1">Scraping automatique: lit le sitemap, filtre les URLs produit (/product, /p/, /item/...), scrape chaque page pour extraire nom, prix, description, image. Supporte les sitemaps index (nested).</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Nombre max de pages à scraper</label>
+              <label className="text-sm font-medium text-gray-700">{t('prod.maxPages')}</label>
               <input type="number" min={1} max={500} value={sitemapMaxPages} onChange={(e) => setSitemapMaxPages(Math.max(1, Math.min(500, Number(e.target.value) || 1)))} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
-              <p className="text-xs text-gray-400 mt-1">Entre 1 et 500 (par défaut 50).</p>
+              <p className="text-xs text-gray-400 mt-1">{t('prod.maxPagesHint')}</p>
             </div>
             {agentSelect}
           </div>
@@ -582,7 +585,7 @@ function ImportModal({ onClose, onDone, showToast, agents, initialTab, initialCo
           <div className="space-y-3">
             <div><label className="text-sm font-medium text-gray-700">Domaine Shopify</label><input value={shopifyForm.shopDomain} onChange={(e) => setShopifyForm({ ...shopifyForm, shopDomain: e.target.value })} placeholder="maboutique.myshopify.com" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
             <div><label className="text-sm font-medium text-gray-700">Access Token</label><input value={shopifyForm.accessToken} onChange={(e) => setShopifyForm({ ...shopifyForm, accessToken: e.target.value })} type="password" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
-            <p className="text-xs text-gray-400">API Admin — accès complet aux produits, variants, stock.</p>
+            <p className="text-xs text-gray-400">{t('prod.apiHint')}</p>
           </div>
         )}
 
@@ -594,7 +597,7 @@ function ImportModal({ onClose, onDone, showToast, agents, initialTab, initialCo
           </div>
         )}
 
-        <button onClick={handleImport} disabled={loading} className="w-full mt-4 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50">{loading ? 'Import en cours...' : 'Importer'}</button>
+        <button onClick={handleImport} disabled={loading} className="w-full mt-4 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50">{loading ? t('prod.importing') : t('prod.import')}</button>
       </div>
     </div>
   );
@@ -621,6 +624,7 @@ function HistoryModal({
   showToast: (msg: string, type?: 'success' | 'error') => void;
   onReimport?: (config: { tab: any; storeDomain?: string; agentId?: string; csvUrl?: string; format?: string }) => void;
 }) {
+  const { t } = useUiLocale();
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
       success: 'bg-green-100 text-green-700',
@@ -650,17 +654,17 @@ function HistoryModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl p-4 lg:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold">Historique des imports</h2>
+          <h2 className="text-lg font-bold">{t('prod.historyTitle')}</h2>
           <div className="flex items-center gap-2">
-            <button onClick={onRefresh} className="p-2 rounded-lg hover:bg-gray-100" title="Rafraîchir"><RefreshCw className="w-4 h-4 text-gray-500" /></button>
+            <button onClick={onRefresh} className="p-2 rounded-lg hover:bg-gray-100" title={t('prod.refresh')}><RefreshCw className="w-4 h-4 text-gray-500" /></button>
             <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
           </div>
         </div>
 
         {loading ? (
-          <div className="text-center py-8 text-gray-500">Chargement...</div>
+          <div className="text-center py-8 text-gray-500">{t('common.loading')}</div>
         ) : history.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">Aucun import enregistré.</div>
+          <div className="text-center py-8 text-gray-500">{t('prod.noImports')}</div>
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-gray-500">{total} import{total > 1 ? 's' : ''}</p>
@@ -680,20 +684,20 @@ function HistoryModal({
                 {selected?.id === h.id && (
                   <div className="mt-3 pt-3 border-t border-gray-100 text-sm">
                     <div className="grid grid-cols-3 gap-2 mb-3">
-                      <div className="text-center p-2 bg-green-50 rounded-lg"><div className="font-bold text-green-700">{h.created}</div><div className="text-xs text-green-600">Créés</div></div>
-                      <div className="text-center p-2 bg-blue-50 rounded-lg"><div className="font-bold text-blue-700">{h.updated}</div><div className="text-xs text-blue-600">Mis à jour</div></div>
-                      <div className="text-center p-2 bg-red-50 rounded-lg"><div className="font-bold text-red-700">{h.errors}</div><div className="text-xs text-red-600">Erreurs</div></div>
+                      <div className="text-center p-2 bg-green-50 rounded-lg"><div className="font-bold text-green-700">{h.created}</div><div className="text-xs text-green-600">{t('prod.createdShort')}</div></div>
+                      <div className="text-center p-2 bg-blue-50 rounded-lg"><div className="font-bold text-blue-700">{h.updated}</div><div className="text-xs text-blue-600">{t('prod.updatedShort')}</div></div>
+                      <div className="text-center p-2 bg-red-50 rounded-lg"><div className="font-bold text-red-700">{h.errors}</div><div className="text-xs text-red-600">{t('prod.errors')}</div></div>
                     </div>
-                    {h.scanned != null && <p className="text-xs text-gray-500 mb-2">{h.scanned} URLs scannées</p>}
+                    {h.scanned != null && <p className="text-xs text-gray-500 mb-2">{h.scanned} {t('prod.scanned')}</p>}
                     {h.source === 'sitemap' && h.metadata?.sitemapUrl && (
                       <button
                         onClick={async () => {
                           try {
                             await productsApi.importSitemap(h.metadata.sitemapUrl, h.metadata.agentId, h.metadata.maxPages);
-                            showToast('Import sitemap relancé');
+                            showToast(t('prod.toast.reimportSitemap'));
                             onRefresh();
                           } catch {
-                            showToast('Erreur lors du re-lancement', 'error');
+                            showToast(t('prod.toast.reimportError'), 'error');
                           }
                         }}
                         className="mt-2 w-full py-2 rounded-lg bg-primary-600 text-white text-xs font-medium hover:bg-primary-700"
@@ -706,10 +710,10 @@ function HistoryModal({
                         onClick={async () => {
                           try {
                             await productsApi.importCsvUrl(h.metadata.csvUrl, h.metadata.format, h.metadata.storeDomain, h.metadata.agentId);
-                            showToast('Import CSV URL relancé');
+                            showToast(t('prod.toast.reimportCsv'));
                             onRefresh();
                           } catch {
-                            showToast('Erreur lors du re-lancement', 'error');
+                            showToast(t('prod.toast.reimportError'), 'error');
                           }
                         }}
                         className="mt-2 w-full py-2 rounded-lg bg-primary-600 text-white text-xs font-medium hover:bg-primary-700"
@@ -726,7 +730,7 @@ function HistoryModal({
                         })}
                         className="mt-2 w-full py-2 rounded-lg bg-primary-600 text-white text-xs font-medium hover:bg-primary-700"
                       >
-                        Ré-importer avec les mêmes paramètres
+                        {t('prod.reimport')}
                       </button>
                     )}
                     {h.source === 'google_merchant' && onReimport && (
@@ -737,12 +741,12 @@ function HistoryModal({
                         })}
                         className="mt-2 w-full py-2 rounded-lg bg-primary-600 text-white text-xs font-medium hover:bg-primary-700"
                       >
-                        Ré-importer avec les mêmes paramètres
+                        {t('prod.reimport')}
                       </button>
                     )}
                     {h.details && h.details.length > 0 && (
                       <div className="bg-gray-50 rounded-lg p-2 max-h-40 overflow-y-auto">
-                        <p className="text-xs font-medium text-gray-700 mb-1">Détails</p>
+                        <p className="text-xs font-medium text-gray-700 mb-1">{t('prod.details')}</p>
                         {h.details.map((d: string, i: number) => <p key={i} className="text-xs text-gray-600">{d}</p>)}
                       </div>
                     )}
@@ -768,34 +772,35 @@ function SourcesModal({
   onRefresh: () => void;
   showToast: (msg: string, type?: 'success' | 'error') => void;
 }) {
+  const { t } = useUiLocale();
   const toggle = async (id: string, enabled: boolean) => {
     try {
       await productsApi.updateImportSource(id, { enabled: !enabled });
-      showToast(enabled ? 'Source désactivée' : 'Source activée');
+      showToast(enabled ? t('prod.toast.srcOff') : t('prod.toast.srcOn'));
       onRefresh();
     } catch {
-      showToast('Erreur lors de la mise à jour', 'error');
+      showToast(t('prod.toast.updateError'), 'error');
     }
   };
 
   const updateFrequency = async (id: string, frequencyMinutes: number) => {
     try {
       await productsApi.updateImportSource(id, { frequencyMinutes });
-      showToast('Fréquence mise à jour');
+      showToast(t('prod.toast.freqUpdated'));
       onRefresh();
     } catch {
-      showToast('Erreur lors de la mise à jour de la fréquence', 'error');
+      showToast(t('prod.toast.freqError'), 'error');
     }
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Supprimer cette source ?')) return;
+    if (!confirm(t('prod.confirmSrcDelete'))) return;
     try {
       await productsApi.deleteImportSource(id);
-      showToast('Source supprimée');
+      showToast(t('prod.toast.srcDeleted'));
       onRefresh();
     } catch {
-      showToast('Erreur lors de la suppression', 'error');
+      showToast(t('prod.toast.deleteError'), 'error');
     }
   };
 
@@ -807,8 +812,8 @@ function SourcesModal({
   };
 
   const nextImport = (s: any) => {
-    if (!s.enabled) return 'Désactivée';
-    if (!s.lastImportAt) return 'Dès le prochain cycle';
+    if (!s.enabled) return t('prod.disabled');
+    if (!s.lastImportAt) return t('prod.nextCycle');
     const freq = (s.config?.frequencyMinutes || 360) * 60 * 1000;
     const next = new Date(new Date(s.lastImportAt).getTime() + freq);
     return `Prochain : ${next.toLocaleString()}`;
@@ -818,11 +823,11 @@ function SourcesModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl p-4 lg:p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold">Sources d'import mémorisées</h2>
+          <h2 className="text-lg font-bold">{t('prod.sourcesTitle')}</h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
         </div>
         {sources.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-6">Aucune source enregistrée. Importez depuis sitemap ou CSV URL pour en créer.</p>
+          <p className="text-sm text-gray-500 text-center py-6">{t('prod.noSources')}</p>
         ) : (
           <div className="space-y-3">
             {sources.map((s) => (

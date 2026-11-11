@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { leadsApi } from '@/lib/api';
 import { Users, Plus, X, Mail, Phone, Filter, ArrowUpRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { useUiLocale } from '@/lib/ui-locale';
 
 interface Lead {
   id: string;
@@ -18,17 +19,18 @@ interface Lead {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'new', label: 'Nouveau', badge: 'bg-blue-100 text-blue-700' },
-  { value: 'contacted', label: 'Contacté', badge: 'bg-amber-100 text-amber-700' },
-  { value: 'qualified', label: 'Qualifié', badge: 'bg-purple-100 text-purple-700' },
-  { value: 'converted', label: 'Converti', badge: 'bg-green-100 text-green-700' },
-  { value: 'lost', label: 'Perdu', badge: 'bg-gray-100 text-gray-500' },
+  { value: 'new', badge: 'bg-blue-100 text-blue-700' },
+  { value: 'contacted', badge: 'bg-amber-100 text-amber-700' },
+  { value: 'qualified', badge: 'bg-purple-100 text-purple-700' },
+  { value: 'converted', badge: 'bg-green-100 text-green-700' },
+  { value: 'lost', badge: 'bg-gray-100 text-gray-500' },
 ];
 
 const emptyForm = { name: '', email: '', phone: '', source: '', score: 0, status: 'new' };
 const PAGE_SIZE = 15;
 
 export default function LeadsPage() {
+  const { t } = useUiLocale();
   const queryClient = useQueryClient();
   const { data: leads = [], isLoading: loading } = useQuery<Lead[]>({
     queryKey: ['leads'],
@@ -51,7 +53,7 @@ export default function LeadsPage() {
     },
     onError: (_err, _vars, ctx) => {
       queryClient.setQueryData(['leads'], ctx?.previous);
-      toast.error('Impossible de mettre à jour le statut');
+      toast.error(t('lead.toast.statusError'));
     },
   });
   const [showForm, setShowForm] = useState(false);
@@ -105,11 +107,11 @@ export default function LeadsPage() {
     setSaving(true);
     try {
       await createLead.mutateAsync(form);
-      toast.success('Lead ajouté');
+      toast.success(t('lead.toast.created'));
       setShowForm(false);
       setForm(emptyForm);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Création de lead impossible");
+      toast.error(error?.response?.data?.message || t('lead.toast.createError'));
     } finally {
       setSaving(false);
     }
@@ -120,7 +122,7 @@ export default function LeadsPage() {
     if (!current || current.status === status) return;
     try {
       await updateLeadStatus.mutateAsync({ id, status });
-      toast.success('Statut mis à jour');
+      toast.success(t('lead.toast.statusUpdated'));
     } catch { /* optimistic rollback handled by onError */ }
   };
 
@@ -128,11 +130,11 @@ export default function LeadsPage() {
     <div className="p-4 lg:p-8 space-y-4 lg:space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Pipeline des leads</h1>
-          <p className="text-sm text-gray-500">Suivez vos prospects générés par les agents.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{t('lead.title')}</h1>
+          <p className="text-sm text-gray-500">{t('lead.subtitle')}</p>
         </div>
         <button className="btn-primary flex items-center gap-2" onClick={() => setShowForm(true)}>
-          <Plus className="w-4 h-4" /> Nouveau lead
+          <Plus className="w-4 h-4" /> {t('lead.new')}
         </button>
       </div>
 
@@ -142,21 +144,21 @@ export default function LeadsPage() {
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-sm text-gray-500">Total leads</p>
+            <p className="text-sm text-gray-500">{t('lead.stats.total')}</p>
             <p className="text-xl sm:text-2xl font-bold">{loading ? '...' : stats.total}</p>
           </div>
         </div>
         <div className="card p-5">
-          <p className="text-sm text-gray-500">Qualifiés</p>
+          <p className="text-sm text-gray-500">{t('lead.stats.qualified')}</p>
           <p className="text-xl sm:text-2xl font-bold">{loading ? '...' : stats.qualified}</p>
         </div>
         <div className="card p-5">
-          <p className="text-sm text-gray-500">Convertis</p>
+          <p className="text-sm text-gray-500">{t('lead.stats.converted')}</p>
           <p className="text-xl sm:text-2xl font-bold">{loading ? '...' : stats.converted}</p>
         </div>
         <div className="card p-5">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-500">Taux de conversion</p>
+            <p className="text-sm text-gray-500">{t('lead.stats.conversionRate')}</p>
             <ArrowUpRight className="w-4 h-4 text-green-500" />
           </div>
           <p className="text-xl sm:text-2xl font-bold">{loading ? '...' : `${stats.conversionRate}%`}</p>
@@ -166,7 +168,7 @@ export default function LeadsPage() {
       <div className="card">
         <div className="p-5 flex flex-wrap items-center gap-3 border-b border-gray-100">
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Filter className="w-4 h-4" /> Filtrer :
+            <Filter className="w-4 h-4" /> {t('lead.filter')}
           </div>
           <div className="flex flex-wrap gap-2">
             {['all', ...STATUS_OPTIONS.map((s) => s.value)].map((value) => (
@@ -177,27 +179,27 @@ export default function LeadsPage() {
                 }`}
                 onClick={() => setFilter(value)}
               >
-                {value === 'all' ? 'Tous' : STATUS_OPTIONS.find((s) => s.value === value)?.label}
+                {value === 'all' ? t('lead.filter.all') : t(`lead.status.${value}`)}
               </button>
             ))}
           </div>
         </div>
 
         {loading ? (
-          <div className="p-4 lg:p-8 text-center text-gray-400">Chargement...</div>
+          <div className="p-4 lg:p-8 text-center text-gray-400">{t('common.loading')}</div>
         ) : filteredLeads.length === 0 ? (
-          <div className="p-4 lg:p-8 text-center text-gray-400">Aucun lead pour ce filtre.</div>
+          <div className="p-4 lg:p-8 text-center text-gray-400">{t('lead.empty')}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] text-sm">
               <thead>
                 <tr className="text-left border-b border-gray-100 text-gray-500">
-                  <th className="p-4 font-medium">Lead</th>
-                  <th className="p-4 font-medium">Contact</th>
-                  <th className="p-4 font-medium">Score</th>
-                  <th className="p-4 font-medium">Source</th>
-                  <th className="p-4 font-medium">Créé le</th>
-                  <th className="p-4 font-medium">Statut</th>
+                  <th className="p-4 font-medium">{t('lead.col.lead')}</th>
+                  <th className="p-4 font-medium">{t('lead.col.contact')}</th>
+                  <th className="p-4 font-medium">{t('lead.col.score')}</th>
+                  <th className="p-4 font-medium">{t('lead.col.source')}</th>
+                  <th className="p-4 font-medium">{t('lead.col.createdAt')}</th>
+                  <th className="p-4 font-medium">{t('lead.col.status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -213,7 +215,7 @@ export default function LeadsPage() {
                     >
                       <td className="p-4">
                         <a href={`/dashboard/leads/${lead.id}`} className="font-medium text-gray-900 hover:text-primary-600">
-                          {lead.name || 'Sans nom'}
+                          {lead.name || t('lead.unnamed')}
                         </a>
                         <p className="text-xs text-gray-400">#{lead.id.slice(0, 8)}</p>
                       </td>
@@ -244,9 +246,9 @@ export default function LeadsPage() {
                           value={lead.status}
                           onChange={(e) => handleStatusChange(lead.id, e.target.value)}
                         >
-                          {STATUS_OPTIONS.map(({ value, label }) => (
+                          {STATUS_OPTIONS.map(({ value }) => (
                             <option key={value} value={value}>
-                              {label}
+                              {t(`lead.status.${value}`)}
                             </option>
                           ))}
                         </select>
@@ -265,15 +267,15 @@ export default function LeadsPage() {
               disabled={page === 1}
               className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm disabled:opacity-50"
             >
-              Précédent
+              {t('lead.prev')}
             </button>
-            <span className="text-sm text-gray-600">Page {page} / {totalPages}</span>
+            <span className="text-sm text-gray-600">{t('lead.page')} {page} / {totalPages}</span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
               className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm disabled:opacity-50"
             >
-              Suivant
+              {t('lead.next')}
             </button>
           </div>
         )}
@@ -285,16 +287,16 @@ export default function LeadsPage() {
             <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-600" onClick={() => setShowForm(false)}>
               <X className="w-5 h-5" />
             </button>
-            <h2 className="text-lg font-semibold text-gray-900 mb-1">Nouveau lead</h2>
-            <p className="text-sm text-gray-500 mb-4">Ajoutez manuellement un prospect capturé hors agent.</p>
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">{t('lead.new')}</h2>
+            <p className="text-sm text-gray-500 mb-4">{t('lead.form.subtitle')}</p>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="label">Nom</label>
+                <label className="label">{t('lead.form.name')}</label>
                 <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Email</label>
+                  <label className="label">{t('lead.form.email')}</label>
                   <input
                     type="email"
                     className="input"
@@ -303,17 +305,17 @@ export default function LeadsPage() {
                   />
                 </div>
                 <div>
-                  <label className="label">Téléphone</label>
+                  <label className="label">{t('lead.form.phone')}</label>
                   <input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Source</label>
-                  <input className="input" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="Chatbot, salon, call..." />
+                  <label className="label">{t('lead.form.source')}</label>
+                  <input className="input" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder={t('lead.form.sourcePlaceholder')} />
                 </div>
                 <div>
-                  <label className="label">Score</label>
+                  <label className="label">{t('lead.form.score')}</label>
                   <input
                     type="number"
                     min={0}
@@ -324,17 +326,17 @@ export default function LeadsPage() {
                 </div>
               </div>
               <div>
-                <label className="label">Statut</label>
+                <label className="label">{t('lead.form.status')}</label>
                 <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                  {STATUS_OPTIONS.map(({ value, label }) => (
+                  {STATUS_OPTIONS.map(({ value }) => (
                     <option key={value} value={value}>
-                      {label}
+                      {t(`lead.status.${value}`)}
                     </option>
                   ))}
                 </select>
               </div>
               <button type="submit" className="btn-primary w-full" disabled={saving}>
-                {saving ? 'Création...' : 'Enregistrer le lead'}
+                {saving ? t('lead.form.creating') : t('lead.form.submit')}
               </button>
             </form>
           </div>
