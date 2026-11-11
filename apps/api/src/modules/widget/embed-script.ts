@@ -146,14 +146,14 @@ export const EMBED_SCRIPT = `
         .replace(/_(.*?)_/g, '<i>$1</i>')
         .replace(/\[(.*?)\]\((.*?)\)/g, '<a href=$2 target=_blank>$1</a>');
     }
-    var lines = text.split('\n').filter(function(l) { return l.trim() !== ''; });
+    var lines = text.split('\\n').filter(function(l) { return l.trim() !== ''; });
     if (lines.length > 1) {
       var allTable = lines.every(function(l) {
         var tl = l.trim();
         return tl.charAt(0) === '|' && tl.charAt(tl.length - 1) === '|';
       });
       if (allTable) {
-        var hasHeader = lines.length > 1 && lines[1].replace(/[|\-:\s]/g, '') === '';
+        var hasHeader = lines.length > 1 && lines[1].replace(/[|\\-:\\s]/g, '') === '';
         var start = hasHeader ? 2 : 1;
         var header = '<tr>' + lines[0].split('|').slice(1, -1).map(function(c) { return '<th>' + inline(esc(c.trim())) + '</th>'; }).join('') + '</tr>';
         var body = '';
@@ -163,7 +163,7 @@ export const EMBED_SCRIPT = `
         return '<table>' + (hasHeader ? '<thead>' + header + '</thead>' : '') + '<tbody>' + body + '</tbody></table>';
       }
     }
-    return inline(esc(text)).replace(/\n/g, '<br>');
+    return inline(esc(text)).replace(/\\n/g, '<br>');
   }
 
   function addMessage(role, text) {
@@ -172,7 +172,7 @@ export const EMBED_SCRIPT = `
     var msg = document.createElement('div');
     var isUser = role === 'user';
     msg.style.cssText = 'max-width:80%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.4;' + (isUser ? 'background:' + primaryColor + ';color:white;align-self:flex-end;border-bottom-right-radius:4px;' : 'background:white;color:#333;align-self:flex-start;border:1px solid #eee;border-bottom-left-radius:4px;');
-    msg.innerHTML = isUser ? esc(text).replace(/\n/g, '<br>') : formatAgent(text);
+    msg.innerHTML = isUser ? esc(text).replace(/\\n/g, '<br>') : formatAgent(text);
     container.appendChild(msg);
     container.scrollTop = container.scrollHeight;
     messages.push({ role: role, text: text });
