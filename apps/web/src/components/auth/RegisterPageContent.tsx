@@ -129,10 +129,10 @@ export default function RegisterPageContent() {
             </div>
 
             <div className="border-t pt-4 mt-2">
-              <h2 className="text-sm font-medium text-gray-900 mb-3">Préférences</h2>
+              <h2 className="text-sm font-medium text-gray-900 mb-3">{t('preferences')}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Langue</label>
+                  <label className="label">{t('language')}</label>
                   <select
                     className="input"
                     value={form.language}
@@ -143,7 +143,7 @@ export default function RegisterPageContent() {
                   </select>
                 </div>
                 <div>
-                  <label className="label">Fuseau horaire (GMT)</label>
+                  <label className="label">{t('timezone')}</label>
                   <select
                     className="input"
                     value={form.timezone}
@@ -155,7 +155,7 @@ export default function RegisterPageContent() {
                 </div>
               </div>
               <div className="mt-4">
-                <label className="label">Localité</label>
+                <label className="label">{t('location')}</label>
                 <input
                   type="text"
                   name="location"

@@ -196,7 +196,11 @@
       "loading": "Erstellung...",
       "error": "Registrierung fehlgeschlagen",
       "hasAccount": "Schon ein Konto?",
-      "signin": "Anmelden"
+      "signin": "Anmelden",
+      "preferences": "Einstellungen",
+      "language": "Sprache",
+      "timezone": "Zeitzone",
+      "location": "Ort"
     }
   }
 }

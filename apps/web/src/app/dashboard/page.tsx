@@ -4,7 +4,7 @@ import { agentsApi, leadsApi, chatApi } from '@/lib/api';
 import { Bot, MessageSquare, Users, TrendingUp } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { data: stats = { agents: 0, conversations: 0, leads: 0 }, isLoading: loading } = useQuery({
+  const { data: stats = { agents: 0, conversations: 0, leads: 0, qualifiedRate: '0%' }, isLoading: loading } = useQuery({
     queryKey: ['dashboard', 'stats'],
     queryFn: async () => {
       const [agents, conversations, leads] = await Promise.all([
@@ -12,10 +12,14 @@ export default function DashboardPage() {
         chatApi.conversations(),
         leadsApi.list(),
       ]);
+      const leadList: any[] = leads.data ?? leads ?? [];
+      const qualified = leadList.filter((l) => ['qualified', 'converted'].includes(l.status)).length;
+      const qualifiedRate = leadList.length ? `${Math.round((qualified / leadList.length) * 100)}%` : '0%';
       return {
         agents: agents.data?.length ?? agents.length ?? 0,
         conversations: conversations.data?.length ?? conversations.length ?? 0,
-        leads: leads.data?.length ?? leads.length ?? 0,
+        leads: leadList.length,
+        qualifiedRate,
       };
     },
   });
@@ -24,7 +28,7 @@ export default function DashboardPage() {
     { label: 'Agents actifs', value: stats.agents, icon: Bot, color: 'bg-blue-500' },
     { label: 'Conversations', value: stats.conversations, icon: MessageSquare, color: 'bg-green-500' },
     { label: 'Leads capturés', value: stats.leads, icon: Users, color: 'bg-purple-500' },
-    { label: 'Taux de réponse', value: '98%', icon: TrendingUp, color: 'bg-orange-500' },
+    { label: 'Leads qualifiés', value: stats.qualifiedRate, icon: TrendingUp, color: 'bg-orange-500' },
   ];
 
   return (

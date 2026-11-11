@@ -6,35 +6,36 @@ import { Bot, MessageSquare, Users, BookOpen, LayoutDashboard, LogOut, Package, 
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import BusinessSelector from '@/components/BusinessSelector';
+import { useUiLocale } from '@/lib/ui-locale';
 import { clsx } from 'clsx';
 
 const nav = [
-  { href: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-  { href: '/dashboard/agents', label: 'Agents', icon: Bot },
-  { href: '/dashboard/personality', label: 'Personnalité', icon: Sparkles },
-  { href: '/dashboard/chat', label: 'Conversations', icon: MessageSquare },
-  { href: '/dashboard/operator', label: 'Opérateur', icon: Headphones },
-  { href: '/dashboard/leads', label: 'Leads', icon: Users },
-  { href: '/dashboard/surveys', label: 'Sondages', icon: ClipboardList },
-  { href: '/dashboard/pipeline', label: 'Pipeline CRM', icon: KanbanSquare },
-  { href: '/dashboard/products', label: 'Produits', icon: Package },
-  { href: '/dashboard/quotes', label: 'Devis', icon: FileText },
-  { href: '/dashboard/knowledge', label: 'Base de connaissances', icon: BookOpen },
-  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/dashboard/channels', label: 'Channels', icon: BarChart3 },
-  { href: '/dashboard/intelligence', label: 'Intelligence', icon: Brain },
-  { href: '/dashboard/memory', label: 'Mémoire Agent', icon: Brain },
-  { href: '/dashboard/workflows', label: 'Workflows', icon: Workflow },
-  { href: '/dashboard/widget', label: 'Widget & Intégration', icon: Code2 },
-  { href: '/dashboard/site', label: 'Site & Landing', icon: Globe },
-  { href: '/dashboard/marketplace', label: 'Marketplace', icon: Store },
-  { href: '/dashboard/flows', label: 'Flux', icon: List },
-  { href: '/dashboard/billing', label: 'Facturation', icon: CreditCard },
-  { href: '/dashboard/settings', label: 'Paramètres', icon: Settings },
+  { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+  { href: '/dashboard/agents', labelKey: 'nav.agents', icon: Bot },
+  { href: '/dashboard/personality', labelKey: 'nav.personality', icon: Sparkles },
+  { href: '/dashboard/chat', labelKey: 'nav.chat', icon: MessageSquare },
+  { href: '/dashboard/operator', labelKey: 'nav.operator', icon: Headphones },
+  { href: '/dashboard/leads', labelKey: 'nav.leads', icon: Users },
+  { href: '/dashboard/surveys', labelKey: 'nav.surveys', icon: ClipboardList },
+  { href: '/dashboard/pipeline', labelKey: 'nav.pipeline', icon: KanbanSquare },
+  { href: '/dashboard/products', labelKey: 'nav.products', icon: Package },
+  { href: '/dashboard/quotes', labelKey: 'nav.quotes', icon: FileText },
+  { href: '/dashboard/knowledge', labelKey: 'nav.knowledge', icon: BookOpen },
+  { href: '/dashboard/analytics', labelKey: 'nav.analytics', icon: BarChart3 },
+  { href: '/dashboard/channels', labelKey: 'nav.channels', icon: BarChart3 },
+  { href: '/dashboard/intelligence', labelKey: 'nav.intelligence', icon: Brain },
+  { href: '/dashboard/memory', labelKey: 'nav.memory', icon: Brain },
+  { href: '/dashboard/workflows', labelKey: 'nav.workflows', icon: Workflow },
+  { href: '/dashboard/widget', labelKey: 'nav.widget', icon: Code2 },
+  { href: '/dashboard/site', labelKey: 'nav.site', icon: Globe },
+  { href: '/dashboard/marketplace', labelKey: 'nav.marketplace', icon: Store },
+  { href: '/dashboard/flows', labelKey: 'nav.flows', icon: List },
+  { href: '/dashboard/billing', labelKey: 'nav.billing', icon: CreditCard },
+  { href: '/dashboard/settings', labelKey: 'nav.settings', icon: Settings },
 ];
 
 const adminNav = [
-  { href: '/dashboard/admin', label: 'Super Admin', icon: Crown },
+  { href: '/dashboard/admin', labelKey: 'nav.superAdmin', icon: Crown },
 ];
 
 function jwtRole(token: string | null): string | null {
@@ -51,6 +52,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout, refreshToken, accessToken } = useAuthStore();
+  const { t } = useUiLocale();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isSuperAdmin = jwtRole(accessToken) === 'super_admin';
 
@@ -104,7 +106,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 p-3 space-y-1">
-        {nav.map(({ href, label, icon: Icon }) => (
+        {nav.map(({ href, labelKey, icon: Icon }) => (
           <Link
             key={href}
             href={href}
@@ -117,10 +119,10 @@ export default function Sidebar() {
             )}
           >
             <Icon className="w-4 h-4" />
-            {label}
+            {t(labelKey)}
           </Link>
         ))}
-        {isSuperAdmin && adminNav.map(({ href, label, icon: Icon }) => (
+        {isSuperAdmin && adminNav.map(({ href, labelKey, icon: Icon }) => (
           <Link
             key={href}
             href={href}
@@ -133,7 +135,7 @@ export default function Sidebar() {
             )}
           >
             <Icon className="w-4 h-4" />
-            {label}
+            {t(labelKey)}
           </Link>
         ))}
       </nav>
@@ -144,7 +146,7 @@ export default function Sidebar() {
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white w-full transition-colors"
         >
           <LogOut className="w-4 h-4" />
-          Déconnexion
+          {t('nav.logout')}
         </button>
       </div>
     </aside>

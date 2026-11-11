@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: pgvector/pg16:pg16
+    image: pgvector/pgvector:pg16
     container_name: stiamond_db
     restart: unless-stopped
     environment:

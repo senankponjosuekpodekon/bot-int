@@ -33,6 +33,7 @@ export default function LeadsPage() {
   const { data: leads = [], isLoading: loading } = useQuery<Lead[]>({
     queryKey: ['leads'],
     queryFn: () => leadsApi.list().then((res: any) => res.data || res),
+    refetchOnMount: 'always',
   });
   const createLead = useMutation({
     mutationFn: (data: typeof emptyForm) => leadsApi.create(data),

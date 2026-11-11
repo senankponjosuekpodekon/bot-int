@@ -196,7 +196,11 @@
       "loading": "Creating...",
       "error": "Registration failed",
       "hasAccount": "Already have an account?",
-      "signin": "Sign in"
+      "signin": "Sign in",
+      "preferences": "Preferences",
+      "language": "Language",
+      "timezone": "Timezone",
+      "location": "Location"
     }
   }
 }

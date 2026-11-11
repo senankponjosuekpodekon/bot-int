@@ -196,7 +196,11 @@
       "loading": "Création...",
       "error": "Échec de l'inscription",
       "hasAccount": "Déjà un compte ?",
-      "signin": "Se connecter"
+      "signin": "Se connecter",
+      "preferences": "Préférences",
+      "language": "Langue",
+      "timezone": "Fuseau horaire",
+      "location": "Localité"
     }
   }
 }
