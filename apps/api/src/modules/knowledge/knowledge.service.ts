@@ -17,9 +17,11 @@ const CHUNK_OVERLAP = 100;
 const MAX_SEARCH_RESULTS = 3;
 const MAX_CRAWL_PAGES = 5;
 // Must match the embedding model's output size (text-embedding-3-small=1536,
-// jina-embeddings-v3=1024, llama3.2=3072). Override via env when switching models.
-const EMBEDDING_DIMS = Number(process.env.EMBEDDING_DIMS) || 1536;
-const SIMILARITY_THRESHOLD = Number(process.env.KNOWLEDGE_SIMILARITY_THRESHOLD) || 0.2;
+// jina-embeddings-v3=1024, llama3.2=3072). Read lazily: a module-level const
+// would evaluate before ConfigModule populates process.env from .env.
+const embeddingDims = (): number => Number(process.env.EMBEDDING_DIMS) || 1536;
+const similarityThreshold = (): number =>
+  Number(process.env.KNOWLEDGE_SIMILARITY_THRESHOLD) || 0.2;
 
 interface ScrapedPage {
   url: string;
@@ -53,11 +55,11 @@ export class KnowledgeService implements OnModuleInit {
         return;
       }
       await this.dataSource.query('CREATE EXTENSION IF NOT EXISTS vector');
-      await this.dataSource.query(`ALTER TABLE knowledge_chunks ADD COLUMN IF NOT EXISTS embedding_vector vector(${EMBEDDING_DIMS})`);
+      await this.dataSource.query(`ALTER TABLE knowledge_chunks ADD COLUMN IF NOT EXISTS embedding_vector vector(${embeddingDims()})`);
 
-      const indexType = EMBEDDING_DIMS > 2000 ? 'hnsw' : 'ivfflat';
+      const indexType = embeddingDims() > 2000 ? 'hnsw' : 'ivfflat';
       const indexOptions =
-        EMBEDDING_DIMS > 2000
+        embeddingDims() > 2000
           ? 'WITH (m = 16, ef_construction = 64)'
           : 'WITH (lists = 100)';
 
@@ -512,7 +514,7 @@ export class KnowledgeService implements OnModuleInit {
 
       if (this.hasPgvector) {
         const embeddingStr = `[${queryEmbedding.join(',')}]`;
-        const maxDistance = 1 - SIMILARITY_THRESHOLD;
+        const maxDistance = 1 - similarityThreshold();
         let sql = `SELECT chunk.content, doc."sourceUrl", doc."createdAt"
            FROM knowledge_chunks chunk
            INNER JOIN knowledge_documents doc ON chunk."documentId" = doc.id
@@ -564,7 +566,7 @@ export class KnowledgeService implements OnModuleInit {
           }
           return { ...row, score: this.cosineSimilarity(queryEmbedding, embedding) };
         })
-        .filter((row: any) => row.score >= SIMILARITY_THRESHOLD)
+        .filter((row: any) => row.score >= similarityThreshold())
         .sort((a: any, b: any) => b.score - a.score)
         .slice(0, MAX_SEARCH_RESULTS);
 
