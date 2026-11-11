@@ -7,7 +7,7 @@ import { agentsApi } from '@/lib/api';
 export default function WidgetConfigPage() {
   const { data: agents = [] } = useQuery<any[]>({
     queryKey: ['widget-config', 'agents'],
-    queryFn: () => agentsApi.list(),
+    queryFn: () => agentsApi.list().then((res: any) => res?.data || res || []),
   });
   const [selectedAgentOverride, setSelectedAgent] = useState('');
   const selectedAgent = selectedAgentOverride || agents[0]?.id || '';

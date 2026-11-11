@@ -1,7 +1,7 @@
 import { Request } from '@nestjs/common';
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';;
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, MoreThan } from 'typeorm';
+import { Repository, Between, MoreThan, IsNull, Not } from 'typeorm';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ChatService } from './chat.service';
@@ -36,14 +36,14 @@ export class AnalyticsController {
       this.convRepo.count({ where: { tenantId, status: ConversationStatus.HANDED_OFF } }),
       this.convRepo.count({ where: { tenantId, status: ConversationStatus.CLOSED } }),
       this.convRepo.count({ where: { tenantId, createdAt: MoreThan(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) } }),
-      this.convRepo.count({ where: { tenantId, leadId: MoreThan(''), createdAt: Between(start, end) } }),
+      this.convRepo.count({ where: { tenantId, leadId: Not(IsNull()), createdAt: Between(start, end) } }),
     ]);
 
     const leadTotal = withLead;
     const leadRecent = await this.convRepo.count({
       where: {
         tenantId,
-        leadId: MoreThan(''),
+        leadId: Not(IsNull()),
         createdAt: MoreThan(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
       },
     });

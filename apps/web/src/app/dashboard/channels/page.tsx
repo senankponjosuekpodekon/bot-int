@@ -1,8 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BarChart3, MessageSquare, Users, TrendingUp, Activity, Plus, Trash2, Webhook } from 'lucide-react';
 import { analyticsApi, webhooksApi } from '@/lib/api';
+import { toast } from 'sonner';
 import ChannelIntegrations from './ChannelIntegrations';
 
 const CHANNEL_LABELS: Record<string, string> = {
@@ -32,13 +33,16 @@ export default function ChannelAnalyticsPage() {
     queryKey: ['analytics', 'channels', days],
     queryFn: () => analyticsApi.channels(days),
   });
-  const { data: webhooks = [], isLoading: webhooksLoading } = useQuery<any[]>({
+  const { data: webhooks = [], isLoading: webhooksLoading, isError: webhooksError } = useQuery<any[]>({
     queryKey: ['webhooks'],
     queryFn: async () => {
       const res = await webhooksApi.list();
       return Array.isArray(res) ? res : res?.data ?? [];
     },
   });
+  useEffect(() => {
+    if (webhooksError) toast.error('Impossible de charger les webhooks');
+  }, [webhooksError]);
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookEvents, setWebhookEvents] = useState('message.replied,lead.created');
 

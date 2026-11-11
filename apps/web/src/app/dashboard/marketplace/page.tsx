@@ -1,7 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Store, Sparkles, Loader2, Plus, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import { marketplaceApi } from '@/lib/api';
 
 interface Template {
@@ -15,10 +16,13 @@ interface Template {
 
 export default function MarketplacePage() {
   const [page, setPage] = useState(1);
-  const { data, isLoading: loading } = useQuery({
+  const { data, isLoading: loading, isError } = useQuery({
     queryKey: ['marketplace', 'templates', page],
     queryFn: () => marketplaceApi.list({ page, limit: 20 }),
   });
+  useEffect(() => {
+    if (isError) toast.error('Impossible de charger les templates');
+  }, [isError]);
   const templates: Template[] = data?.data || [];
   const pagination = {
     page: data?.page || 1,

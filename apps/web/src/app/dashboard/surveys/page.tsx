@@ -29,7 +29,7 @@ export default function SurveysPage() {
     queryKey: ['surveys'],
     queryFn: async () => {
       const [data, ag] = await Promise.all([surveysApi.list(), agentsApi.list()]);
-      return { surveys: data as any[], agents: ag as any[] };
+      return { surveys: data as any[], agents: (ag as any)?.data ?? ag ?? [] };
     },
   });
   const surveys = bundle?.surveys ?? [];

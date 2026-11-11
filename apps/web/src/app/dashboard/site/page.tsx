@@ -24,7 +24,7 @@ export default function SiteConfigPage() {
   });
   const { data: agents = [], isLoading: agentsLoading } = useQuery<any[]>({
     queryKey: ['agents'],
-    queryFn: () => agentsApi.list(),
+    queryFn: () => agentsApi.list().then((res: any) => res?.data || res || []),
   });
   const loading = sitesLoading || agentsLoading;
   const [showBuilder, setShowBuilder] = useState(false);

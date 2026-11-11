@@ -126,6 +126,13 @@ export class AgentsController {
     return this.pendingActionService.findByTenant(req.user.tenantId, status);
   }
 
+  // Declared before ':id' to avoid being shadowed by it.
+  @Get('workflows')
+  @ApiOperation({ summary: 'List workflows (paginated)' })
+  listWorkflows(@Request() req, @Query() query: PaginationDto) {
+    return this.workflowService.findByTenant(req.user.tenantId, query.page, query.limit);
+  }
+
   @Get(':id')
   @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.OPERATOR, UserRole.VIEWER)
   @ApiOperation({ summary: 'Get agent by ID' })
@@ -220,12 +227,6 @@ export class AgentsController {
   @ApiOperation({ summary: 'Create a workflow' })
   createWorkflow(@Request() req, @Body() dto: CreateWorkflowDto) {
     return this.workflowService.create(req.user.tenantId, dto);
-  }
-
-  @Get('workflows')
-  @ApiOperation({ summary: 'List workflows (paginated)' })
-  listWorkflows(@Request() req, @Query() query: PaginationDto) {
-    return this.workflowService.findByTenant(req.user.tenantId, query.page, query.limit);
   }
 
   @Get('workflows/:id')
