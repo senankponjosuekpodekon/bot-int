@@ -43,6 +43,14 @@ export class FlowsController {
     return this.service.findByAgent(req.user.tenantId, agentId);
   }
 
+  // Declared before ':id' to avoid being shadowed by it.
+  @Get('executions')
+  @ApiOperation({ summary: 'List all flow executions for tenant' })
+  @ApiResponse({ status: 200, description: 'Paginated flow executions' })
+  findAllExecutions(@Request() req, @Query() query: PaginationDto) {
+    return this.service.findExecutions(req.user.tenantId, undefined, query.page, query.limit);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get flow by ID' })
   @ApiResponse({ status: 200, description: 'Flow details' })
@@ -76,13 +84,6 @@ export class FlowsController {
   @ApiResponse({ status: 200, description: 'Flow response processed' })
   respond(@Request() req, @Body() dto: FlowResponseDto) {
     return this.service.processFlowResponse(req.user.tenantId, dto.conversationId, dto.flowId, dto.responses);
-  }
-
-  @Get('executions')
-  @ApiOperation({ summary: 'List all flow executions for tenant' })
-  @ApiResponse({ status: 200, description: 'Paginated flow executions' })
-  findAllExecutions(@Request() req, @Query() query: PaginationDto) {
-    return this.service.findExecutions(req.user.tenantId, undefined, query.page, query.limit);
   }
 
   @Get(':id/executions')
