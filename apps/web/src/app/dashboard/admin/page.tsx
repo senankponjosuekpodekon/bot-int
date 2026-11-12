@@ -7,10 +7,12 @@ import {
   AlertCircle, Loader2, ChevronRight
 } from 'lucide-react';
 import { adminApi } from '@/lib/api';
+import { useUiLocale } from '@/lib/ui-locale';
 
 type Tab = 'overview' | 'tenants' | 'users' | 'conversations' | 'delivery';
 
 export default function AdminPage() {
+  const { t } = useUiLocale();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>('overview');
   const [search, setSearch] = useState('');
@@ -72,24 +74,24 @@ export default function AdminPage() {
     } catch {}
   };
 
-  if (loading) return <div className="p-4 lg:p-6 text-center text-gray-500">Chargement...</div>;
+  if (loading) return <div className="p-4 lg:p-6 text-center text-gray-500">{t('common.loading')}</div>;
 
   if (!stats) {
     return (
       <div className="p-4 lg:p-6 max-w-2xl mx-auto text-center">
         <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Accès refusé</h2>
-        <p className="text-gray-500">Vous devez être Super Admin pour accéder à cette page.</p>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">{t('adm.denied')}</h2>
+        <p className="text-gray-500">{t('adm.deniedDesc')}</p>
       </div>
     );
   }
 
   const tabs: { id: Tab; label: string; icon: any }[] = [
-    { id: 'overview', label: "Vue d'ensemble", icon: TrendingUp },
+    { id: 'overview', label: t('adm.tab.overview'), icon: TrendingUp },
     { id: 'tenants', label: 'Tenants', icon: Building2 },
-    { id: 'users', label: 'Utilisateurs', icon: Users },
-    { id: 'conversations', label: 'Conversations', icon: MessageSquare },
-    { id: 'delivery', label: 'Livraisons', icon: AlertCircle },
+    { id: 'users', label: t('adm.tab.users'), icon: Users },
+    { id: 'conversations', label: t('adm.tab.conversations'), icon: MessageSquare },
+    { id: 'delivery', label: t('adm.tab.delivery'), icon: AlertCircle },
   ];
 
   return (
@@ -98,20 +100,20 @@ export default function AdminPage() {
         <Crown className="w-6 h-6 text-indigo-600" />
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Super Admin</h1>
       </div>
-      <p className="text-gray-500 mb-8">Gestion horizontale et verticale de la plateforme</p>
+      <p className="text-gray-500 mb-8">{t('adm.subtitle')}</p>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
-        {tabs.map((t) => (
+        {tabs.map((tb) => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
+            key={tb.id}
+            onClick={() => setTab(tb.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              tab === t.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              tab === tb.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            <t.icon className="w-4 h-4" />
-            {t.label}
+            <tb.icon className="w-4 h-4" />
+            {tb.label}
           </button>
         ))}
       </div>
@@ -122,11 +124,11 @@ export default function AdminPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
               { label: 'Tenants', value: stats.tenants.total, icon: Building2, color: 'bg-blue-50 text-blue-600' },
-              { label: 'Utilisateurs', value: stats.users.total, icon: Users, color: 'bg-indigo-50 text-indigo-600' },
+              { label: t('adm.tab.users'), value: stats.users.total, icon: Users, color: 'bg-indigo-50 text-indigo-600' },
               { label: 'Agents', value: stats.agents.total, icon: Bot, color: 'bg-purple-50 text-purple-600' },
-              { label: 'Conversations', value: stats.conversations.total, icon: MessageSquare, color: 'bg-green-50 text-green-600' },
+              { label: t('adm.tab.conversations'), value: stats.conversations.total, icon: MessageSquare, color: 'bg-green-50 text-green-600' },
               { label: 'Leads', value: stats.leads.total, icon: TrendingUp, color: 'bg-orange-50 text-orange-600' },
-              { label: 'Subs actives', value: stats.subscriptions.active, icon: Crown, color: 'bg-yellow-50 text-yellow-600' },
+              { label: t('adm.stat.subs'), value: stats.subscriptions.active, icon: Crown, color: 'bg-yellow-50 text-yellow-600' },
             ].map((s) => (
               <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-5">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${s.color}`}>
@@ -143,23 +145,23 @@ export default function AdminPage() {
             <div className="bg-white rounded-2xl border border-gray-100 p-4 lg:p-6">
               <div className="flex items-center gap-2 mb-4">
                 <DollarSign className="w-5 h-5 text-green-600" />
-                <h3 className="font-semibold text-gray-900">Revenus estimés (MRR)</h3>
+                <h3 className="font-semibold text-gray-900">{t('adm.mrr')}</h3>
               </div>
               <p className="text-2xl sm:text-3xl font-bold text-gray-900">
-                {(stats.revenue.estimatedMrr / 100).toLocaleString('fr-FR')}€
+                {(stats.revenue.estimatedMrr / 100).toLocaleString()}€
               </p>
               <div className="mt-4 space-y-2">
                 {Object.entries(stats.revenue.byPlan).map(([plan, amount]) => (
                   <div key={plan} className="flex items-center justify-between text-sm">
                     <span className="capitalize text-gray-600">{plan}</span>
-                    <span className="font-medium text-gray-900">{((amount as number) / 100).toLocaleString('fr-FR')}€</span>
+                    <span className="font-medium text-gray-900">{((amount as number) / 100).toLocaleString()}€</span>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="bg-white rounded-2xl border border-gray-100 p-4 lg:p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Distribution des plans</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('adm.planDist')}</h3>
               <div className="space-y-3">
                 {Object.entries(stats.subscriptions.planDistribution).map(([plan, count]) => (
                   <div key={plan} className="flex items-center justify-between">
@@ -178,11 +180,11 @@ export default function AdminPage() {
               </div>
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">Nouveaux tenants (30j)</span>
+                  <span className="text-gray-500">{t('adm.newTenants')}</span>
                   <span className="font-bold text-indigo-600">{stats.tenants.newLast30Days}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm mt-2">
-                  <span className="text-gray-500">Overage conversations</span>
+                  <span className="text-gray-500">{t('adm.overage')}</span>
                   <span className="font-bold text-orange-500">{stats.subscriptions.totalOverageConversations}</span>
                 </div>
               </div>
@@ -199,7 +201,7 @@ export default function AdminPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Rechercher un tenant..."
+                placeholder={t('adm.searchTenant')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && loadTenants()}
@@ -207,7 +209,7 @@ export default function AdminPage() {
               />
             </div>
             <button onClick={() => loadTenants()} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium">
-              Rechercher
+              {t('common.search')}
             </button>
           </div>
 
@@ -218,48 +220,48 @@ export default function AdminPage() {
                   <th className="text-left px-4 py-3">Tenant</th>
                   <th className="text-left px-4 py-3">Plan</th>
                   <th className="text-left px-4 py-3">Users</th>
-                  <th className="text-left px-4 py-3">Statut</th>
-                  <th className="text-left px-4 py-3">Conversations</th>
-                  <th className="text-right px-4 py-3">Actions</th>
+                  <th className="text-left px-4 py-3">{t('adm.col.status')}</th>
+                  <th className="text-left px-4 py-3">{t('adm.tab.conversations')}</th>
+                  <th className="text-right px-4 py-3">{t('adm.col.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {tenants.map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50">
+                {tenants.map((tn) => (
+                  <tr key={tn.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900">{t.name}</p>
-                      <p className="text-xs text-gray-500">{t.email}</p>
+                      <p className="font-medium text-gray-900">{tn.name}</p>
+                      <p className="text-xs text-gray-500">{tn.email}</p>
                     </td>
                     <td className="px-4 py-3">
                       <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-medium capitalize">
-                        {t.subscription?.plan || 'free'}
+                        {tn.subscription?.plan || 'free'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{t.userCount}</td>
+                    <td className="px-4 py-3 text-gray-600">{tn.userCount}</td>
                     <td className="px-4 py-3">
-                      {t.isActive ? (
-                        <span className="text-green-600 text-xs font-medium">Actif</span>
+                      {tn.isActive ? (
+                        <span className="text-green-600 text-xs font-medium">{t('adm.active')}</span>
                       ) : (
-                        <span className="text-red-500 text-xs font-medium">Suspendu</span>
+                        <span className="text-red-500 text-xs font-medium">{t('adm.suspended')}</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{t.subscription?.conversationsThisMonth || 0}</td>
+                    <td className="px-4 py-3 text-gray-600">{tn.subscription?.conversationsThisMonth || 0}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => setSelectedTenant(t)}
+                          onClick={() => setSelectedTenant(tn)}
                           className="p-1.5 text-gray-400 hover:text-indigo-600"
-                          title="Détails"
+                          title={t('adm.details')}
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleToggleTenant(t.id)}
-                          disabled={actionLoading === t.id}
+                          onClick={() => handleToggleTenant(tn.id)}
+                          disabled={actionLoading === tn.id}
                           className="p-1.5 text-gray-400 hover:text-indigo-600"
-                          title={t.isActive ? 'Suspendre' : 'Activer'}
+                          title={tn.isActive ? t('adm.suspend') : t('adm.activate')}
                         >
-                          {t.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                          {tn.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
                         </button>
                       </div>
                     </td>
@@ -277,11 +279,11 @@ export default function AdminPage() {
           <table className="w-full min-w-[560px] text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>
-                <th className="text-left px-4 py-3">Utilisateur</th>
-                <th className="text-left px-4 py-3">Rôle</th>
+                <th className="text-left px-4 py-3">{t('adm.col.user')}</th>
+                <th className="text-left px-4 py-3">{t('adm.col.role')}</th>
                 <th className="text-left px-4 py-3">Tenant</th>
-                <th className="text-left px-4 py-3">Statut</th>
-                <th className="text-right px-4 py-3">Actions</th>
+                <th className="text-left px-4 py-3">{t('adm.col.status')}</th>
+                <th className="text-right px-4 py-3">{t('adm.col.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -303,9 +305,9 @@ export default function AdminPage() {
                   <td className="px-4 py-3 text-gray-500 text-xs">{u.tenantId.substring(0, 8)}</td>
                   <td className="px-4 py-3">
                     {u.isActive ? (
-                      <span className="text-green-600 text-xs font-medium">Actif</span>
+                      <span className="text-green-600 text-xs font-medium">{t('adm.active')}</span>
                     ) : (
-                      <span className="text-red-500 text-xs font-medium">Désactivé</span>
+                      <span className="text-red-500 text-xs font-medium">{t('adm.disabled')}</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -314,7 +316,7 @@ export default function AdminPage() {
                         onClick={() => handleToggleUser(u.id)}
                         disabled={actionLoading === u.id}
                         className="p-1.5 text-gray-400 hover:text-indigo-600"
-                        title={u.isActive ? 'Désactiver' : 'Activer'}
+                        title={u.isActive ? t('adm.disable') : t('adm.activate')}
                       >
                         {u.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
                       </button>
@@ -332,25 +334,25 @@ export default function AdminPage() {
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden overflow-x-auto">
           {deliveryErrors.length === 0 ? (
             <div className="p-8 text-center text-gray-500 text-sm">
-              Aucune erreur de livraison récente — tous les messages sortants sont passés.
+              {t('adm.noDeliveryErrors')}
             </div>
           ) : (
           <table className="w-full min-w-[720px] text-sm">
             <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
               <tr>
                 <th className="text-left px-4 py-3">Date</th>
-                <th className="text-left px-4 py-3">Canal</th>
-                <th className="text-left px-4 py-3">Destinataire</th>
-                <th className="text-left px-4 py-3">Conversation</th>
+                <th className="text-left px-4 py-3">{t('adm.col.channel')}</th>
+                <th className="text-left px-4 py-3">{t('adm.col.recipient')}</th>
+                <th className="text-left px-4 py-3">{t('adm.col.conversation')}</th>
                 <th className="text-left px-4 py-3">Tenant</th>
-                <th className="text-left px-4 py-3">Erreur</th>
+                <th className="text-left px-4 py-3">{t('adm.col.error')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {deliveryErrors.map((e) => (
                 <tr key={e.messageId} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
-                    {new Date(e.sendFailedAt || e.createdAt).toLocaleString('fr-FR')}
+                    {new Date(e.sendFailedAt || e.createdAt).toLocaleString()}
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-xs font-medium text-gray-700 capitalize">{e.channel || '—'}</span>
@@ -378,7 +380,7 @@ export default function AdminPage() {
                 <th className="text-left px-4 py-3">ID</th>
                 <th className="text-left px-4 py-3">Agent</th>
                 <th className="text-left px-4 py-3">Tenant</th>
-                <th className="text-left px-4 py-3">Funnel</th>
+                <th className="text-left px-4 py-3">{t('adm.col.funnel')}</th>
                 <th className="text-left px-4 py-3">Date</th>
               </tr>
             </thead>
@@ -392,7 +394,7 @@ export default function AdminPage() {
                     <span className="text-xs text-gray-600 capitalize">{c.funnelStage || '—'}</span>
                   </td>
                   <td className="px-4 py-3 text-gray-500 text-xs">
-                    {new Date(c.createdAt).toLocaleDateString('fr-FR')}
+                    {new Date(c.createdAt).toLocaleDateString()}
                   </td>
                 </tr>
               ))}

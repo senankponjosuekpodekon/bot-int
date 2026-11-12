@@ -5,6 +5,7 @@ import { BarChart3, MessageSquare, Users, TrendingUp, Activity, Plus, Trash2, We
 import { analyticsApi, webhooksApi } from '@/lib/api';
 import { toast } from 'sonner';
 import ChannelIntegrations from './ChannelIntegrations';
+import { useUiLocale } from '@/lib/ui-locale';
 
 const CHANNEL_LABELS: Record<string, string> = {
   web: 'Web Chat',
@@ -27,6 +28,7 @@ const CHANNEL_COLORS: Record<string, string> = {
 };
 
 export default function ChannelAnalyticsPage() {
+  const { t } = useUiLocale();
   const queryClient = useQueryClient();
   const [days, setDays] = useState(30);
   const { data, isLoading: loading } = useQuery<any>({
@@ -76,11 +78,11 @@ export default function ChannelAnalyticsPage() {
   };
 
   if (loading) {
-    return <div className="p-4 lg:p-6 text-center text-gray-400">Loading analytics...</div>;
+    return <div className="p-4 lg:p-6 text-center text-gray-400">{t('chn.loading')}</div>;
   }
 
   if (!data) {
-    return <div className="p-4 lg:p-6 text-center text-gray-400">No data available</div>;
+    return <div className="p-4 lg:p-6 text-center text-gray-400">{t('chn.noData')}</div>;
   }
 
   const maxConversations = Math.max(...(data.channels?.map((c: any) => c.conversations) || [1]), 1);
@@ -91,14 +93,14 @@ export default function ChannelAnalyticsPage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
             <BarChart3 className="w-6 h-6 text-primary-600" />
-            Channel Analytics
+            {t('chn.title')}
           </h1>
-          <p className="text-gray-500 text-sm mt-1">Message volume, lead conversion, and performance by channel</p>
+          <p className="text-gray-500 text-sm mt-1">{t('chn.subtitle')}</p>
         </div>
         <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="input w-full sm:w-40">
-          <option value={7}>Last 7 days</option>
-          <option value={30}>Last 30 days</option>
-          <option value={90}>Last 90 days</option>
+          <option value={7}>{t('chn.days7')}</option>
+          <option value={30}>{t('chn.days30')}</option>
+          <option value={90}>{t('chn.days90')}</option>
         </select>
       </div>
 
@@ -107,7 +109,7 @@ export default function ChannelAnalyticsPage() {
       <div className="card p-4 lg:p-6 mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Webhook className="w-5 h-5 text-primary-600" />
-          <h2 className="font-semibold text-gray-900">Webhooks sortants</h2>
+          <h2 className="font-semibold text-gray-900">{t('chn.webhooks')}</h2>
         </div>
         <form onSubmit={handleAddWebhook} className="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-4">
           <input
@@ -129,13 +131,13 @@ export default function ChannelAnalyticsPage() {
             disabled={webhookSubmitting}
             className="btn-primary flex items-center justify-center gap-2"
           >
-            {webhookSubmitting ? '...' : <><Plus className="w-4 h-4" /> Ajouter</>}
+            {webhookSubmitting ? '...' : <><Plus className="w-4 h-4" /> {t('site.add')}</>}
           </button>
         </form>
         {webhooksLoading ? (
-          <p className="text-sm text-gray-400">Chargement...</p>
+          <p className="text-sm text-gray-400">{t('common.loading')}</p>
         ) : webhooks.length === 0 ? (
-          <p className="text-sm text-gray-400">Aucun webhook enregistré.</p>
+          <p className="text-sm text-gray-400">{t('chn.noWebhooks')}</p>
         ) : (
           <div className="space-y-2">
             {webhooks.map((wh) => (
@@ -147,7 +149,7 @@ export default function ChannelAnalyticsPage() {
                 <button
                   onClick={() => handleDeleteWebhook(wh.id)}
                   className="p-2 text-red-400 hover:text-red-600"
-                  title="Supprimer"
+                  title={t('common.delete')}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

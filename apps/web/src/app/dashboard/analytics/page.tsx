@@ -2,6 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { MessageSquare, Users, Package, Bot, TrendingUp, Target, Zap, Clock, Filter, Radio, ArrowRight } from 'lucide-react';
 import { analyticsApi } from '@/lib/api';
+import { useUiLocale } from '@/lib/ui-locale';
 
 interface DashboardData {
   conversations: { total: number; open: number; handedOff: number; closed: number; recent7d: number; leadCaptureRate: number };
@@ -11,10 +12,11 @@ interface DashboardData {
 }
 
 export default function AnalyticsPage() {
+  const { t } = useUiLocale();
   const { data: bundle, isLoading: loading } = useQuery({
     queryKey: ['analytics', 'dashboard'],
     queryFn: async () => {
-        const [d, t, f, a] = await Promise.all([
+        const [d, tl, f, a] = await Promise.all([
           analyticsApi.dashboard(),
           analyticsApi.timeline(30),
           analyticsApi.funnel(),
@@ -31,15 +33,8 @@ export default function AnalyticsPage() {
           conversionRate: agent.conversionRate,
         }));
         const outData = { ...d, agents: { ...d.agents, performance: mappedPerformance } };
-        const outTimeline = t;
+        const outTimeline = tl;
 
-        const stageLabels: Record<string, string> = {
-          awareness: 'Awareness',
-          consideration: 'Considération',
-          decision: 'Décision',
-          closed_won: 'Gagné',
-          closed_lost: 'Perdu',
-        };
         const stageColors: Record<string, string> = {
           awareness: '#3b82f6',
           consideration: '#8b5cf6',
@@ -51,7 +46,8 @@ export default function AnalyticsPage() {
           const prev = i > 0 ? f.stages[i - 1].count : null;
           const dropoffRate = prev && prev > 0 ? Math.round(((prev - s.count) / prev) * 100) : 0;
           return {
-            label: stageLabels[s.stage] || s.stage,
+            key: s.stage,
+            label: s.stage,
             color: stageColors[s.stage] || '#9ca3af',
             count: s.count,
             avgIntentScore: s.avgIntentScore,
@@ -60,13 +56,6 @@ export default function AnalyticsPage() {
         }) || [];
         const outFunnel = { ...f, stages: mappedStages };
 
-        const channelLabels: Record<string, string> = {
-          web: 'Web widget',
-          whatsapp: 'WhatsApp',
-          instagram: 'Instagram',
-          api: 'API',
-          unknown: 'Inconnu',
-        };
         const channelColors: Record<string, string> = {
           web: '#3b82f6',
           whatsapp: '#10b981',
@@ -75,7 +64,8 @@ export default function AnalyticsPage() {
           unknown: '#9ca3af',
         };
         const mappedChannels = a.channels?.map((c: any) => ({
-          label: channelLabels[c.channel] || c.channel,
+          key: c.channel,
+          label: c.channel,
           color: channelColors[c.channel] || '#9ca3af',
           count: c.count,
           conversions: c.leads,
@@ -91,16 +81,16 @@ export default function AnalyticsPage() {
   const funnel = bundle?.funnel || null;
   const acquisition = bundle?.acquisition || null;
 
-  if (loading) return <div className="p-4 lg:p-6 text-center text-gray-500">Chargement des analytics...</div>;
-  if (!data) return <div className="p-4 lg:p-6 text-center text-gray-500">Erreur lors du chargement</div>;
+  if (loading) return <div className="p-4 lg:p-6 text-center text-gray-500">{t('ana.loading')}</div>;
+  if (!data) return <div className="p-4 lg:p-6 text-center text-gray-500">{t('ana.loadError')}</div>;
 
   const stats = [
-    { label: 'Conversations', value: data.conversations.total, sub: `${data.conversations.open} ouvertes • ${data.conversations.handedOff} transférées`, icon: MessageSquare, color: 'text-blue-600 bg-blue-50' },
-    { label: 'Leads capturés', value: data.leads.total, sub: `Taux capture: ${data.conversations.leadCaptureRate}%`, icon: Users, color: 'text-green-600 bg-green-50' },
-    { label: 'Taux conversion', value: `${data.leads.conversionRate}%`, sub: `${data.leads.converted} convertis`, icon: Target, color: 'text-purple-600 bg-purple-50' },
-    { label: 'Score moyen', value: data.leads.avgScore, sub: `${data.leads.recent7d} nouveaux (7j)`, icon: TrendingUp, color: 'text-orange-600 bg-orange-50' },
-    { label: 'Produits', value: data.products.total, sub: `${data.products.active} actifs • ${data.products.outOfStock} rupture`, icon: Package, color: 'text-indigo-600 bg-indigo-50' },
-    { label: 'Agents actifs', value: data.agents.active, sub: `${data.agents.total} au total`, icon: Bot, color: 'text-pink-600 bg-pink-50' },
+    { label: t('ana.conversations'), value: data.conversations.total, sub: `${data.conversations.open} ${t('ana.open')} • ${data.conversations.handedOff} ${t('ana.handedOff')}`, icon: MessageSquare, color: 'text-blue-600 bg-blue-50' },
+    { label: t('ana.leadsCaptured'), value: data.leads.total, sub: `${t('ana.captureRate')}: ${data.conversations.leadCaptureRate}%`, icon: Users, color: 'text-green-600 bg-green-50' },
+    { label: t('ana.convRate'), value: `${data.leads.conversionRate}%`, sub: `${data.leads.converted} ${t('ana.converted')}`, icon: Target, color: 'text-purple-600 bg-purple-50' },
+    { label: t('ana.avgScore'), value: data.leads.avgScore, sub: `${data.leads.recent7d} ${t('ana.new7d')}`, icon: TrendingUp, color: 'text-orange-600 bg-orange-50' },
+    { label: t('ana.products'), value: data.products.total, sub: `${data.products.active} ${t('ana.active')} • ${data.products.outOfStock} ${t('ana.outOfStock')}`, icon: Package, color: 'text-indigo-600 bg-indigo-50' },
+    { label: t('ana.activeAgents'), value: data.agents.active, sub: `${data.agents.total} ${t('ana.total')}`, icon: Bot, color: 'text-pink-600 bg-pink-50' },
   ];
 
   const maxTimeline = Math.max(...timeline.map((t) => t.count), 1);
@@ -124,7 +114,7 @@ export default function AnalyticsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:p-6">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Clock className="w-4 h-4 text-gray-400" /> Conversations (30 derniers jours)</h2>
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Clock className="w-4 h-4 text-gray-400" /> {t('ana.conv30d')}</h2>
           {timeline.length > 0 ? (
             <div className="flex items-end gap-1 h-40">
               {timeline.map((t, i) => (
@@ -134,11 +124,11 @@ export default function AnalyticsPage() {
                 </div>
               ))}
             </div>
-          ) : <p className="text-sm text-gray-400 text-center py-8">Aucune donnée</p>}
+          ) : <p className="text-sm text-gray-400 text-center py-8">{t('ana.noData')}</p>}
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Zap className="w-4 h-4 text-gray-400" /> Performance des agents</h2>
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Zap className="w-4 h-4 text-gray-400" /> {t('ana.agentPerf')}</h2>
           <div className="space-y-3">
             {data.agents.performance.map((a) => (
               <div key={a.agentId} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
@@ -148,7 +138,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold text-gray-900">{a.conversionRate}%</p>
-                  <p className="text-xs text-gray-500">{a.conversions}/{a.leads} convertis</p>
+                  <p className="text-xs text-gray-500">{a.conversions}/{a.leads} {t('ana.converted')}</p>
                 </div>
               </div>
             ))}
@@ -156,14 +146,14 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="font-semibold text-gray-900 mb-4">Répartition des leads</h2>
+          <h2 className="font-semibold text-gray-900 mb-4">{t('ana.leadDist')}</h2>
           <div className="space-y-2">
             {[
-              { label: 'Nouveau', count: data.leads.new, color: 'bg-blue-500' },
-              { label: 'Contacté', count: data.leads.contacted, color: 'bg-yellow-500' },
-              { label: 'Qualifié', count: data.leads.qualified, color: 'bg-purple-500' },
-              { label: 'Converti', count: data.leads.converted, color: 'bg-green-500' },
-              { label: 'Perdu', count: data.leads.lost, color: 'bg-red-500' },
+              { label: t('pipe.col.new'), count: data.leads.new, color: 'bg-blue-500' },
+              { label: t('pipe.col.contacted'), count: data.leads.contacted, color: 'bg-yellow-500' },
+              { label: t('pipe.col.qualified'), count: data.leads.qualified, color: 'bg-purple-500' },
+              { label: t('pipe.col.converted'), count: data.leads.converted, color: 'bg-green-500' },
+              { label: t('pipe.col.lost'), count: data.leads.lost, color: 'bg-red-500' },
             ].map((s) => {
               const pct = data.leads.total > 0 ? (s.count / data.leads.total) * 100 : 0;
               return (
@@ -182,23 +172,23 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="font-semibold text-gray-900 mb-4">Catalogue produits</h2>
+          <h2 className="font-semibold text-gray-900 mb-4">{t('ana.catalog')}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="text-center p-4 rounded-lg bg-gray-50">
               <p className="text-2xl sm:text-3xl font-bold text-gray-900">{data.products.total}</p>
-              <p className="text-xs text-gray-500 mt-1">Total produits</p>
+              <p className="text-xs text-gray-500 mt-1">{t('ana.totalProducts')}</p>
             </div>
             <div className="text-center p-4 rounded-lg bg-gray-50">
               <p className="text-2xl sm:text-3xl font-bold text-gray-900">{data.products.categories}</p>
-              <p className="text-xs text-gray-500 mt-1">Catégories</p>
+              <p className="text-xs text-gray-500 mt-1">{t('ana.categories')}</p>
             </div>
             <div className="text-center p-4 rounded-lg bg-green-50">
               <p className="text-2xl sm:text-3xl font-bold text-green-600">{data.products.active}</p>
-              <p className="text-xs text-gray-500 mt-1">Actifs</p>
+              <p className="text-xs text-gray-500 mt-1">{t('ana.active')}</p>
             </div>
             <div className="text-center p-4 rounded-lg bg-red-50">
               <p className="text-2xl sm:text-3xl font-bold text-red-600">{data.products.outOfStock}</p>
-              <p className="text-xs text-gray-500 mt-1">Rupture stock</p>
+              <p className="text-xs text-gray-500 mt-1">{t('ana.outOfStock')}</p>
             </div>
           </div>
         </div>
@@ -206,7 +196,7 @@ export default function AnalyticsPage() {
         {/* Funnel Analytics */}
         {funnel && (
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Filter className="w-4 h-4 text-gray-400" /> Funnel de conversion</h2>
+            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Filter className="w-4 h-4 text-gray-400" /> {t('ana.funnel')}</h2>
             <div className="space-y-2">
               {funnel.stages.map((s: any, i: number) => {
                 const maxCount = Math.max(...funnel.stages.map((x: any) => x.count), 1);
@@ -214,7 +204,7 @@ export default function AnalyticsPage() {
                 return (
                   <div key={s.stage}>
                     <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="font-medium text-gray-700">{s.label}</span>
+                      <span className="font-medium text-gray-700">{t('ana.stage.' + s.key)}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-gray-900 font-bold">{s.count}</span>
                         {s.dropoffRate > 0 && (
@@ -237,15 +227,15 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4 pt-4 border-t border-gray-100">
               <div className="text-center">
                 <p className="text-lg font-bold text-gray-900">{funnel.summary.conversionRate}%</p>
-                <p className="text-xs text-gray-500">Conversion</p>
+                <p className="text-xs text-gray-500">{t('ana.conversion')}</p>
               </div>
               <div className="text-center">
                 <p className="text-lg font-bold text-green-600">{funnel.summary.wonCount}</p>
-                <p className="text-xs text-gray-500">Gagné</p>
+                <p className="text-xs text-gray-500">{t('ana.won')}</p>
               </div>
               <div className="text-center">
                 <p className="text-lg font-bold text-red-400">{funnel.summary.lostCount}</p>
-                <p className="text-xs text-gray-500">Perdu</p>
+                <p className="text-xs text-gray-500">{t('ana.lost')}</p>
               </div>
               <div className="text-center">
                 <p className="text-lg font-bold text-orange-500">{funnel.summary.highIntentLeads}</p>
@@ -258,7 +248,7 @@ export default function AnalyticsPage() {
         {/* Acquisition Channel Analytics */}
         {acquisition && (
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Radio className="w-4 h-4 text-gray-400" /> Canaux d'acquisition</h2>
+            <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Radio className="w-4 h-4 text-gray-400" /> {t('ana.channels')}</h2>
             {acquisition.channels.length > 0 ? (
               <div className="space-y-3">
                 {acquisition.channels.map((c: any) => {
@@ -269,7 +259,7 @@ export default function AnalyticsPage() {
                       <div className="flex items-center justify-between text-sm mb-1">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded" style={{ background: c.color }} />
-                          <span className="font-medium text-gray-700">{c.label}</span>
+                          <span className="font-medium text-gray-700">{t('ana.ch.' + c.key)}</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-gray-900 font-bold">{c.count}</span>
@@ -291,7 +281,7 @@ export default function AnalyticsPage() {
                 })}
                 {acquisition.topCampaigns.length > 0 && (
                   <div className="pt-3 border-t border-gray-100">
-                    <p className="text-xs font-medium text-gray-500 mb-2">Top campagnes UTM</p>
+                    <p className="text-xs font-medium text-gray-500 mb-2">{t('ana.topUtm')}</p>
                     <div className="flex flex-wrap gap-2">
                       {acquisition.topCampaigns.map((c: any) => (
                         <span key={c.campaign} className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
@@ -312,7 +302,7 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
               </div>
-            ) : <p className="text-sm text-gray-400 text-center py-8">Aucune donnée d'acquisition</p>}
+            ) : <p className="text-sm text-gray-400 text-center py-8">{t('ana.noAcquisition')}</p>}
           </div>
         )}
       </div>

@@ -5,8 +5,10 @@ import {
   Calendar, X, Loader2, Sparkles
 } from 'lucide-react';
 import { billingApi, analyticsApi } from '@/lib/api';
+import { useUiLocale } from '@/lib/ui-locale';
 
 export default function BillingPage() {
+  const { t } = useUiLocale();
   const { data, isLoading: loading } = useQuery({
     queryKey: ['billing'],
     queryFn: async () => {
@@ -58,7 +60,7 @@ export default function BillingPage() {
   };
 
   const handleCancel = async () => {
-    if (!confirm('Annuler votre abonnement ?')) return;
+    if (!confirm(t('bill.confirmCancel'))) return;
     try {
       await cancelMutation.mutateAsync();
       window.location.reload();
@@ -69,8 +71,8 @@ export default function BillingPage() {
 
   return (
     <div className="p-4 lg:p-6 max-w-5xl mx-auto">
-      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Facturation & Abonnement</h1>
-      <p className="text-gray-500 mb-8">Gérez votre plan et suivez votre consommation</p>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{t('bill.title')}</h1>
+      <p className="text-gray-500 mb-8">{t('bill.subtitle')}</p>
 
       {/* Current plan status */}
       <div className="bg-white rounded-2xl border border-gray-200 p-4 lg:p-6 mb-8">
@@ -80,23 +82,23 @@ export default function BillingPage() {
               <span className="text-lg font-semibold text-gray-900 capitalize">{usage?.plan || currentPlan}</span>
               {usage?.status === 'trialing' && (
                 <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-600 text-xs font-medium">
-                  Essai {usage.trialDaysLeft}j restants
+                  {t('bill.trial')} {usage.trialDaysLeft}j
                 </span>
               )}
               {usage?.status === 'active' && (
-                <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-600 text-xs font-medium">Actif</span>
+                <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-600 text-xs font-medium">{t('adm.active')}</span>
               )}
               {usage?.status === 'past_due' && (
-                <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-xs font-medium">Paiement en retard</span>
+                <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-xs font-medium">{t('bill.pastDue')}</span>
               )}
               {usage?.status === 'canceled' && (
-                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-medium">Annulé</span>
+                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-medium">{t('bill.canceled')}</span>
               )}
             </div>
             {usage?.currentPeriodEnd && (
               <p className="text-sm text-gray-500 flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5" />
-                Renouvellement le {new Date(usage.currentPeriodEnd).toLocaleDateString('fr-FR')}
+                {t('bill.renews')} {new Date(usage.currentPeriodEnd).toLocaleDateString()}
               </p>
             )}
           </div>
@@ -107,7 +109,7 @@ export default function BillingPage() {
               className="text-sm text-red-500 hover:text-red-600 font-medium flex items-center gap-1"
             >
               {actionLoading === 'cancel' ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-              Annuler
+              {t('common.cancel')}
             </button>
           )}
         </div>
@@ -115,7 +117,7 @@ export default function BillingPage() {
         {/* Usage bar */}
         <div>
           <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-gray-600">Conversations ce mois</span>
+            <span className="text-gray-600">{t('bill.convMonth')}</span>
             <span className="font-medium text-gray-900">
               {usage?.conversationsUsed || 0} / {usage?.conversationsLimit === 999999 ? '∞' : usage?.conversationsLimit || 0}
             </span>
@@ -133,14 +135,14 @@ export default function BillingPage() {
               <span className="flex items-center gap-2">
                 <AlertCircle className="w-4 h-4" />
                 {usagePct >= 100
-                  ? 'Limite atteinte ! Vos conversations sont suspendues.'
-                  : `Il vous reste ${usage?.conversationsRemaining || 0} conversations.`}
+                  ? t('bill.limitReached')
+                  : `${t('bill.remaining')} ${usage?.conversationsRemaining || 0} ${t('bill.conversations')}.`}
               </span>
               <button
                 onClick={() => document.getElementById('plan-selection')?.scrollIntoView({ behavior: 'smooth' })}
                 className="font-semibold underline hover:no-underline"
               >
-                Upgrader →
+                {t('bill.upgrade')} →
               </button>
             </div>
           )}
@@ -150,13 +152,13 @@ export default function BillingPage() {
             <div className="mt-3 p-3 rounded-xl bg-indigo-50 text-indigo-700 text-sm flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4" />
-                Vous êtes sur le plan Free. Passez à Starter pour plus de conversations/mois.
+                {t('bill.freeNudge')}
               </span>
               <button
                 onClick={() => document.getElementById('plan-selection')?.scrollIntoView({ behavior: 'smooth' })}
                 className="font-semibold underline hover:no-underline"
               >
-                Voir les plans →
+                {t('bill.seePlans')} →
               </button>
             </div>
           )}
@@ -164,22 +166,22 @@ export default function BillingPage() {
           {/* Overage info */}
           {usage?.overageConversations > 0 && (
             <div className="mt-3 p-3 rounded-xl bg-orange-50 text-orange-700 text-sm">
-              <strong>{usage.overageConversations}</strong> conversations en overage — {(usage.overageCostCents / 100).toFixed(2)}€ facturés en sus.
+              <strong>{usage.overageConversations}</strong> {t('bill.overage')} — {(usage.overageCostCents / 100).toFixed(2)}€ {t('bill.overageBilled')}
             </div>
           )}
 
           {/* Actual vs projected usage */}
           {usage?.actualConversations != null && (
             <div className="mt-6 pt-6 border-t border-gray-100">
-              <h3 className="text-sm font-medium text-gray-900 mb-4">Consommation réelle vs projetée</h3>
+              <h3 className="text-sm font-medium text-gray-900 mb-4">{t('bill.actualVsProjected')}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="text-center p-4 rounded-xl bg-gray-50">
-                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">{usage.actualConversations.toLocaleString('fr-FR')}</p>
-                  <p className="text-xs text-gray-500 mt-1">Conversations réelles (mois en cours)</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900">{usage.actualConversations.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mt-1">{t('bill.actualConv')}</p>
                 </div>
                 <div className="text-center p-4 rounded-xl bg-indigo-50">
-                  <p className="text-2xl sm:text-3xl font-bold text-indigo-600">{usage.projectedConversationsThisMonth?.toLocaleString('fr-FR') || '—'}</p>
-                  <p className="text-xs text-indigo-600 mt-1">Projection fin de mois</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-indigo-600">{usage.projectedConversationsThisMonth?.toLocaleString() || '—'}</p>
+                  <p className="text-xs text-indigo-600 mt-1">{t('bill.projected')}</p>
                 </div>
               </div>
             </div>
@@ -190,19 +192,19 @@ export default function BillingPage() {
             <div className="mt-6 pt-6 border-t border-gray-100">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="w-4 h-4 text-indigo-500" />
-                <h3 className="font-semibold text-gray-900">Consommation de tokens (7 jours)</h3>
+                <h3 className="font-semibold text-gray-900">{t('bill.tokens7d')}</h3>
               </div>
               <div className="grid grid-cols-3 gap-3 mb-4">
                 <div className="text-center p-3 bg-gray-50 rounded-xl">
-                  <p className="text-lg font-bold text-gray-900">{tokenData.total?.promptTokens?.toLocaleString('fr-FR') || 0}</p>
+                  <p className="text-lg font-bold text-gray-900">{tokenData.total?.promptTokens?.toLocaleString() || 0}</p>
                   <p className="text-xs text-gray-500">Prompt</p>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded-xl">
-                  <p className="text-lg font-bold text-gray-900">{tokenData.total?.completionTokens?.toLocaleString('fr-FR') || 0}</p>
+                  <p className="text-lg font-bold text-gray-900">{tokenData.total?.completionTokens?.toLocaleString() || 0}</p>
                   <p className="text-xs text-gray-500">Completion</p>
                 </div>
                 <div className="text-center p-3 bg-indigo-50 rounded-xl">
-                  <p className="text-lg font-bold text-indigo-700">{tokenData.total?.totalTokens?.toLocaleString('fr-FR') || 0}</p>
+                  <p className="text-lg font-bold text-indigo-700">{tokenData.total?.totalTokens?.toLocaleString() || 0}</p>
                   <p className="text-xs text-indigo-600">Total</p>
                 </div>
               </div>
@@ -213,11 +215,11 @@ export default function BillingPage() {
                     const pct = ((day.totalTokens || 0) / max) * 100;
                     return (
                       <div key={i} className="flex items-center gap-3 text-sm">
-                        <span className="w-12 text-gray-500 text-xs">{new Date(day.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}</span>
+                        <span className="w-12 text-gray-500 text-xs">{new Date(day.date).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' })}</span>
                         <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                           <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${pct}%` }} />
                         </div>
-                        <span className="w-16 text-right font-medium text-gray-700">{(day.totalTokens || 0).toLocaleString('fr-FR')}</span>
+                        <span className="w-16 text-right font-medium text-gray-700">{(day.totalTokens || 0).toLocaleString()}</span>
                       </div>
                     );
                   })}
@@ -236,11 +238,11 @@ export default function BillingPage() {
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-gray-900">{usage.channels?.length || 0}</p>
-              <p className="text-xs text-gray-500">Canaux</p>
+              <p className="text-xs text-gray-500">{t('bill.channels')}</p>
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-gray-900">{usage.customDomain ? '✓' : '✗'}</p>
-              <p className="text-xs text-gray-500">Domaine custom</p>
+              <p className="text-xs text-gray-500">{t('bill.customDomain')}</p>
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-gray-900">{usage.apiAccess ? '✓' : '✗'}</p>
@@ -251,7 +253,7 @@ export default function BillingPage() {
       </div>
 
       {/* Plan selection */}
-      <h2 id="plan-selection" className="text-lg font-semibold text-gray-900 mb-4">Changer de plan</h2>
+      <h2 id="plan-selection" className="text-lg font-semibold text-gray-900 mb-4">{t('bill.changePlan')}</h2>
       <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 lg:grid-cols-5 gap-4">
         {plans.map((p) => {
           const isCurrent = currentPlan === p.id;
@@ -274,7 +276,7 @@ export default function BillingPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900">{p.name}</h3>
-                  <p className="text-xs text-gray-500">{p.price === null ? 'Sur devis' : `${p.price}€/mois`}</p>
+                  <p className="text-xs text-gray-500">{p.price === null ? t('bill.onQuote') : `${p.price}€/${t('bill.month')}`}</p>
                 </div>
               </div>
 
@@ -289,11 +291,11 @@ export default function BillingPage() {
 
               {isCurrent ? (
                 <button disabled className="w-full py-3 rounded-xl bg-green-50 text-green-600 font-semibold cursor-default">
-                  Plan actuel
+                  {t('bill.currentPlan')}
                 </button>
               ) : p.id === 'enterprise' ? (
                 <a href="mailto:sales@stiamond.com" className="w-full py-3 rounded-xl bg-gray-900 text-white font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
-                  Contacter les ventes
+                  {t('bill.contactSales')}
                 </a>
               ) : (
                 <button
@@ -302,7 +304,7 @@ export default function BillingPage() {
                   className="w-full py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
                 >
                   {actionLoading === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                  {p.id === 'free' ? 'Passer au Free' : 'Upgrader'}
+                  {p.id === 'free' ? t('bill.goFree') : t('bill.upgrade')}
                 </button>
               )}
             </div>

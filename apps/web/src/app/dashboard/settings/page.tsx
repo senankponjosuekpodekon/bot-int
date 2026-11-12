@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CreditCard, Calendar, Mail, Save, Check, X, ExternalLink, MessageCircle, Send, Smartphone, Globe, Clock, MapPin } from 'lucide-react';
 import { integrationsApi, tenantApi } from '@/lib/api';
+import { useUiLocale } from '@/lib/ui-locale';
 
 const LANGUAGES = [
   { value: 'fr', label: 'Français' },
@@ -26,6 +27,7 @@ interface Integration {
 }
 
 export default function SettingsPage() {
+  const { t } = useUiLocale();
   const queryClient = useQueryClient();
   const [profile, setProfile] = useState({ language: 'fr', timezone: 'UTC', location: '' });
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -63,9 +65,9 @@ export default function SettingsPage() {
     mutationFn: (data: typeof profile) => tenantApi.updateMe(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenant', 'me'] });
-      showToast('Préférences mises à jour');
+      showToast(t('set.toast.prefsSaved'));
     },
-    onError: () => showToast('Erreur lors de la mise à jour', 'error'),
+    onError: () => showToast(t('set.toast.updateError'), 'error'),
   });
 
   const integrations = integrationsQuery.data ?? [];
@@ -102,11 +104,11 @@ export default function SettingsPage() {
   }, [integrationsQuery.data]);
 
   useEffect(() => {
-    if (integrationsQuery.isError) showToast('Erreur lors du chargement', 'error');
+    if (integrationsQuery.isError) showToast(t('set.toast.loadError'), 'error');
   }, [integrationsQuery.isError]);
 
   useEffect(() => {
-    if (profileQuery.isError) showToast('Erreur lors du chargement du profil', 'error');
+    if (profileQuery.isError) showToast(t('set.toast.profileError'), 'error');
   }, [profileQuery.isError]);
 
   const saveProfile = () => {
@@ -116,65 +118,65 @@ export default function SettingsPage() {
   const saveStripe = async () => {
     try {
       await upsertIntegration.mutateAsync({ type: 'stripe', config: stripeForm });
-      showToast('Stripe configuré');
-    } catch { showToast('Erreur', 'error'); }
+      showToast(t('set.toast.stripeSaved'));
+    } catch { showToast(t('set.toast.error'), 'error'); }
   };
 
   const saveCalendly = async () => {
     try {
       await upsertIntegration.mutateAsync({ type: 'calendly', config: calendlyForm });
-      showToast('Calendly configuré');
-    } catch { showToast('Erreur', 'error'); }
+      showToast(t('set.toast.calendlySaved'));
+    } catch { showToast(t('set.toast.error'), 'error'); }
   };
 
   const saveEmail = async () => {
     try {
       await upsertIntegration.mutateAsync({ type: 'email', config: emailForm });
-      showToast('Email configuré');
-    } catch { showToast('Erreur', 'error'); }
+      showToast(t('set.toast.emailSaved'));
+    } catch { showToast(t('set.toast.error'), 'error'); }
   };
 
   const saveWhatsapp = async () => {
     try {
       await upsertIntegration.mutateAsync({ type: 'whatsapp', config: whatsappForm });
-      showToast('WhatsApp configuré');
-    } catch { showToast('Erreur', 'error'); }
+      showToast(t('set.toast.whatsappSaved'));
+    } catch { showToast(t('set.toast.error'), 'error'); }
   };
 
   const saveTelegram = async () => {
     try {
       await upsertIntegration.mutateAsync({ type: 'telegram', config: telegramForm });
-      showToast('Telegram configuré');
-    } catch { showToast('Erreur', 'error'); }
+      showToast(t('set.toast.telegramSaved'));
+    } catch { showToast(t('set.toast.error'), 'error'); }
   };
 
   const saveTwilio = async () => {
     try {
       await upsertIntegration.mutateAsync({ type: 'twilio', config: twilioForm });
-      showToast('SMS (Twilio) configuré');
-    } catch { showToast('Erreur', 'error'); }
+      showToast(t('set.toast.twilioSaved'));
+    } catch { showToast(t('set.toast.error'), 'error'); }
   };
 
   const toggleIntegration = (type: string, enabled: boolean) => {
     toggleIntegrationMutation.mutate(
       { type, enabled },
-      { onError: () => showToast('Erreur', 'error') },
+      { onError: () => showToast(t('set.toast.error'), 'error') },
     );
   };
 
   const isEnabled = (type: string) => integrations.find((i) => i.type === type)?.enabled ?? false;
 
-  if (loading) return <div className="p-4 lg:p-6 text-center text-gray-500">Chargement...</div>;
+  if (loading) return <div className="p-4 lg:p-6 text-center text-gray-500">{t('common.loading')}</div>;
 
   return (
     <div className="p-4 lg:p-6 max-w-3xl mx-auto">
-      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Paramètres du compte</h1>
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">{t('set.title')}</h1>
 
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
-        <h2 className="font-semibold text-gray-900 mb-4">Préférences</h2>
+        <h2 className="font-semibold text-gray-900 mb-4">{t('set.prefs')}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2"><Globe className="w-4 h-4" /> Langue</label>
+            <label className="text-sm font-medium text-gray-700 flex items-center gap-2"><Globe className="w-4 h-4" /> {t('set.language')}</label>
             <select
               className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"
               value={profile.language}
@@ -184,7 +186,7 @@ export default function SettingsPage() {
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2"><Clock className="w-4 h-4" /> Fuseau horaire</label>
+            <label className="text-sm font-medium text-gray-700 flex items-center gap-2"><Clock className="w-4 h-4" /> {t('set.timezone')}</label>
             <select
               className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"
               value={profile.timezone}
@@ -194,13 +196,13 @@ export default function SettingsPage() {
             </select>
           </div>
           <div className="sm:col-span-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2"><MapPin className="w-4 h-4" /> Localité</label>
+            <label className="text-sm font-medium text-gray-700 flex items-center gap-2"><MapPin className="w-4 h-4" /> {t('set.location')}</label>
             <input
               type="text"
               className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"
               value={profile.location}
               onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-              placeholder="France, Paris"
+              placeholder={t('set.locationPh')}
             />
           </div>
         </div>
@@ -209,11 +211,11 @@ export default function SettingsPage() {
           disabled={savingProfile}
           className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
         >
-          <Save className="w-4 h-4" /> {savingProfile ? 'Sauvegarde...' : 'Sauvegarder'}
+          <Save className="w-4 h-4" /> {savingProfile ? t('common.saving') : t('common.save')}
         </button>
       </div>
 
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Connecteurs</h2>
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('set.connectors')}</h2>
 
       <div className="space-y-4 lg:space-y-6">
         {/* Stripe */}
@@ -223,7 +225,7 @@ export default function SettingsPage() {
               <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center"><CreditCard className="w-5 h-5 text-indigo-600" /></div>
               <div>
                 <h2 className="font-semibold text-gray-900">Stripe</h2>
-                <p className="text-xs text-gray-500">Paiements en ligne — l'agent génère des liens de paiement</p>
+                <p className="text-xs text-gray-500">{t('set.stripeDesc')}</p>
               </div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -234,7 +236,7 @@ export default function SettingsPage() {
           <div className="space-y-3">
             <div><label className="text-sm font-medium text-gray-700">Secret Key</label><input type="password" value={stripeForm.secretKey} onChange={(e) => setStripeForm({ ...stripeForm, secretKey: e.target.value })} placeholder="sk_live_..." className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
             <div><label className="text-sm font-medium text-gray-700">Publishable Key</label><input value={stripeForm.publishableKey} onChange={(e) => setStripeForm({ ...stripeForm, publishableKey: e.target.value })} placeholder="pk_live_..." className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
-            <button onClick={saveStripe} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"><Save className="w-4 h-4" /> Sauvegarder</button>
+            <button onClick={saveStripe} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"><Save className="w-4 h-4" /> {t('common.save')}</button>
           </div>
         </div>
 
@@ -245,7 +247,7 @@ export default function SettingsPage() {
               <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center"><Calendar className="w-5 h-5 text-blue-600" /></div>
               <div>
                 <h2 className="font-semibold text-gray-900">Calendly</h2>
-                <p className="text-xs text-gray-500">Prise de rendez-vous — l'agent propose des créneaux</p>
+                <p className="text-xs text-gray-500">{t('set.calendlyDesc')}</p>
               </div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -255,8 +257,8 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-3">
             <div><label className="text-sm font-medium text-gray-700">Personal Access Token</label><input type="password" value={calendlyForm.accessToken} onChange={(e) => setCalendlyForm({ ...calendlyForm, accessToken: e.target.value })} placeholder="Calendly PAT..." className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
-            <a href="https://calendly.com/integrations/api_webhooks" target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">Obtenir un token <ExternalLink className="w-3 h-3" /></a>
-            <button onClick={saveCalendly} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"><Save className="w-4 h-4" /> Sauvegarder</button>
+            <a href="https://calendly.com/integrations/api_webhooks" target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">{t('set.getToken')} <ExternalLink className="w-3 h-3" /></a>
+            <button onClick={saveCalendly} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"><Save className="w-4 h-4" /> {t('common.save')}</button>
           </div>
         </div>
 
@@ -266,8 +268,8 @@ export default function SettingsPage() {
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center"><Mail className="w-5 h-5 text-green-600" /></div>
               <div>
-                <h2 className="font-semibold text-gray-900">Email transactionnel</h2>
-                <p className="text-xs text-gray-500">Envoi d'emails — Resend ou SendGrid</p>
+                <h2 className="font-semibold text-gray-900">{t('set.emailTitle')}</h2>
+                <p className="text-xs text-gray-500">{t('set.emailDesc')}</p>
               </div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -276,13 +278,13 @@ export default function SettingsPage() {
             </label>
           </div>
           <div className="space-y-3">
-            <div><label className="text-sm font-medium text-gray-700">Fournisseur</label><select value={emailForm.provider} onChange={(e) => setEmailForm({ ...emailForm, provider: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"><option value="resend">Resend</option><option value="sendgrid">SendGrid</option></select></div>
+            <div><label className="text-sm font-medium text-gray-700">{t('set.provider')}</label><select value={emailForm.provider} onChange={(e) => setEmailForm({ ...emailForm, provider: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"><option value="resend">Resend</option><option value="sendgrid">SendGrid</option></select></div>
             <div><label className="text-sm font-medium text-gray-700">API Key</label><input type="password" value={emailForm.apiKey} onChange={(e) => setEmailForm({ ...emailForm, apiKey: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label className="text-sm font-medium text-gray-700">Email expéditeur</label><input value={emailForm.fromEmail} onChange={(e) => setEmailForm({ ...emailForm, fromEmail: e.target.value })} placeholder="noreply@example.com" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
-              <div><label className="text-sm font-medium text-gray-700">Nom expéditeur</label><input value={emailForm.fromName} onChange={(e) => setEmailForm({ ...emailForm, fromName: e.target.value })} placeholder="Mon Entreprise" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
+              <div><label className="text-sm font-medium text-gray-700">{t('set.fromEmail')}</label><input value={emailForm.fromEmail} onChange={(e) => setEmailForm({ ...emailForm, fromEmail: e.target.value })} placeholder="noreply@example.com" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
+              <div><label className="text-sm font-medium text-gray-700">{t('set.fromName')}</label><input value={emailForm.fromName} onChange={(e) => setEmailForm({ ...emailForm, fromName: e.target.value })} placeholder={t('set.fromNamePh')} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
             </div>
-            <button onClick={saveEmail} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"><Save className="w-4 h-4" /> Sauvegarder</button>
+            <button onClick={saveEmail} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"><Save className="w-4 h-4" /> {t('common.save')}</button>
           </div>
         </div>
 
@@ -293,7 +295,7 @@ export default function SettingsPage() {
               <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center"><MessageCircle className="w-5 h-5 text-green-600" /></div>
               <div>
                 <h2 className="font-semibold text-gray-900">WhatsApp Business</h2>
-                <p className="text-xs text-gray-500">Envoyer des messages via WhatsApp Business API</p>
+                <p className="text-xs text-gray-500">{t('set.whatsappDesc')}</p>
               </div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -304,9 +306,9 @@ export default function SettingsPage() {
           <div className="space-y-3">
             <div><label className="text-sm font-medium text-gray-700">Phone Number ID</label><input value={whatsappForm.phoneNumberId} onChange={(e) => setWhatsappForm({ ...whatsappForm, phoneNumberId: e.target.value })} placeholder="123456789" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
             <div><label className="text-sm font-medium text-gray-700">Access Token</label><input type="password" value={whatsappForm.accessToken} onChange={(e) => setWhatsappForm({ ...whatsappForm, accessToken: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
-            <div><label className="text-sm font-medium text-gray-700">Webhook Verify Token</label><input value={whatsappForm.verifyToken} onChange={(e) => setWhatsappForm({ ...whatsappForm, verifyToken: e.target.value })} placeholder="my_verify_token" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
+            <div><label className="text-sm font-medium text-gray-700">{t('set.verifyToken')}</label><input value={whatsappForm.verifyToken} onChange={(e) => setWhatsappForm({ ...whatsappForm, verifyToken: e.target.value })} placeholder="my_verify_token" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
             <a href="https://developers.facebook.com/docs/whatsapp" target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-xs text-green-600 hover:underline">Documentation WhatsApp API <ExternalLink className="w-3 h-3" /></a>
-            <button onClick={saveWhatsapp} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"><Save className="w-4 h-4" /> Sauvegarder</button>
+            <button onClick={saveWhatsapp} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"><Save className="w-4 h-4" /> {t('common.save')}</button>
           </div>
         </div>
 
@@ -317,7 +319,7 @@ export default function SettingsPage() {
               <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center"><Send className="w-5 h-5 text-blue-600" /></div>
               <div>
                 <h2 className="font-semibold text-gray-900">Telegram</h2>
-                <p className="text-xs text-gray-500">Bot Telegram pour envoi de messages</p>
+                <p className="text-xs text-gray-500">{t('set.telegramDesc')}</p>
               </div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -327,8 +329,8 @@ export default function SettingsPage() {
           </div>
           <div className="space-y-3">
             <div><label className="text-sm font-medium text-gray-700">Bot Token</label><input type="password" value={telegramForm.botToken} onChange={(e) => setTelegramForm({ ...telegramForm, botToken: e.target.value })} placeholder="123456:ABC-DEF..." className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
-            <a href="https://t.me/botfather" target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">Créer un bot via @BotFather <ExternalLink className="w-3 h-3" /></a>
-            <button onClick={saveTelegram} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"><Save className="w-4 h-4" /> Sauvegarder</button>
+            <a href="https://t.me/botfather" target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">{t('set.createBot')} <ExternalLink className="w-3 h-3" /></a>
+            <button onClick={saveTelegram} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"><Save className="w-4 h-4" /> {t('common.save')}</button>
           </div>
         </div>
 
@@ -339,7 +341,7 @@ export default function SettingsPage() {
               <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center"><Smartphone className="w-5 h-5 text-red-600" /></div>
               <div>
                 <h2 className="font-semibold text-gray-900">SMS (Twilio)</h2>
-                <p className="text-xs text-gray-500">Envoi de SMS via Twilio</p>
+                <p className="text-xs text-gray-500">{t('set.twilioDesc')}</p>
               </div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -350,9 +352,9 @@ export default function SettingsPage() {
           <div className="space-y-3">
             <div><label className="text-sm font-medium text-gray-700">Account SID</label><input value={twilioForm.accountSid} onChange={(e) => setTwilioForm({ ...twilioForm, accountSid: e.target.value })} placeholder="ACxxx..." className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
             <div><label className="text-sm font-medium text-gray-700">Auth Token</label><input type="password" value={twilioForm.authToken} onChange={(e) => setTwilioForm({ ...twilioForm, authToken: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
-            <div><label className="text-sm font-medium text-gray-700">Numéro expéditeur</label><input value={twilioForm.fromNumber} onChange={(e) => setTwilioForm({ ...twilioForm, fromNumber: e.target.value })} placeholder="+33612345678" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
+            <div><label className="text-sm font-medium text-gray-700">{t('set.fromNumber')}</label><input value={twilioForm.fromNumber} onChange={(e) => setTwilioForm({ ...twilioForm, fromNumber: e.target.value })} placeholder="+33612345678" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" /></div>
             <a href="https://www.twilio.com/console" target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-xs text-red-600 hover:underline">Console Twilio <ExternalLink className="w-3 h-3" /></a>
-            <button onClick={saveTwilio} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700"><Save className="w-4 h-4" /> Sauvegarder</button>
+            <button onClick={saveTwilio} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700"><Save className="w-4 h-4" /> {t('common.save')}</button>
           </div>
         </div>
       </div>

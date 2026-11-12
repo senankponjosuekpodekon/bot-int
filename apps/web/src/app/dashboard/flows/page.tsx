@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { List, Play, Settings, Trash2, Plus, Loader2, Activity } from 'lucide-react';
 import { flowsApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useUiLocale } from '@/lib/ui-locale';
 import FlowForm from './FlowForm';
 
 interface Flow {
@@ -32,6 +33,7 @@ interface FlowExecution {
 }
 
 function FlowExecutions({ flowId }: { flowId: string }) {
+  const { t } = useUiLocale();
   const { data: execs, isLoading } = useQuery<FlowExecution[]>({
     queryKey: ['flows', flowId, 'executions'],
     queryFn: async () => {
@@ -47,12 +49,12 @@ function FlowExecutions({ flowId }: { flowId: string }) {
   return (
     <div className="mt-4 border-t border-gray-100 pt-4">
       <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-        <Play className="w-4 h-4 text-gray-400" /> Dernières exécutions
+        <Play className="w-4 h-4 text-gray-400" /> {t('flw.lastExecs')}
       </h4>
       {isLoading || !execs ? (
-        <p className="text-sm text-gray-400 flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> Chargement...</p>
+        <p className="text-sm text-gray-400 flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> {t('common.loading')}</p>
       ) : execs.length === 0 ? (
-        <p className="text-sm text-gray-400">Aucune exécution.</p>
+        <p className="text-sm text-gray-400">{t('flw.noExecs')}</p>
       ) : (
         <div className="space-y-2">
           {execs.map((exec) => (
@@ -65,7 +67,7 @@ function FlowExecutions({ flowId }: { flowId: string }) {
                 }`}>
                   {exec.status}
                 </span>
-                <span className="text-xs text-gray-400">{new Date(exec.createdAt).toLocaleString('fr-FR')}</span>
+                <span className="text-xs text-gray-400">{new Date(exec.createdAt).toLocaleString()}</span>
               </div>
               <p className="mt-1 text-gray-600">{exec.triggeredBy}</p>
               {exec.errorMessage && <p className="text-xs text-red-500 mt-1">{exec.errorMessage}</p>}
@@ -78,6 +80,7 @@ function FlowExecutions({ flowId }: { flowId: string }) {
 }
 
 export default function FlowsPage() {
+  const { t } = useUiLocale();
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showForm, setShowForm] = useState(false);
@@ -92,28 +95,28 @@ export default function FlowsPage() {
   });
 
   useEffect(() => {
-    if (isError) toast.error('Erreur lors du chargement des flux');
+    if (isError) toast.error(t('flw.toast.loadError'));
   }, [isError]);
 
   const deleteFlow = useMutation({
     mutationFn: (id: string) => flowsApi.delete(id),
     onSuccess: () => {
-      toast.success('Flux supprimé');
+      toast.success(t('flw.toast.deleted'));
       queryClient.invalidateQueries({ queryKey: ['flows'] });
     },
-    onError: () => toast.error('Erreur lors de la suppression'),
+    onError: () => toast.error(t('flw.toast.deleteError')),
   });
 
   const saveFlow = useMutation({
     mutationFn: ({ id, data }: { id?: string; data: any }) =>
       id ? flowsApi.update(id, data) : flowsApi.create(data),
     onSuccess: (_res, { id }) => {
-      toast.success(id ? 'Flux mis à jour' : 'Flux créé');
+      toast.success(id ? t('flw.toast.updated') : t('flw.toast.created'));
       setShowForm(false);
       setEditing(null);
       queryClient.invalidateQueries({ queryKey: ['flows'] });
     },
-    onError: () => toast.error('Erreur lors de l\'enregistrement'),
+    onError: () => toast.error(t('flw.toast.saveError')),
   });
 
   const toggleExecutions = (flowId: string) => {
@@ -121,7 +124,7 @@ export default function FlowsPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm('Supprimer ce flux ?')) return;
+    if (!confirm(t('flw.confirmDelete'))) return;
     deleteFlow.mutate(id);
   };
 
@@ -138,7 +141,7 @@ export default function FlowsPage() {
     return (
       <div className="p-4 lg:p-6 text-center text-gray-500 flex items-center justify-center gap-2">
         <Loader2 className="w-4 h-4 animate-spin" />
-        Chargement des flux...
+        {t('flw.loading')}
       </div>
     );
   }
@@ -149,12 +152,12 @@ export default function FlowsPage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
             <List className="w-6 h-6 text-primary-600" />
-            Flux (chat flows)
+            {t('flw.title')}
           </h1>
-          <p className="text-gray-500 text-sm mt-1">Formulaires conversationnels et audit d'exécution</p>
+          <p className="text-gray-500 text-sm mt-1">{t('flw.subtitle')}</p>
         </div>
         <button onClick={() => { setEditing(null); setShowForm(true); }} className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" /> New Flow
+          <Plus className="w-4 h-4" /> {t('flw.new')}
         </button>
       </div>
 
@@ -165,7 +168,7 @@ export default function FlowsPage() {
       {flows.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <List className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          Aucun flux pour le moment.
+          {t('flw.empty')}
         </div>
       ) : (
         <div className="space-y-3">
@@ -176,34 +179,34 @@ export default function FlowsPage() {
                   <div className="flex items-center gap-2">
                     <h3 className="font-medium text-gray-900">{flow.title}</h3>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${flow.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {flow.isActive ? 'Actif' : 'Inactif'}
+                      {flow.isActive ? t('flw.active') : t('flw.inactive')}
                     </span>
                   </div>
                   {flow.description && <p className="text-gray-500 text-sm mt-1">{flow.description}</p>}
                   <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
-                    <span>{flow.fields?.length || 0} champs</span>
-                    <span>{flow.actions?.length || 0} actions</span>
+                    <span>{flow.fields?.length || 0} {t('flw.fields')}</span>
+                    <span>{flow.actions?.length || 0} {t('flw.actions')}</span>
                   </div>
                 </div>
                 <div className="flex gap-1">
                   <button
                     onClick={() => toggleExecutions(flow.id)}
                     className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg"
-                    title="Executions"
+                    title={t('flw.executions')}
                   >
                     <Activity className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleEdit(flow)}
                     className="p-2 text-gray-400 hover:text-gray-600"
-                    title="Edit"
+                    title={t('srv.edit')}
                   >
                     <Settings className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(flow.id)}
                     className="p-2 text-red-400 hover:text-red-600"
-                    title="Delete"
+                    title={t('common.delete')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

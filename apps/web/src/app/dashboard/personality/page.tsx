@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Sparkles, Clock, MessageCircle, Shield, Zap, Trash2, Plus, Save, AlertCircle, Globe, Brain } from 'lucide-react';
 import { agentsApi, chatApi } from '@/lib/api';
+import { useUiLocale } from '@/lib/ui-locale';
 
 export default function PersonalityPage() {
+  const { t } = useUiLocale();
   const queryClient = useQueryClient();
   const [selectedAgent, setSelectedAgent] = useState('');
   const [config, setConfig] = useState<any>({
@@ -49,9 +51,9 @@ export default function PersonalityPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       queryClient.invalidateQueries({ queryKey: ['agent', selectedAgent] });
-      showToast('Personnalité sauvegardée');
+      showToast(t('pers.toast.saved'));
     },
-    onError: () => showToast('Erreur lors de la sauvegarde', 'error'),
+    onError: () => showToast(t('pers.toast.saveError'), 'error'),
   });
   const saving = savePersonality.isPending;
 
@@ -61,9 +63,9 @@ export default function PersonalityPage() {
       queryClient.setQueryData(['chat', 'feedback', selectedAgent], (old: any[] = []) =>
         old.filter((f) => f.id !== id),
       );
-      showToast('Feedback supprimé');
+      showToast(t('pers.toast.fbDeleted'));
     },
-    onError: () => showToast('Erreur', 'error'),
+    onError: () => showToast(t('pers.toast.error'), 'error'),
   });
 
   useEffect(() => {
@@ -71,7 +73,7 @@ export default function PersonalityPage() {
   }, [agents, selectedAgent]);
 
   useEffect(() => {
-    if (agentsQuery.isError) showToast('Erreur lors du chargement', 'error');
+    if (agentsQuery.isError) showToast(t('pers.toast.loadError'), 'error');
   }, [agentsQuery.isError]);
 
   useEffect(() => {
@@ -116,15 +118,15 @@ export default function PersonalityPage() {
     deleteFeedbackMutation.mutate(id);
   };
 
-  const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  const days = t('pers.days').split(',');
 
   return (
     <div className="p-4 lg:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Sparkles className="w-6 h-6 text-primary-600" /> Personnalité & Comportement
+          <Sparkles className="w-6 h-6 text-primary-600" /> {t('pers.title')}
         </h1>
-        <p className="text-sm text-gray-500 mt-1">Configurez le ton, le rythme, la transparence et l'apprentissage de votre agent</p>
+        <p className="text-sm text-gray-500 mt-1">{t('pers.subtitle')}</p>
       </div>
 
       {/* Agent selector */}
@@ -137,13 +139,13 @@ export default function PersonalityPage() {
 
       {/* Ton de voix */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
-        <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><MessageCircle className="w-4 h-4 text-gray-400" /> Ton de voix</h2>
+        <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><MessageCircle className="w-4 h-4 text-gray-400" /> {t('pers.tone')}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           {[
-            { value: 'professional', label: 'Professionnel' },
-            { value: 'friendly', label: 'Amical' },
-            { value: 'formal', label: 'Formel' },
-            { value: 'casual', label: 'Décontracté' },
+            { value: 'professional', label: t('pers.tone.professional') },
+            { value: 'friendly', label: t('pers.tone.friendly') },
+            { value: 'formal', label: t('pers.tone.formal') },
+            { value: 'casual', label: t('pers.tone.casual') },
           ].map((t) => (
             <button
               key={t.value}
@@ -161,7 +163,7 @@ export default function PersonalityPage() {
         <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Shield className="w-4 h-4 text-gray-400" /> Transparence IA (Genuine)</h2>
         <label className="flex items-center gap-2 cursor-pointer mb-3">
           <input type="checkbox" checked={config.discloseAI} onChange={(e) => setConfig({ ...config, discloseAI: e.target.checked })} className="w-4 h-4 rounded" />
-          <span className="text-sm text-gray-700">Divulguer que les réponses sont générées par IA</span>
+          <span className="text-sm text-gray-700">{t('pers.disclose')}</span>
         </label>
         {config.discloseAI && (
           <div>
@@ -169,10 +171,10 @@ export default function PersonalityPage() {
             <input
               value={config.aiDisclosureMessage || ''}
               onChange={(e) => setConfig({ ...config, aiDisclosureMessage: e.target.value })}
-              placeholder="— Message généré par notre assistant IA. Un agent humain peut prendre le relais."
+              placeholder={t('pers.disclosePh')}
               className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"
             />
-            <p className="text-xs text-gray-400 mt-1">Ajouté à la fin du premier message de chaque nouvelle conversation.</p>
+            <p className="text-xs text-gray-400 mt-1">{t('pers.discloseHint')}</p>
           </div>
         )}
       </div>
@@ -182,48 +184,48 @@ export default function PersonalityPage() {
         <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Zap className="w-4 h-4 text-gray-400" /> Rythme de communication (Pacing)</h2>
         <label className="flex items-center gap-2 cursor-pointer mb-3">
           <input type="checkbox" checked={config.pacingEnabled} onChange={(e) => setConfig({ ...config, pacingEnabled: e.target.checked })} className="w-4 h-4 rounded" />
-          <span className="text-sm text-gray-700">Simuler un délai naturel avant de répondre</span>
+          <span className="text-sm text-gray-700">{t('pers.delay')}</span>
         </label>
         {config.pacingEnabled && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-700">Délai minimum (ms)</label>
+              <label className="text-sm font-medium text-gray-700">{t('pers.delayMin')}</label>
               <input type="number" value={config.minDelayMs} onChange={(e) => setConfig({ ...config, minDelayMs: parseInt(e.target.value) || 500 })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Délai maximum (ms)</label>
+              <label className="text-sm font-medium text-gray-700">{t('pers.delayMax')}</label>
               <input type="number" value={config.maxDelayMs} onChange={(e) => setConfig({ ...config, maxDelayMs: parseInt(e.target.value) || 2500 })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
             </div>
           </div>
         )}
-        <p className="text-xs text-gray-400 mt-2">Le délai est calculé selon la longueur de la réponse (mots × 30ms). Un humain met du temps à répondre — le bot aussi.</p>
+        <p className="text-xs text-gray-400 mt-2">{t('pers.delayHint')}</p>
       </div>
 
       {/* Horaires */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
-        <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Clock className="w-4 h-4 text-gray-400" /> Horaires & Disponibilité</h2>
+        <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Clock className="w-4 h-4 text-gray-400" /> {t('pers.hours')}</h2>
         <div className="mb-3">
-          <label className="text-sm font-medium text-gray-700">Mode de réponse automatique</label>
+          <label className="text-sm font-medium text-gray-700">{t('pers.autoReply')}</label>
           <select value={config.autoReplyMode} onChange={(e) => setConfig({ ...config, autoReplyMode: e.target.value })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm">
-            <option value="always">Toujours (24/7)</option>
-            <option value="business_hours">Pendant les horaires d'ouverture uniquement</option>
-            <option value="off_hours_only">Hors horaires d'ouverture uniquement</option>
+            <option value="always">{t('pers.mode.always')}</option>
+            <option value="business_hours">{t('pers.mode.business')}</option>
+            <option value="off_hours_only">{t('pers.mode.offHours')}</option>
           </select>
         </div>
         {config.autoReplyMode !== 'always' && (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
               <div>
-                <label className="text-sm font-medium text-gray-700">Ouverture</label>
+                <label className="text-sm font-medium text-gray-700">{t('pers.open')}</label>
                 <input type="time" value={config.businessHours?.start || '09:00'} onChange={(e) => setConfig({ ...config, businessHours: { ...config.businessHours, start: e.target.value } })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">Fermeture</label>
+                <label className="text-sm font-medium text-gray-700">{t('pers.close')}</label>
                 <input type="time" value={config.businessHours?.end || '18:00'} onChange={(e) => setConfig({ ...config, businessHours: { ...config.businessHours, end: e.target.value } })} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Jours d'ouverture</label>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">{t('pers.daysOpen')}</label>
               <div className="flex gap-1">
                 {days.map((day, idx) => (
                   <button
@@ -246,34 +248,34 @@ export default function PersonalityPage() {
 
       {/* Capacités : outils et mémoire */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
-        <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Zap className="w-4 h-4 text-gray-400" /> Capacités</h2>
-        <p className="text-xs text-gray-400 mb-3">Choisissez ce que l&apos;agent peut utiliser pour enrichir ses réponses.</p>
+        <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Zap className="w-4 h-4 text-gray-400" /> {t('pers.capabilities')}</h2>
+        <p className="text-xs text-gray-400 mb-3">{t('pers.capabilitiesDesc')}</p>
         <label className="flex items-center gap-2 cursor-pointer mb-3">
           <input type="checkbox" checked={config.toolsEnabled} onChange={(e) => setConfig({ ...config, toolsEnabled: e.target.checked })} className="w-4 h-4 rounded" />
           <Globe className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-700">Outils externes (web search, calculatrice, calendrier)</span>
+          <span className="text-sm text-gray-700">{t('pers.tools')}</span>
         </label>
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={config.memoryEnabled} onChange={(e) => setConfig({ ...config, memoryEnabled: e.target.checked })} className="w-4 h-4 rounded" />
           <Brain className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-700">Mémoire persistante sur le visiteur</span>
+          <span className="text-sm text-gray-700">{t('pers.memory')}</span>
         </label>
       </div>
 
       {/* Escalade & Sujets interdits */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
-        <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><AlertCircle className="w-4 h-4 text-gray-400" /> Escalade & Limites</h2>
+        <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><AlertCircle className="w-4 h-4 text-gray-400" /> {t('pers.escalation')}</h2>
         
         <div className="mb-4">
-          <label className="text-sm font-medium text-gray-700">Sujets à escalader vers un humain</label>
-          <p className="text-xs text-gray-400 mb-2">Quand l'utilisateur mentionne ces mots, la conversation est transférée automatiquement</p>
+          <label className="text-sm font-medium text-gray-700">{t('pers.escTopics')}</label>
+          <p className="text-xs text-gray-400 mb-2">{t('pers.escHint')}</p>
           <div className="flex gap-2 mb-2">
             <select value={topicType} onChange={(e) => setTopicType(e.target.value as any)} className="px-2 py-1 rounded-lg border border-gray-300 text-xs">
-              <option value="escalation">Escalade</option>
-              <option value="forbidden">Interdit</option>
+              <option value="escalation">{t('pers.escalationOpt')}</option>
+              <option value="forbidden">{t('pers.forbiddenOpt')}</option>
             </select>
-            <input value={newTopic} onChange={(e) => setNewTopic(e.target.value)} placeholder="ex: réclamation, plainte, remboursement..." className="flex-1 px-3 py-1 rounded-lg border border-gray-300 text-sm" onKeyDown={(e) => e.key === 'Enter' && addTopic()} />
-            <button onClick={addTopic} className="flex items-center gap-1 px-3 py-1 rounded-lg bg-primary-50 text-primary-700 text-sm"><Plus className="w-3 h-3" /> Ajouter</button>
+            <input value={newTopic} onChange={(e) => setNewTopic(e.target.value)} placeholder={t('pers.topicPh')} className="flex-1 px-3 py-1 rounded-lg border border-gray-300 text-sm" onKeyDown={(e) => e.key === 'Enter' && addTopic()} />
+            <button onClick={addTopic} className="flex items-center gap-1 px-3 py-1 rounded-lg bg-primary-50 text-primary-700 text-sm"><Plus className="w-3 h-3" /> {t('site.add')}</button>
           </div>
           <div className="flex flex-wrap gap-2">
             {(config.escalationTopics || []).map((t: string) => (
@@ -292,24 +294,24 @@ export default function PersonalityPage() {
 
       {/* Feedback loop */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
-        <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Sparkles className="w-4 h-4 text-yellow-500" /> Apprentissage (Feedback)</h2>
-        <p className="text-xs text-gray-400 mb-3">Les corrections de l'administrateur sont injectées dans le prompt de l'agent pour qu'il apprenne de ses erreurs.</p>
+        <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Sparkles className="w-4 h-4 text-yellow-500" /> {t('pers.learning')}</h2>
+        <p className="text-xs text-gray-400 mb-3">{t('pers.learningDesc')}</p>
         {feedback.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-4">Aucun feedback pour le moment. Corrigez une réponse dans la page Conversations pour entraîner l'agent.</p>
+          <p className="text-sm text-gray-500 text-center py-4">{t('pers.noFeedback')}</p>
         ) : (
           <div className="space-y-2">
             {feedback.map((f) => (
               <div key={f.id} className="border border-gray-200 rounded-lg p-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-xs text-gray-500">Question: {f.userMessage.slice(0, 80)}</p>
-                    <p className="text-xs text-red-600 mt-1 line-through">Réponse originale: {f.originalReply.slice(0, 80)}</p>
-                    <p className="text-xs text-green-600 mt-1">Correction: {f.correctedReply.slice(0, 80)}</p>
-                    {f.reason && <p className="text-xs text-gray-400 mt-1">Raison: {f.reason}</p>}
+                    <p className="text-xs text-gray-500">{t('pers.question')}: {f.userMessage.slice(0, 80)}</p>
+                    <p className="text-xs text-red-600 mt-1 line-through">{t('pers.original')}: {f.originalReply.slice(0, 80)}</p>
+                    <p className="text-xs text-green-600 mt-1">{t('pers.correction')}: {f.correctedReply.slice(0, 80)}</p>
+                    {f.reason && <p className="text-xs text-gray-400 mt-1">{t('pers.reason')}: {f.reason}</p>}
                   </div>
                   <button onClick={() => deleteFeedback(f.id)} className="p-1 rounded hover:bg-gray-100"><Trash2 className="w-4 h-4 text-gray-400" /></button>
                 </div>
-                {f.appliedToPrompt && <span className="text-xs text-green-600 mt-1 inline-block">✓ Appliqué au prompt</span>}
+                {f.appliedToPrompt && <span className="text-xs text-green-600 mt-1 inline-block">✓ {t('pers.applied')}</span>}
               </div>
             ))}
           </div>
@@ -323,7 +325,7 @@ export default function PersonalityPage() {
           disabled={saving}
           className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 disabled:opacity-50"
         >
-          <Save className="w-4 h-4" /> {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+          <Save className="w-4 h-4" /> {saving ? t('common.saving') : t('common.save')}
         </button>
       </div>
 

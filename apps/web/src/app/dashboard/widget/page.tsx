@@ -4,8 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Code2, Copy, Check, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { agentsApi } from '@/lib/api';
+import { useUiLocale } from '@/lib/ui-locale';
 
 export default function WidgetConfigPage() {
+  const { t } = useUiLocale();
   const { data: agents = [] } = useQuery<any[]>({
     queryKey: ['widget-config', 'agents'],
     queryFn: () => agentsApi.list().then((res: any) => res?.data || res || []),
@@ -23,11 +25,11 @@ export default function WidgetConfigPage() {
   const saveDomains = useMutation({
     mutationFn: (list: string[]) => agentsApi.update(selectedAgent, { allowedDomains: list }),
     onSuccess: () => {
-      toast.success('Domaines autorisés enregistrés');
+      toast.success(t('wgt.toast.domainsSaved'));
       setDomainsDraft(null);
       queryClient.invalidateQueries({ queryKey: ['widget-config', 'agents'] });
     },
-    onError: () => toast.error('Impossible d’enregistrer les domaines'),
+    onError: () => toast.error(t('wgt.toast.domainsError')),
   });
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL
@@ -41,7 +43,7 @@ export default function WidgetConfigPage() {
   data-position="${position}"
   data-api="${apiUrl}">
 </script>`
-    : '<!-- Sélectionnez un agent -->';
+    : `<!-- ${t('wgt.selectAgent')} -->`;
 
   const wordpressShortcode = selectedAgent
     ? `[stiamond_chat agent_id="${selectedAgent}" color="${customColor}" title="${customTitle}"]`
@@ -57,14 +59,14 @@ export default function WidgetConfigPage() {
     <div className="p-4 lg:p-6 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Code2 className="w-6 h-6 text-primary-600" /> Widget & Intégration
+          <Code2 className="w-6 h-6 text-primary-600" /> {t('wgt.title')}
         </h1>
-        <p className="text-sm text-gray-500 mt-1">Intégrez le chat IA sur n'importe quel site en une ligne de code</p>
+        <p className="text-sm text-gray-500 mt-1">{t('wgt.subtitle')}</p>
       </div>
 
       {/* Configuration */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 mb-6">
-        <h2 className="font-semibold text-gray-900 mb-4">Configuration</h2>
+        <h2 className="font-semibold text-gray-900 mb-4">{t('wgt.config')}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-medium text-gray-700">Agent</label>
@@ -73,21 +75,21 @@ export default function WidgetConfigPage() {
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">Titre du widget</label>
+            <label className="text-sm font-medium text-gray-700">{t('wgt.widgetTitle')}</label>
             <input value={customTitle} onChange={(e) => setCustomTitle(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">Couleur</label>
+            <label className="text-sm font-medium text-gray-700">{t('wgt.color')}</label>
             <div className="flex items-center gap-2 mt-1">
               <input type="color" value={customColor} onChange={(e) => setCustomColor(e.target.value)} className="w-12 h-10 rounded-lg border border-gray-300 cursor-pointer" />
               <input value={customColor} onChange={(e) => setCustomColor(e.target.value)} className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700">Position</label>
+            <label className="text-sm font-medium text-gray-700">{t('wgt.position')}</label>
             <select value={position} onChange={(e) => setPosition(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm">
-              <option value="bottom-right">Bas droite</option>
-              <option value="bottom-left">Bas gauche</option>
+              <option value="bottom-right">{t('wgt.posRight')}</option>
+              <option value="bottom-left">{t('wgt.posLeft')}</option>
             </select>
           </div>
         </div>
@@ -95,9 +97,9 @@ export default function WidgetConfigPage() {
 
       {/* Preview */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 mb-6">
-        <h2 className="font-semibold text-gray-900 mb-4">Aperçu</h2>
+        <h2 className="font-semibold text-gray-900 mb-4">{t('wgt.preview')}</h2>
         <div className="bg-gray-100 rounded-lg p-4 lg:p-8 relative h-48 flex items-center justify-center">
-          <p className="text-gray-400 text-sm">Aperçu de votre site</p>
+          <p className="text-gray-400 text-sm">{t('wgt.previewSite')}</p>
           <div className="absolute bottom-4 right-4 flex items-center gap-2">
             <div className="bg-white rounded-lg shadow-lg p-3 max-w-[200px]">
               <p className="text-xs text-gray-700">{customTitle}</p>
@@ -112,17 +114,16 @@ export default function WidgetConfigPage() {
       {/* Sécurité — domaines autorisés */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 mb-6">
         <h2 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-primary-600" /> Domaines autorisés
+          <ShieldCheck className="w-4 h-4 text-primary-600" /> {t('wgt.domainsTitle')}
         </h2>
         <p className="text-xs text-gray-500 mb-3">
-          Limitez les sites où votre chatbot peut être intégré. Vide = tous les domaines autorisés.
-          Séparez par des virgules ; <code className="bg-gray-100 px-1 rounded">*.mondomaine.com</code> couvre les sous-domaines.
+          {t('wgt.domainsDesc')} <code className="bg-gray-100 px-1 rounded">*.example.com</code>
         </p>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
             value={domainsValue}
             onChange={(e) => setDomainsDraft(e.target.value)}
-            placeholder="maboutique.com, www.maboutique.com"
+            placeholder={t('wgt.domainsPh')}
             className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm"
             disabled={!selectedAgent}
           />
@@ -138,7 +139,7 @@ export default function WidgetConfigPage() {
             disabled={!selectedAgent || saveDomains.isPending}
             className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
           >
-            {saveDomains.isPending ? 'Enregistrement…' : 'Enregistrer'}
+            {saveDomains.isPending ? t('common.saving') : t('common.save')}
           </button>
         </div>
       </div>
@@ -146,13 +147,13 @@ export default function WidgetConfigPage() {
       {/* Embed code */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-900">Code d'intégration (HTML)</h2>
+          <h2 className="font-semibold text-gray-900">{t('wgt.embedTitle')}</h2>
           <button onClick={() => copyToClipboard(embedCode)} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100">
-            {copied ? <><Check className="w-3 h-3" /> Copié</> : <><Copy className="w-3 h-3" /> Copier</>}
+            {copied ? <><Check className="w-3 h-3" /> {t('agc.copied')}</> : <><Copy className="w-3 h-3" /> {t('agc.copy')}</>}
           </button>
         </div>
         <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs overflow-x-auto"><code>{embedCode}</code></pre>
-        <p className="text-xs text-gray-400 mt-2">Ajoutez ce code avant la balise <code className="bg-gray-100 px-1 rounded">&lt;/body&gt;</code> de votre site.</p>
+        <p className="text-xs text-gray-400 mt-2">{t('wgt.embedHint1')} <code className="bg-gray-100 px-1 rounded">&lt;/body&gt;</code> {t('wgt.embedHint2')}</p>
       </div>
 
       {/* WordPress shortcode */}
@@ -160,36 +161,36 @@ export default function WidgetConfigPage() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold text-gray-900">Shortcode WordPress</h2>
           <button onClick={() => copyToClipboard(wordpressShortcode)} className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100">
-            <Copy className="w-3 h-3" /> Copier
+            <Copy className="w-3 h-3" /> {t('agc.copy')}
           </button>
         </div>
         <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 text-xs overflow-x-auto"><code>{wordpressShortcode}</code></pre>
-        <p className="text-xs text-gray-400 mt-2">Ajoutez ce shortcode dans n'importe quelle page ou article WordPress.</p>
+        <p className="text-xs text-gray-400 mt-2">{t('wgt.shortcodeHint')}</p>
       </div>
 
       {/* API endpoints */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
-        <h2 className="font-semibold text-gray-900 mb-3">Endpoints API publique</h2>
+        <h2 className="font-semibold text-gray-900 mb-3">{t('wgt.apiTitle')}</h2>
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-green-100 text-green-700">GET</span>
             <code className="text-xs text-gray-700">{apiUrl}/widget/embed.js</code>
-            <span className="text-xs text-gray-400">— Script du widget</span>
+            <span className="text-xs text-gray-400">— {t('wgt.epScript')}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-blue-100 text-blue-700">GET</span>
             <code className="text-xs text-gray-700">{apiUrl}/widget/config/:agentId</code>
-            <span className="text-xs text-gray-400">— Config de l'agent</span>
+            <span className="text-xs text-gray-400">— {t('wgt.epConfig')}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-orange-100 text-orange-700">POST</span>
             <code className="text-xs text-gray-700">{apiUrl}/widget/send</code>
-            <span className="text-xs text-gray-400">— Envoyer un message</span>
+            <span className="text-xs text-gray-400">— {t('wgt.epSend')}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-blue-100 text-blue-700">GET</span>
             <code className="text-xs text-gray-700">{apiUrl}/widget/history/:conversationId</code>
-            <span className="text-xs text-gray-400">— Historique visiteur</span>
+            <span className="text-xs text-gray-400">— {t('wgt.epHistory')}</span>
           </div>
         </div>
       </div>

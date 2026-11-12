@@ -4,15 +4,16 @@ import { useQuery } from '@tanstack/react-query';
 import { Plus, Trash2, X, Save } from 'lucide-react';
 import { agentsApi } from '@/lib/api';
 import { toast } from 'sonner';
+import { useUiLocale } from '@/lib/ui-locale';
 
 const FIELD_TYPES = [
-  { value: 'text', label: 'Texte' },
-  { value: 'email', label: 'Email' },
-  { value: 'phone', label: 'Téléphone' },
-  { value: 'number', label: 'Nombre' },
-  { value: 'date', label: 'Date' },
-  { value: 'buttons', label: 'Boutons' },
-  { value: 'dropdown', label: 'Liste déroulante' },
+  { value: 'text', labelKey: 'flw.ft.text' },
+  { value: 'email', labelKey: 'flw.ft.email' },
+  { value: 'phone', labelKey: 'flw.ft.phone' },
+  { value: 'number', labelKey: 'flw.ft.number' },
+  { value: 'date', labelKey: 'flw.ft.date' },
+  { value: 'buttons', labelKey: 'flw.ft.buttons' },
+  { value: 'dropdown', labelKey: 'flw.ft.dropdown' },
 ];
 
 const ACTION_TYPES = [
@@ -68,6 +69,7 @@ function formatOptions(options?: { label: string; value: string }[]): string {
 }
 
 export default function FlowForm({ flow, onSave, onCancel }: FlowFormProps) {
+  const { t } = useUiLocale();
   const { data: agents = [], isLoading: loadingAgents } = useQuery<Agent[]>({
     queryKey: ['agents', { limit: 100 }],
     queryFn: async () => {
@@ -130,7 +132,7 @@ export default function FlowForm({ flow, onSave, onCancel }: FlowFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.agentId || !form.title || form.fields.length === 0) {
-      toast.error('Agent, titre et au moins un champ sont requis');
+      toast.error(t('flw.toast.required'));
       return;
     }
     onSave({
@@ -146,7 +148,7 @@ export default function FlowForm({ flow, onSave, onCancel }: FlowFormProps) {
     <form onSubmit={handleSubmit} className="card p-4 lg:p-6 mb-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">
-          {flow ? 'Modifier le flux' : 'Nouveau flux'}
+          {flow ? t('flw.editFlow') : t('flw.newFlow')}
         </h2>
         <button type="button" onClick={onCancel} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg">
           <X className="w-4 h-4" />
@@ -162,7 +164,7 @@ export default function FlowForm({ flow, onSave, onCancel }: FlowFormProps) {
             className="input"
             required
           >
-            <option value="">{loadingAgents ? 'Chargement...' : 'Sélectionner un agent'}</option>
+            <option value="">{loadingAgents ? t('common.loading') : t('flw.selectAgent')}</option>
             {agents.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
@@ -171,47 +173,47 @@ export default function FlowForm({ flow, onSave, onCancel }: FlowFormProps) {
           </select>
         </div>
         <div>
-          <label className="label">Statut</label>
+          <label className="label">{t('flw.status')}</label>
           <select
             value={form.isActive ? 'true' : 'false'}
             onChange={(e) => setForm({ ...form, isActive: e.target.value === 'true' })}
             className="input"
           >
-            <option value="true">Actif</option>
-            <option value="false">Inactif</option>
+            <option value="true">{t('flw.active')}</option>
+            <option value="false">{t('flw.inactive')}</option>
           </select>
         </div>
       </div>
 
       <div>
-        <label className="label">Titre</label>
+        <label className="label">{t('srv.fieldTitle')}</label>
         <input
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           className="input"
-          placeholder="Formulaire de devis"
+          placeholder={t('flw.titlePlaceholder')}
           required
         />
       </div>
 
       <div>
-        <label className="label">Description</label>
+        <label className="label">{t('prod.description')}</label>
         <input
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
           className="input"
-          placeholder="Objectif du flux..."
+          placeholder={t('flw.descPlaceholder')}
         />
       </div>
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="label">Champs</label>
+          <label className="label">{t('flw.fieldsLabel')}</label>
           <button type="button" onClick={addField} className="text-sm text-primary-600 hover:underline flex items-center gap-1">
-            <Plus className="w-3 h-3" /> Ajouter un champ
+            <Plus className="w-3 h-3" /> {t('flw.addField')}
           </button>
         </div>
-        {form.fields.length === 0 && <p className="text-sm text-gray-400">Aucun champ.</p>}
+        {form.fields.length === 0 && <p className="text-sm text-gray-400">{t('flw.noFields')}</p>}
         {form.fields.map((field, idx) => (
           <div key={field.id} className="border border-gray-200 rounded-lg p-3 space-y-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -219,7 +221,7 @@ export default function FlowForm({ flow, onSave, onCancel }: FlowFormProps) {
                 value={field.label}
                 onChange={(e) => updateField(idx, 'label', e.target.value)}
                 className="input"
-                placeholder="Label"
+                placeholder={t('flw.labelPlaceholder')}
                 required
               />
               <select
@@ -227,9 +229,9 @@ export default function FlowForm({ flow, onSave, onCancel }: FlowFormProps) {
                 onChange={(e) => updateField(idx, 'type', e.target.value)}
                 className="input"
               >
-                {FIELD_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
+                {FIELD_TYPES.map((ft) => (
+                  <option key={ft.value} value={ft.value}>
+                    {t(ft.labelKey)}
                   </option>
                 ))}
               </select>
@@ -239,14 +241,14 @@ export default function FlowForm({ flow, onSave, onCancel }: FlowFormProps) {
                 value={field.placeholder || ''}
                 onChange={(e) => updateField(idx, 'placeholder', e.target.value)}
                 className="input"
-                placeholder="Placeholder"
+                placeholder={t('flw.placeholderPh')}
               />
               {(field.type === 'buttons' || field.type === 'dropdown') && (
                 <input
                   value={formatOptions(field.options)}
                   onChange={(e) => updateField(idx, 'options', normalizeOptions(e.target.value))}
                   className="input"
-                  placeholder="Option 1, Option 2, ..."
+                  placeholder={t('flw.optionsPh')}
                 />
               )}
             </div>
@@ -258,7 +260,7 @@ export default function FlowForm({ flow, onSave, onCancel }: FlowFormProps) {
                   onChange={(e) => updateField(idx, 'required', e.target.checked)}
                   className="w-4 h-4 rounded border-gray-300 text-primary-600"
                 />
-                Requis
+                {t('srv.required')}
               </label>
               <button type="button" onClick={() => removeField(idx)} className="text-red-400 hover:text-red-600 p-1">
                 <Trash2 className="w-4 h-4" />
@@ -270,12 +272,12 @@ export default function FlowForm({ flow, onSave, onCancel }: FlowFormProps) {
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="label">Actions</label>
+          <label className="label">{t('prod.actions')}</label>
           <button type="button" onClick={addAction} className="text-sm text-primary-600 hover:underline flex items-center gap-1">
-            <Plus className="w-3 h-3" /> Ajouter une action
+            <Plus className="w-3 h-3" /> {t('flw.addAction')}
           </button>
         </div>
-        {form.actions.length === 0 && <p className="text-sm text-gray-400">Aucune action.</p>}
+        {form.actions.length === 0 && <p className="text-sm text-gray-400">{t('flw.noActions')}</p>}
         {form.actions.map((action, idx) => (
           <div key={idx} className="border border-gray-200 rounded-lg p-3 space-y-2">
             <div className="flex items-center gap-3">
@@ -284,9 +286,9 @@ export default function FlowForm({ flow, onSave, onCancel }: FlowFormProps) {
                 onChange={(e) => updateAction(idx, 'type', e.target.value)}
                 className="input w-32"
               >
-                {ACTION_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
+                {ACTION_TYPES.map((at) => (
+                  <option key={at.value} value={at.value}>
+                    {at.label}
                   </option>
                 ))}
               </select>
@@ -295,7 +297,7 @@ export default function FlowForm({ flow, onSave, onCancel }: FlowFormProps) {
                   value={action.config?.message || ''}
                   onChange={(e) => updateActionConfig(idx, 'message', e.target.value)}
                   className="input flex-1"
-                  placeholder="Message à logger"
+                  placeholder={t('flw.logMessage')}
                 />
               ) : (
                 <input
@@ -316,10 +318,10 @@ export default function FlowForm({ flow, onSave, onCancel }: FlowFormProps) {
 
       <div className="flex gap-3 pt-2">
         <button type="submit" className="btn-primary flex items-center gap-2">
-          <Save className="w-4 h-4" /> Enregistrer
+          <Save className="w-4 h-4" /> {t('common.save')}
         </button>
         <button type="button" onClick={onCancel} className="btn-secondary">
-          Annuler
+          {t('common.cancel')}
         </button>
       </div>
     </form>

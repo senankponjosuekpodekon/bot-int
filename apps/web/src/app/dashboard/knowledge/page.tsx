@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { knowledgeApi } from '@/lib/api';
 import { BookOpen, Plus, Trash2, Search, X, FileText, Link as LinkIcon, Upload, Building2, Loader2, Globe } from 'lucide-react';
 import { toast } from 'sonner';
+import { useUiLocale } from '@/lib/ui-locale';
 
 interface KnowledgeDoc {
   id: string;
@@ -15,6 +16,7 @@ interface KnowledgeDoc {
 }
 
 export default function KnowledgePage() {
+  const { t } = useUiLocale();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [importMode, setImportMode] = useState<'text' | 'file' | 'url' | 'company' | 'scrape'>('text');
@@ -42,44 +44,44 @@ export default function KnowledgePage() {
     mutationFn: ({ content, filename }: { content: string; filename?: string }) =>
       knowledgeApi.addText(content, filename),
     onSuccess: () => {
-      toast.success('Document ajouté');
+      toast.success(t('kn.toast.added'));
       setShowForm(false);
       setForm({ content: '', filename: '' });
       invalidateDocs();
     },
-    onError: (error: any) => toast.error(error?.response?.data?.message || 'Ajout impossible'),
+    onError: (error: any) => toast.error(error?.response?.data?.message || t('kn.toast.addError')),
   });
 
   const deleteDoc = useMutation({
     mutationFn: (id: string) => knowledgeApi.delete(id),
     onSuccess: (_res, id) => {
-      toast.success('Document supprimé');
+      toast.success(t('kn.toast.deleted'));
       queryClient.setQueriesData<KnowledgeDoc[]>({ queryKey: ['knowledge'] }, (old) =>
         old ? old.filter((doc) => doc.id !== id) : old,
       );
     },
-    onError: (error: any) => toast.error(error?.response?.data?.message || 'Suppression impossible'),
+    onError: (error: any) => toast.error(error?.response?.data?.message || t('kn.toast.deleteError')),
   });
 
   const uploadFile = useMutation({
     mutationFn: (file: File) => knowledgeApi.uploadFile(file),
     onSuccess: () => {
-      toast.success('Fichier importé avec succès');
+      toast.success(t('kn.toast.imported'));
       setShowForm(false);
       invalidateDocs();
     },
-    onError: (error: any) => toast.error(error?.response?.data?.message || 'Import impossible'),
+    onError: (error: any) => toast.error(error?.response?.data?.message || t('kn.toast.importError')),
   });
 
   const importUrl = useMutation({
     mutationFn: (url: string) => knowledgeApi.importUrlAsync(url),
     onSuccess: () => {
-      toast.success('Import URL lancé en arrière-plan');
+      toast.success(t('kn.toast.urlStarted'));
       setShowForm(false);
       setUrlForm('');
       setTimeout(() => invalidateDocs(), 5000);
     },
-    onError: (error: any) => toast.error(error?.response?.data?.message || 'Import URL impossible'),
+    onError: (error: any) => toast.error(error?.response?.data?.message || t('kn.toast.urlError')),
   });
 
   const searchCompany = useMutation({
@@ -87,24 +89,24 @@ export default function KnowledgePage() {
     onSuccess: (result, name) => {
       setCompanyResult(result);
       if (result.docs?.length > 0) {
-        toast.success(`${result.docs.length} document(s) importé(s) pour ${name}`);
+        toast.success(`${result.docs.length} ${t('kn.toast.docsImported')} ${name}`);
         invalidateDocs();
       } else {
-        toast.info('Recherche terminée — aucune page exploitable trouvée');
+        toast.info(t('kn.toast.noPages'));
       }
     },
-    onError: (error: any) => toast.error(error?.response?.data?.message || 'Recherche entreprise impossible'),
+    onError: (error: any) => toast.error(error?.response?.data?.message || t('kn.toast.companyError')),
   });
 
   const scrapeSite = useMutation({
     mutationFn: (url: string) => knowledgeApi.scrapeSite(url),
     onSuccess: (result) => {
-      toast.success(`${result.knowledgeEntries} entrée(s) ajoutée(s) à la base de connaissances`);
+      toast.success(`${result.knowledgeEntries} ${t('kn.toast.entriesAdded')}`);
       setShowForm(false);
       setUrlForm('');
       invalidateDocs();
     },
-    onError: (error: any) => toast.error(error?.response?.data?.message || 'Scraping impossible'),
+    onError: (error: any) => toast.error(error?.response?.data?.message || t('kn.toast.scrapeError')),
   });
 
   const uploading = uploadFile.isPending;
@@ -125,7 +127,7 @@ export default function KnowledgePage() {
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm('Supprimer ce document ?')) return;
+    if (!confirm(t('kn.confirmDelete'))) return;
     deleteDoc.mutate(id);
   };
 
@@ -168,11 +170,11 @@ export default function KnowledgePage() {
     <div className="p-4 lg:p-8 space-y-4 lg:space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Base de connaissances</h1>
-          <p className="text-sm text-gray-500">Centralisez les documents utilisés par vos agents IA.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{t('kn.title')}</h1>
+          <p className="text-sm text-gray-500">{t('kn.subtitle')}</p>
         </div>
         <button className="btn-primary flex items-center gap-2" onClick={() => setShowForm(true)}>
-          <Plus className="w-4 h-4" /> Ajouter du contenu
+          <Plus className="w-4 h-4" /> {t('kn.addContent')}
         </button>
       </div>
 
@@ -181,22 +183,22 @@ export default function KnowledgePage() {
           <Search className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
           <input
             className="input pl-10"
-            placeholder="Rechercher un document ou un passage"
+            placeholder={t('kn.searchPh')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
         <button type="submit" className="btn-secondary whitespace-nowrap" disabled={searching}>
-          {searching ? 'Recherche...' : 'Filtrer'}
+          {searching ? t('kn.searching') : t('kn.filter')}
         </button>
       </form>
 
       {loading ? (
-        <div className="card p-12 text-center text-gray-400">Chargement des documents...</div>
+        <div className="card p-12 text-center text-gray-400">{t('kn.loadingDocs')}</div>
       ) : filteredDocs.length === 0 ? (
         <div className="card p-12 text-center text-gray-400">
           <BookOpen className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-          Aucun document pour le moment. Ajoutez-en pour alimenter vos agents.
+          {t('kn.empty')}
         </div>
       ) : (
         <div className="grid gap-4">
@@ -206,13 +208,13 @@ export default function KnowledgePage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-gray-900">
-                      {doc.filename || 'Texte ajouté'}
+                      {doc.filename || t('kn.textAdded')}
                     </span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 capitalize">
                       {doc.type}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-400">Ajouté le {new Date(doc.createdAt).toLocaleDateString('fr-FR')}</p>
+                  <p className="text-xs text-gray-400">{t('kn.addedOn')} {new Date(doc.createdAt).toLocaleDateString()}</p>
                   <p className="text-sm text-gray-600 mt-3 line-clamp-3 whitespace-pre-line">
                     {doc.content}
                   </p>
@@ -221,7 +223,7 @@ export default function KnowledgePage() {
                   className="text-red-500 hover:text-red-700 flex items-center gap-2 text-sm"
                   onClick={() => handleDelete(doc.id)}
                 >
-                  <Trash2 className="w-4 h-4" /> Supprimer
+                  <Trash2 className="w-4 h-4" /> {t('common.delete')}
                 </button>
               </div>
             </div>
@@ -235,20 +237,20 @@ export default function KnowledgePage() {
             <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-600" onClick={() => setShowForm(false)}>
               <X className="w-5 h-5" />
             </button>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Ajouter du contenu</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('kn.addContent')}</h2>
 
             <div className="flex gap-2 mb-6">
               <button
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${importMode === 'text' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                 onClick={() => setImportMode('text')}
               >
-                <FileText className="w-4 h-4" /> Texte
+                <FileText className="w-4 h-4" /> {t('kn.mode.text')}
               </button>
               <button
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${importMode === 'file' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                 onClick={() => setImportMode('file')}
               >
-                <Upload className="w-4 h-4" /> Fichier
+                <Upload className="w-4 h-4" /> {t('kn.mode.file')}
               </button>
               <button
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${importMode === 'url' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
@@ -260,7 +262,7 @@ export default function KnowledgePage() {
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${importMode === 'company' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                 onClick={() => setImportMode('company')}
               >
-                <Building2 className="w-4 h-4" /> Entreprise
+                <Building2 className="w-4 h-4" /> {t('kn.mode.company')}
               </button>
               <button
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${importMode === 'scrape' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
@@ -276,16 +278,16 @@ export default function KnowledgePage() {
                   Copiez-collez un extrait important (FAQ, script commercial, fiche produit, etc.).
                 </p>
                 <div>
-                  <label className="label">Nom (optionnel)</label>
-                  <input className="input" value={form.filename} onChange={(e) => setForm({ ...form, filename: e.target.value })} placeholder="FAQ Support" />
+                  <label className="label">{t('kn.nameOpt')}</label>
+                  <input className="input" value={form.filename} onChange={(e) => setForm({ ...form, filename: e.target.value })} placeholder={t('kn.namePh')} />
                 </div>
                 <div>
-                  <label className="label">Contenu</label>
+                  <label className="label">{t('kn.content')}</label>
                   <textarea
                     className="input h-48 resize-y"
                     value={form.content}
                     onChange={(e) => setForm({ ...form, content: e.target.value })}
-                    placeholder="Collez votre texte ici..."
+                    placeholder={t('kn.contentPh')}
                     required
                   />
                 </div>
@@ -303,12 +305,12 @@ export default function KnowledgePage() {
             {importMode === 'file' && (
               <div className="space-y-4">
                 <p className="text-sm text-gray-500">
-                  Importez un fichier PDF ou texte. Le contenu sera extrait et indexé automatiquement.
+                  {t('kn.fileDesc')}
                 </p>
                 <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 lg:p-8 text-center">
                   <Upload className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                   <label className="cursor-pointer">
-                    <span className="btn-primary inline-block">{uploading ? 'Import...' : 'Choisir un fichier'}</span>
+                    <span className="btn-primary inline-block">{uploading ? t('kn.importing') : t('kn.chooseFile')}</span>
                     <input
                       type="file"
                       accept=".pdf,.txt,.md,.csv"
@@ -317,10 +319,10 @@ export default function KnowledgePage() {
                       disabled={uploading}
                     />
                   </label>
-                  <p className="text-xs text-gray-400 mt-3">PDF, TXT, MD, CSV — 10 Mo max</p>
+                  <p className="text-xs text-gray-400 mt-3">{t('kn.fileFormats')}</p>
                 </div>
                 <button type="button" className="btn-secondary w-full" onClick={() => setShowForm(false)}>
-                  Annuler
+                  {t('common.cancel')}
                 </button>
               </div>
             )}
@@ -328,22 +330,22 @@ export default function KnowledgePage() {
             {importMode === 'url' && (
               <form className="space-y-4" onSubmit={handleUrlImport}>
                 <p className="text-sm text-gray-500">
-                  Importez le contenu d'une page web. Le scraping s'exécute en arrière-plan avec rendu JavaScript.
+                  {t('kn.urlDesc')}
                 </p>
                 <div>
-                  <label className="label">URL de la page</label>
+                  <label className="label">{t('kn.pageUrl')}</label>
                   <input
                     className="input"
                     value={urlForm}
                     onChange={(e) => setUrlForm(e.target.value)}
-                    placeholder="https://exemple.com/page"
+                    placeholder={t('kn.pageUrlPh')}
                     type="url"
                     required
                   />
                 </div>
                 <div className="flex gap-3">
                   <button type="submit" className="btn-primary flex-1" disabled={saving}>
-                    {saving ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Import...</span> : 'Importer en arrière-plan'}
+                    {saving ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Import...</span> : t('kn.importBg')}
                   </button>
                   <button type="button" className="btn-secondary flex-1" onClick={() => setShowForm(false)}>
                     Annuler
@@ -355,21 +357,21 @@ export default function KnowledgePage() {
             {importMode === 'company' && (
               <form className="space-y-4" onSubmit={handleCompanySearch}>
                 <p className="text-sm text-gray-500">
-                  Recherchez une entreprise par nom. Le système trouve automatiquement son site web, ses réseaux sociaux et importe le contenu dans la base de connaissances.
+                  {t('kn.companyDesc')}
                 </p>
                 <div>
-                  <label className="label">Nom de l'entreprise</label>
+                  <label className="label">{t('kn.companyName')}</label>
                   <input
                     className="input"
                     value={companyForm}
                     onChange={(e) => setCompanyForm(e.target.value)}
-                    placeholder="Ex: Stiamond Agents, OpenAI, Renault..."
+                    placeholder={t('kn.companyPh')}
                     required
                   />
                 </div>
                 <div className="flex gap-3">
                   <button type="submit" className="btn-primary flex-1" disabled={saving}>
-                    {saving ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Recherche...</span> : 'Rechercher et importer'}
+                    {saving ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Recherche...</span> : t('kn.searchAndImport')}
                   </button>
                   <button type="button" className="btn-secondary flex-1" onClick={() => { setShowForm(false); setCompanyResult(null); }}>
                     Annuler
@@ -379,7 +381,7 @@ export default function KnowledgePage() {
                   <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
                     <p className="font-semibold text-gray-900">{companyResult.name}</p>
                     {companyResult.website && (
-                      <p className="text-gray-600">Site web: <a href={companyResult.website} target="_blank" rel="noreferrer" className="text-primary-600 underline">{companyResult.website}</a></p>
+                      <p className="text-gray-600">{t('kn.website')}: <a href={companyResult.website} target="_blank" rel="noreferrer" className="text-primary-600 underline">{companyResult.website}</a></p>
                     )}
                     {companyResult.description && (
                       <p className="text-gray-500 text-xs">{companyResult.description.slice(0, 200)}...</p>
@@ -394,7 +396,7 @@ export default function KnowledgePage() {
                       </div>
                     )}
                     {companyResult.docs?.length > 0 && (
-                      <p className="text-emerald-600 text-xs">{companyResult.docs.length} document(s) importé(s) dans la base</p>
+                      <p className="text-emerald-600 text-xs">{companyResult.docs.length} {t('kn.docsInBase')}</p>
                     )}
                   </div>
                 )}
@@ -404,15 +406,15 @@ export default function KnowledgePage() {
             {importMode === 'scrape' && (
               <form className="space-y-4" onSubmit={handleScrapeSite}>
                 <p className="text-sm text-gray-500">
-                  Donnez l'URL de votre site. Le système scrape automatiquement les pages clés (contact, à propos, FAQ, services) et extrait les informations dans la base de connaissances.
+                  {t('kn.scrapeDesc')}
                 </p>
                 <div>
-                  <label className="label">URL du site à scraper</label>
+                  <label className="label">{t('kn.siteUrl')}</label>
                   <input
                     className="input"
                     value={urlForm}
                     onChange={(e) => setUrlForm(e.target.value)}
-                    placeholder="https://www.monentreprise.com"
+                    placeholder={t('kn.siteUrlPh')}
                     required
                   />
                 </div>
@@ -425,14 +427,14 @@ export default function KnowledgePage() {
                   </button>
                 </div>
                 <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700">
-                  <p className="font-semibold mb-1">Ce qui sera extrait :</p>
+                  <p className="font-semibold mb-1">{t('kn.extractTitle')}</p>
                   <ul className="list-disc list-inside space-y-0.5">
-                    <li>Emails, téléphones, adresses</li>
-                    <li>Horaires d'ouverture</li>
-                    <li>Description de l'entreprise</li>
-                    <li>FAQ (questions/réponses)</li>
-                    <li>Services proposés</li>
-                    <li>Liens réseaux sociaux</li>
+                    <li>{t('kn.extract1')}</li>
+                    <li>{t('kn.extract2')}</li>
+                    <li>{t('kn.extract3')}</li>
+                    <li>{t('kn.extract4')}</li>
+                    <li>{t('kn.extract5')}</li>
+                    <li>{t('kn.extract6')}</li>
                   </ul>
                 </div>
               </form>

@@ -507,9 +507,9 @@ function ImportModal({ onClose, onDone, showToast, agents, initialTab, initialCo
         {tab === 'feed' && (
           <div className="space-y-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">Lien de la boutique Shopify</label>
+              <label className="text-sm font-medium text-gray-700">{t('prod.shopifyUrl')}</label>
               <input value={feedUrl} onChange={(e) => setFeedUrl(e.target.value)} placeholder="maboutique.myshopify.com" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
-              <p className="text-xs text-gray-400 mt-1">Feed public — aucun token requis. Fonctionne avec n'importe quelle boutique Shopify.</p>
+              <p className="text-xs text-gray-400 mt-1">{t('prod.feedHint')}</p>
             </div>
           </div>
         )}
@@ -517,12 +517,12 @@ function ImportModal({ onClose, onDone, showToast, agents, initialTab, initialCo
         {tab === 'csv' && (
           <div className="space-y-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">Coller le contenu CSV</label>
+              <label className="text-sm font-medium text-gray-700">{t('prod.csvPaste')}</label>
               <textarea value={csvText} onChange={(e) => setCsvText(e.target.value)} rows={6} placeholder="name,price,stock,category,description&#10;T-shirt,19.99,100,Vêtements,Coton bio" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm font-mono" />
               <p className="text-xs text-gray-400 mt-1">{t('prod.csvHint')}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Domaine Shopify (optionnel)</label>
+              <label className="text-sm font-medium text-gray-700">{t('prod.csvDomain')}</label>
               <input value={csvStoreDomain} onChange={(e) => setCsvStoreDomain(e.target.value)} placeholder="maboutique.myshopify.com" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
               <p className="text-xs text-gray-400 mt-1">{t('prod.storeDomainHint')}</p>
             </div>
@@ -533,12 +533,12 @@ function ImportModal({ onClose, onDone, showToast, agents, initialTab, initialCo
         {tab === 'csv_url' && (
           <div className="space-y-3">
             <div>
-              <label className="text-sm font-medium text-gray-700">URL du fichier CSV</label>
+              <label className="text-sm font-medium text-gray-700">{t('prod.csvUrl')}</label>
               <input value={csvUrl} onChange={(e) => setCsvUrl(e.target.value)} placeholder="https://maboutique.com/produits.csv" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
               <p className="text-xs text-gray-400 mt-1">{t('prod.csvUrlHint')}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Format (optionnel)</label>
+              <label className="text-sm font-medium text-gray-700">{t('prod.format')}</label>
               <select value={csvUrlFormat} onChange={(e) => setCsvUrlFormat(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm">
                 <option value="">{t('prod.autoDetect')}</option>
                 <option value="shopify">Shopify</option>
@@ -547,7 +547,7 @@ function ImportModal({ onClose, onDone, showToast, agents, initialTab, initialCo
               </select>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Domaine Shopify (optionnel)</label>
+              <label className="text-sm font-medium text-gray-700">{t('prod.csvDomain')}</label>
               <input value={csvUrlStoreDomain} onChange={(e) => setCsvUrlStoreDomain(e.target.value)} placeholder="maboutique.myshopify.com" className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-300 text-sm" />
             </div>
             {agentSelect}

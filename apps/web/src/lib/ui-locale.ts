@@ -5,6 +5,23 @@ import { fr as chatFr, en as chatEn } from './locales/chat';
 import { fr as opFr, en as opEn } from './locales/op';
 import { fr as leadFr, en as leadEn } from './locales/lead';
 import { fr as leaddFr, en as leaddEn } from './locales/leadd';
+import { fr as srvFr, en as srvEn } from './locales/srv';
+import { fr as flwFr, en as flwEn } from './locales/flw';
+import { fr as mktFr, en as mktEn } from './locales/mkt';
+import { fr as setFr, en as setEn } from './locales/set';
+import { fr as admFr, en as admEn } from './locales/adm';
+import { fr as dashFr, en as dashEn } from './locales/dash';
+import { fr as siteFr, en as siteEn } from './locales/site';
+import { fr as wgtFr, en as wgtEn } from './locales/wgt';
+import { fr as quoFr, en as quoEn } from './locales/quo';
+import { fr as pipeFr, en as pipeEn } from './locales/pipe';
+import { fr as knFr, en as knEn } from './locales/kn';
+import { fr as anaFr, en as anaEn } from './locales/ana';
+import { fr as persFr, en as persEn } from './locales/pers';
+import { fr as intelFr, en as intelEn } from './locales/intel';
+import { fr as agdFr, en as agdEn } from './locales/agd';
+import { fr as billFr, en as billEn } from './locales/bill';
+import { fr as chnFr, en as chnEn } from './locales/chn';
 
 export type UiLocale = 'fr' | 'en';
 
@@ -219,6 +236,12 @@ const fr: Dict = {
   'prod.importTitle': 'Importer des produits',
   'prod.importing': 'Import en cours...',
   'prod.imported': 'importés',
+  'prod.shopifyUrl': 'Lien de la boutique Shopify',
+  'prod.feedHint': "Feed public — aucun token requis. Fonctionne avec n'importe quelle boutique Shopify.",
+  'prod.csvPaste': 'Coller le contenu CSV',
+  'prod.csvDomain': 'Domaine Shopify (optionnel)',
+  'prod.csvUrl': 'URL du fichier CSV',
+  'prod.format': 'Format (optionnel)',
   'prod.csvHint': 'Détection automatique du format (Shopify, WooCommerce, ou générique). Colonnes reconnues: name/title, price/prix, stock, category, description, sku, image.',
   'prod.storeDomainHint': "Permet de reconstruire l'URL produit complète (/products/handle).",
   'prod.csvUrlHint': 'Le fichier doit être accessible publiquement (hébergé sur un site, Google Sheets publique, etc.).',
@@ -477,6 +500,12 @@ const en: Dict = {
   'prod.importTitle': 'Import products',
   'prod.importing': 'Importing...',
   'prod.imported': 'imported',
+  'prod.shopifyUrl': 'Shopify store link',
+  'prod.feedHint': 'Public feed — no token required. Works with any Shopify store.',
+  'prod.csvPaste': 'Paste CSV content',
+  'prod.csvDomain': 'Shopify domain (optional)',
+  'prod.csvUrl': 'CSV file URL',
+  'prod.format': 'Format (optional)',
   'prod.csvHint': 'Automatic format detection (Shopify, WooCommerce, or generic). Recognized columns: name/title, price, stock, category, description, sku, image.',
   'prod.storeDomainHint': 'Used to rebuild the full product URL (/products/handle).',
   'prod.csvUrlHint': 'The file must be publicly accessible (hosted on a site, public Google Sheet, etc.).',
@@ -526,8 +555,8 @@ const en: Dict = {
 };
 
 const dicts: Record<UiLocale, Dict> = {
-  fr: { ...fr, ...chatFr, ...opFr, ...leadFr, ...leaddFr },
-  en: { ...en, ...chatEn, ...opEn, ...leadEn, ...leaddEn },
+  fr: { ...fr, ...chatFr, ...opFr, ...leadFr, ...leaddFr, ...srvFr, ...flwFr, ...mktFr, ...setFr, ...admFr, ...dashFr, ...siteFr, ...wgtFr, ...quoFr, ...pipeFr, ...knFr, ...anaFr, ...persFr, ...intelFr, ...agdFr, ...billFr, ...chnFr },
+  en: { ...en, ...chatEn, ...opEn, ...leadEn, ...leaddEn, ...srvEn, ...flwEn, ...mktEn, ...setEn, ...admEn, ...dashEn, ...siteEn, ...wgtEn, ...quoEn, ...pipeEn, ...knEn, ...anaEn, ...persEn, ...intelEn, ...agdEn, ...billEn, ...chnEn },
 };
 
 export function useUiLocale(): { locale: UiLocale; t: (key: string) => string } {

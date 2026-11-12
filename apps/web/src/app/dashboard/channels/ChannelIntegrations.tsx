@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Save, Trash2, Plus, Loader2, Check, X, Copy, Link2 } from 'lucide-react';
 import { integrationsApi, tenantApi } from '@/lib/api';
+import { useUiLocale } from '@/lib/ui-locale';
 import { toast } from 'sonner';
 import WhatsAppConnectButton from './WhatsAppConnectButton';
 
@@ -59,6 +60,7 @@ const KNOWN_TYPES = Object.keys(INTEGRATION_SCHEMAS);
 const EMPTY_INTEGRATIONS: Integration[] = [];
 
 export default function ChannelIntegrations() {
+  const { t } = useUiLocale();
   const queryClient = useQueryClient();
   const { data, isLoading: loading, isError } = useQuery<Integration[]>({
     queryKey: ['integrations'],
@@ -77,13 +79,13 @@ export default function ChannelIntegrations() {
 
   const telegramSetup = useMutation({
     mutationFn: () => integrationsApi.setupTelegramWebhook(tenant.id),
-    onSuccess: (res: any) => toast.success(res?.webhookUrl ? 'Webhook Telegram configuré' : 'Webhook Telegram configuré'),
+    onSuccess: (res: any) => toast.success(t('chn.toast.telegramConfigured')),
     onError: () => toast.error('Échec de la configuration du webhook Telegram'),
   });
 
   const copyWebhook = (url: string) => {
     navigator.clipboard?.writeText(url).then(
-      () => toast.success('URL de webhook copiée'),
+      () => toast.success(t('chn.toast.urlCopied')),
       () => toast.error('Copie impossible'),
     );
   };
@@ -104,7 +106,7 @@ export default function ChannelIntegrations() {
   }, [integrations]);
 
   useEffect(() => {
-    if (isError) toast.error('Erreur lors du chargement des intégrations');
+    if (isError) toast.error(t('chn.toast.loadError'));
   }, [isError]);
 
   const saveIntegration = useMutation({
@@ -117,7 +119,7 @@ export default function ChannelIntegrations() {
       }
     },
     onSuccess: () => {
-      toast.success('Intégration enregistrée');
+      toast.success(t('chn.toast.saved'));
       queryClient.invalidateQueries({ queryKey: ['integrations'] });
     },
     onError: () => toast.error('Erreur lors de l\'enregistrement'),
@@ -127,7 +129,7 @@ export default function ChannelIntegrations() {
   const deleteIntegration = useMutation({
     mutationFn: (type: string) => integrationsApi.remove(type),
     onSuccess: () => {
-      toast.success('Intégration supprimée');
+      toast.success(t('chn.toast.deleted'));
       queryClient.invalidateQueries({ queryKey: ['integrations'] });
     },
     onError: () => toast.error('Erreur lors de la suppression'),
@@ -141,7 +143,7 @@ export default function ChannelIntegrations() {
   };
 
   const handleDelete = (type: string) => {
-    if (!confirm('Supprimer cette intégration ?')) return;
+    if (!confirm(t('chn.confirmDelete'))) return;
     deleteIntegration.mutate(type);
   };
 
@@ -160,14 +162,14 @@ export default function ChannelIntegrations() {
     return (
       <div className="card p-4 flex items-center justify-center gap-2 text-gray-500">
         <Loader2 className="w-4 h-4 animate-spin" />
-        Chargement des intégrations...
+        {t('chn.loadingIntegrations')}
       </div>
     );
   }
 
   return (
     <div className="card p-4 lg:p-6 mb-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Intégrations canaux</h2>
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('chn.integrations')}</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {KNOWN_TYPES.map((type) => {
           const schema = INTEGRATION_SCHEMAS[type];
@@ -184,7 +186,7 @@ export default function ChannelIntegrations() {
                   <Plus className="w-4 h-4" />
                   <span className="font-medium">{schema.label}</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Configurer {schema.label}</p>
+                <p className="text-xs text-gray-500 mt-1">{t('chn.configure')} {schema.label}</p>
               </button>
             );
           }
@@ -200,7 +202,7 @@ export default function ChannelIntegrations() {
                       onChange={(e) => setForms({ ...forms, [type]: { ...form, enabled: e.target.checked } })}
                       className="w-4 h-4 rounded border-gray-300 text-primary-600"
                     />
-                    Actif
+                    {t('chn.active')}
                   </label>
                   <button onClick={() => setOpen(type, false)} className="p-1 text-gray-400 hover:text-gray-600">
                     <X className="w-4 h-4" />
@@ -222,7 +224,7 @@ export default function ChannelIntegrations() {
               {webhookUrl(type) && (
                 <div className="bg-gray-50 rounded-lg p-2 space-y-1">
                   <p className="text-xs font-medium text-gray-500 flex items-center gap-1">
-                    <Link2 className="w-3 h-3" /> URL de webhook (à coller dans la console du fournisseur)
+                    <Link2 className="w-3 h-3" /> {t('chn.webhookUrlHint')}
                   </p>
                   <div className="flex items-center gap-1">
                     <code className="text-xs text-gray-600 break-all flex-1">{webhookUrl(type)}</code>
