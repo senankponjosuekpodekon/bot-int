@@ -1,6 +1,10 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
 import { tenantApi } from '@/lib/api';
+import { fr as chatFr, en as chatEn } from './locales/chat';
+import { fr as opFr, en as opEn } from './locales/op';
+import { fr as leadFr, en as leadEn } from './locales/lead';
+import { fr as leaddFr, en as leaddEn } from './locales/leadd';
 
 export type UiLocale = 'fr' | 'en';
 
@@ -521,7 +525,10 @@ const en: Dict = {
   'prod.toast.srcDeleted': 'Source deleted',
 };
 
-const dicts: Record<UiLocale, Dict> = { fr, en };
+const dicts: Record<UiLocale, Dict> = {
+  fr: { ...fr, ...chatFr, ...opFr, ...leadFr, ...leaddFr },
+  en: { ...en, ...chatEn, ...opEn, ...leadEn, ...leaddEn },
+};
 
 export function useUiLocale(): { locale: UiLocale; t: (key: string) => string } {
   const { data } = useQuery({
