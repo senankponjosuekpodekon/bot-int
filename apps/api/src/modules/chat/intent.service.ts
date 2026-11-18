@@ -79,8 +79,30 @@ Rules:
   }
 
   private extractJson(raw: string): string {
-    const match = raw.match(/\{[\s\S]*?\}/);
-    return match ? match[0] : raw;
+    const cleaned = raw.replace(/```(?:json)?/gi, '').trim();
+    const start = cleaned.indexOf('{');
+    if (start === -1) return cleaned;
+    // Balanced-brace scan: a non-greedy /\{.*?\}/ truncates at the first
+    // inner '}' (e.g. empty entities {}), producing malformed JSON.
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let i = start; i < cleaned.length; i++) {
+      const c = cleaned[i];
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (c === '\\' && inString) {
+        escaped = true;
+        continue;
+      }
+      if (c === '"') inString = !inString;
+      if (inString) continue;
+      if (c === '{') depth++;
+      if (c === '}' && --depth === 0) return cleaned.slice(start, i + 1);
+    }
+    return cleaned.slice(start);
   }
 
   private normalize(parsed: any, original: string): IntentDetectionResult {

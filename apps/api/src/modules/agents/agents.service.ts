@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Agent } from './agent.entity';
@@ -7,12 +7,29 @@ import { PaginatedResult } from '../../common/pagination.dto';
 import { TurnstileService } from '../../common/turnstile.service';
 
 @Injectable()
-export class AgentsService {
+export class AgentsService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(AgentsService.name);
   constructor(
     @InjectRepository(Agent)
     private readonly agentRepo: Repository<Agent>,
     private readonly turnstile: TurnstileService,
   ) {}
+
+  // Domains saved before the CF sync existed were never pushed to the
+  // Turnstile widget: push every agent's allowedDomains once at boot.
+  async onApplicationBootstrap(): Promise<void> {
+    try {
+      const rows = await this.agentRepo
+        .createQueryBuilder('a')
+        .select('a.allowedDomains', 'domains')
+        .where("a.allowedDomains <> '{}'")
+        .getRawMany<{ domains: string[] }>();
+      const domains = rows.flatMap((r) => r.domains || []);
+      if (domains.length) void this.turnstile.syncDomainsToWidget(domains);
+    } catch (e) {
+      this.logger.warn(`Turnstile boot resync skipped: ${e.message}`);
+    }
+  }
 
   async create(tenantId: string, data: Partial<Agent>): Promise<Agent> {
     const agent = this.agentRepo.create({ ...data, tenantId });

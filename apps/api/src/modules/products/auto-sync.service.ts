@@ -92,10 +92,25 @@ export class AutoSyncService {
           totalErrors += result.errors;
         }
         source.lastImportAt = new Date();
+        if ((source.config as any)?.consecutiveFailures) {
+          source.config = { ...source.config, consecutiveFailures: 0 };
+        }
         await this.sourceRepo.save(source);
         this.logger.log(`Synced source ${source.id}: ${result?.imported ?? 0} imported, ${result?.errors ?? 0} errors`);
       } catch (err: any) {
-        this.logger.error(`Source sync failed for ${source.id}: ${err?.message}`);
+        const failures = ((source.config as any)?.consecutiveFailures || 0) + 1;
+        source.config = { ...source.config, consecutiveFailures: failures };
+        // A source that keeps failing (dead URL, paywall) is disabled after
+        // 5 attempts instead of spamming an error every cycle.
+        if (failures >= 5) {
+          source.enabled = false;
+          this.logger.error(
+            `Source ${source.id} disabled after ${failures} consecutive failures: ${err?.message}`,
+          );
+        } else {
+          this.logger.error(`Source sync failed for ${source.id}: ${err?.message}`);
+        }
+        await this.sourceRepo.save(source);
       }
     }
 
