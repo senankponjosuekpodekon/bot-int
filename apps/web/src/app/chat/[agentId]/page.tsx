@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { Send, Loader2, MessageCircle, ArrowLeft } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import Markdown from '@/components/Markdown';
+import { useTurnstile } from '@/lib/use-turnstile';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -75,15 +76,19 @@ export default function PublicChatPage() {
     },
   });
   const config = configQuery.data;
+  const turnstile = useTurnstile(config?.turnstileSiteKey);
 
   const sendMutation = useMutation({
     mutationFn: async (text: string) => {
+      const turnstileToken = await turnstile.execute();
       const res = await fetch(`${API_BASE}/widget/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId, message: text, visitorId, conversationId: conversationId || undefined, utmParams: getUtmParams(), referrerUrl: typeof window !== 'undefined' ? document.referrer : '', landingPageUrl: typeof window !== 'undefined' ? window.location.href : '', clientInfo: getClientInfo() }),
+        body: JSON.stringify({ agentId, message: text, visitorId, conversationId: conversationId || undefined, utmParams: getUtmParams(), referrerUrl: typeof window !== 'undefined' ? document.referrer : '', landingPageUrl: typeof window !== 'undefined' ? window.location.href : '', clientInfo: getClientInfo(), turnstileToken: turnstileToken || undefined }),
       });
-      return res.json();
+      const data = await res.json();
+      if (!res.ok || !data.reply) throw new Error(data.message || 'Send failed');
+      return data;
     },
   });
   const sending = sendMutation.isPending;

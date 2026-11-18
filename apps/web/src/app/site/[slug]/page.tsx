@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { Send, Loader2, MessageCircle, Phone, Mail, MapPin, Clock, Globe, ShoppingBag, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { siteApi } from '@/lib/api';
+import { useTurnstile } from '@/lib/use-turnstile';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -60,17 +61,29 @@ export default function PublicSitePage() {
     enabled: !!slug,
   });
   const site = siteQuery.data ?? null;
+  const widgetConfigQuery = useQuery({
+    queryKey: ['widget', 'config', site?.agentId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/widget/config/${site.agentId}`);
+      return res.json();
+    },
+    enabled: !!site?.agentId,
+  });
+  const turnstile = useTurnstile(widgetConfigQuery.data?.turnstileSiteKey);
   const loading = siteQuery.isLoading;
   const error = siteQuery.error ? (siteQuery.error.message || 'Site introuvable') : '';
 
   const sendMessage = useMutation({
     mutationFn: async (text: string) => {
+      const turnstileToken = await turnstile.execute();
       const res = await fetch(`${API_BASE}/widget/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: site.agentId, message: text, visitorId, conversationId: conversationId || undefined, utmParams: getUtmParams(), referrerUrl: typeof window !== 'undefined' ? document.referrer : '', landingPageUrl: typeof window !== 'undefined' ? window.location.href : '', clientInfo: getClientInfo() }),
+        body: JSON.stringify({ agentId: site.agentId, message: text, visitorId, conversationId: conversationId || undefined, utmParams: getUtmParams(), referrerUrl: typeof window !== 'undefined' ? document.referrer : '', landingPageUrl: typeof window !== 'undefined' ? window.location.href : '', clientInfo: getClientInfo(), turnstileToken: turnstileToken || undefined }),
       });
-      return res.json();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Send failed');
+      return data;
     },
     onSuccess: (data) => {
       if (data.conversationId) {
