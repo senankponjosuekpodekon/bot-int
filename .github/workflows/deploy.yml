@@ -1,0 +1,41 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["Build and Push to GHCR"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Deploy to VPS
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          GHCR_USER: ${{ secrets.GHCR_USERNAME || github.actor }}
+          GHCR_PASS: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="sha-$(echo "${SHA}" | cut -c1-7)"
+          echo "Deploying tag: ${TAG}"
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          printf '%s' "${GHCR_PASS}" | ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" \
+            "cd /root/apps/bot-int && \
+             docker login ghcr.io -u '${GHCR_USER}' --password-stdin && \
+             docker pull ghcr.io/${IMAGE_PREFIX}-api:${TAG} && \
+             docker tag ghcr.io/${IMAGE_PREFIX}-api:${TAG} botint-api:latest && \
+             docker compose up -d && \
+             echo 'Deployment complete'"
