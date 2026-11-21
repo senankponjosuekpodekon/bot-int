@@ -22,6 +22,10 @@ log = logging.getLogger("rag")
 DATABASE_URL = os.environ["DATABASE_URL"]
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434").rstrip("/")
 OLLAMA_EMBED_MODEL = os.environ.get("OLLAMA_EMBED_MODEL", "llama3.1:latest")
+# OpenAI-compatible embeddings take priority when configured (e.g. Jina).
+EMBED_BASE_URL = os.environ.get("OPENAI_EMBED_BASE_URL", "").rstrip("/")
+EMBED_API_KEY = os.environ.get("OPENAI_EMBED_API_KEY", "")
+EMBED_MODEL = os.environ.get("OPENAI_EMBED_MODEL", "")
 CF_ID = os.environ.get("OLLAMA_CF_ACCESS_CLIENT_ID", "")
 CF_SECRET = os.environ.get("OLLAMA_CF_ACCESS_CLIENT_SECRET", "")
 CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", "1000"))
@@ -39,6 +43,8 @@ splitter = RecursiveCharacterTextSplitter(
 _headers = {}
 if CF_ID and CF_SECRET:
     _headers = {"CF-Access-Client-Id": CF_ID, "CF-Access-Client-Secret": CF_SECRET}
+if EMBED_API_KEY:
+    _headers["Authorization"] = f"Bearer {EMBED_API_KEY}"
 
 pool: asyncpg.Pool | None = None
 http: httpx.AsyncClient | None = None
@@ -65,8 +71,8 @@ class IngestReq(BaseModel):
 class SearchReq(BaseModel):
     tenantId: str
     query: str
-    agentId: str = ""
-    businessId: str = ""
+    agentId: str | None = None
+    businessId: str | None = None
     k: int = MAX_K
 
 
@@ -78,12 +84,20 @@ async def embed(texts: list[str]) -> list[list[float] | None]:
     out: list[list[float] | None] = []
     for t in texts:
         try:
-            r = await http.post(
-                f"{OLLAMA_URL}/api/embeddings",
-                json={"model": OLLAMA_EMBED_MODEL, "prompt": t},
-            )
-            r.raise_for_status()
-            vec = r.json()["embedding"]
+            if EMBED_BASE_URL:
+                r = await http.post(
+                    f"{EMBED_BASE_URL}/embeddings",
+                    json={"model": EMBED_MODEL, "input": t},
+                )
+                r.raise_for_status()
+                vec = r.json()["data"][0]["embedding"]
+            else:
+                r = await http.post(
+                    f"{OLLAMA_URL}/api/embeddings",
+                    json={"model": OLLAMA_EMBED_MODEL, "prompt": t},
+                )
+                r.raise_for_status()
+                vec = r.json()["embedding"]
             out.append(vec if len(vec) == EMBEDDING_DIMS else vec)
         except Exception as e:
             log.warning("embed failed: %s", e)
@@ -166,7 +180,7 @@ async def search(req: SearchReq):
             """,
             req.tenantId,
             "[" + ",".join(str(x) for x in vec) + "]" if vec else None,
-            req.query, req.businessId, req.agentId, k,
+            req.query, req.businessId or None, req.agentId or None, k,
         )
     results = [
         {"content": r["content"], "sourceUrl": r["sourceUrl"], "createdAt": str(r["createdAt"]), "score": float(r["rrf"])}
