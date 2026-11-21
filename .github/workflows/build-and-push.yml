@@ -72,4 +72,5 @@ jobs:
              docker pull ghcr.io/${{ env.IMAGE_NAME }}-api:${TAG} && \
              docker tag ghcr.io/${{ env.IMAGE_NAME }}-api:${TAG} botint-api:latest && \
              docker compose up -d && \
+             docker image prune -f && \
              echo 'Deployment complete'"
