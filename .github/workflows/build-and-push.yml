@@ -49,28 +49,3 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  deploy:
-    needs: build-api
-    runs-on: ubuntu-latest
-    environment: prod
-    permissions:
-      contents: read
-      packages: read
-    steps:
-      - name: Deploy to VPS
-        env:
-          SHA: ${{ github.sha }}
-        run: |
-          TAG="sha-$(echo "${SHA}" | cut -c1-7)"
-          echo "Deploying tag: ${TAG}"
-          mkdir -p ~/.ssh
-          echo "${{ secrets.PROD_SSH_KEY }}" | base64 -d > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
-          ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" \
-            "cd /root/apps/bot-int && \
-             docker pull ghcr.io/${{ env.IMAGE_NAME }}-api:${TAG} && \
-             docker tag ghcr.io/${{ env.IMAGE_NAME }}-api:${TAG} botint-api:latest && \
-             docker compose up -d && \
-             docker image prune -f && \
-             echo 'Deployment complete'"
