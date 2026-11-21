@@ -23,13 +23,18 @@ test.describe('Agent → Chat → Lead flow', () => {
   });
 
   test('creates an agent, chats, and produces a lead', async ({ page }) => {
+    // UI locale follows the tenant language (navigator.language at register),
+    // so selectors must accept both fr and en labels.
+    const nextBtn = 'button:has-text("Suivant"), button:has-text("Next")';
+    const createBtn = 'button:has-text("Créer l\'agent"), button:has-text("Create agent")';
+    const sendBtn = 'button[aria-label="Envoyer"], button[aria-label="Send"]';
     await page.goto('/dashboard/agents/create');
     await page.fill('input[name="name"]', 'Sales Bot');
     await page.fill('textarea[name="systemPrompt"]', 'You are a helpful sales assistant.');
-    await page.click('button:has-text("Suivant")');
-    await page.click('button:has-text("Suivant")');
-    await page.click('button:has-text("Suivant")');
-    await page.click("button:has-text(\"Créer l'agent\")");
+    await page.click(nextBtn);
+    await page.click(nextBtn);
+    await page.click(nextBtn);
+    await page.click(createBtn);
     await expect(page.locator('text=Sales Bot')).toBeVisible();
 
     await page.goto('/dashboard/chat');
@@ -38,7 +43,7 @@ test.describe('Agent → Chat → Lead flow', () => {
       'textarea[placeholder*="message"]',
       `Hello, I need pricing. My email is ${leadEmail}`,
     );
-    await page.click('button[aria-label="Envoyer"]');
+    await page.click(sendBtn);
     await expect(page.locator('[data-testid="assistant-message"]')).toBeVisible({ timeout: 30_000 });
 
     await page.goto('/dashboard/leads');
