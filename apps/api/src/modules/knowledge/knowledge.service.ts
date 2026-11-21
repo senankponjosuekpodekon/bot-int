@@ -22,6 +22,9 @@ const MAX_CRAWL_PAGES = 5;
 const embeddingDims = (): number => Number(process.env.EMBEDDING_DIMS) || 1536;
 const similarityThreshold = (): number =>
   Number(process.env.KNOWLEDGE_SIMILARITY_THRESHOLD) || 0.2;
+// Optional Python RAG microservice (apps/rag): when set, ingestion and search
+// are delegated over HTTP; local implementations below stay as fallback.
+const ragUrl = (): string | null => process.env.RAG_URL || null;
 
 interface ScrapedPage {
   url: string;
@@ -509,6 +512,22 @@ export class KnowledgeService implements OnModuleInit {
     agentId?: string,
     businessId?: string,
   ): Promise<string[]> {
+    const rag = ragUrl();
+    if (rag) {
+      try {
+        const res = await axios.post(
+          `${rag}/search`,
+          { tenantId, query, agentId: agentId || '', businessId: businessId || '', k: MAX_SEARCH_RESULTS },
+          { timeout: 30000 },
+        );
+        const results: any[] = res.data?.results || [];
+        if (results.length > 0) {
+          return results.map((r) => this.formatChunk(r.content, r.sourceUrl, r.createdAt));
+        }
+      } catch (error: any) {
+        this.logger.warn('RAG search failed, falling back to local', error?.message);
+      }
+    }
     try {
       const queryEmbedding = await this.llmService.embed(query, { task: 'retrieval.query' });
 
@@ -579,6 +598,15 @@ export class KnowledgeService implements OnModuleInit {
   }
 
   private async chunkAndEmbed(documentId: string, tenantId: string, content: string): Promise<void> {
+    const rag = ragUrl();
+    if (rag) {
+      try {
+        await axios.post(`${rag}/ingest`, { documentId, content }, { timeout: 120000 });
+        return;
+      } catch (error: any) {
+        this.logger.warn(`RAG ingest failed for doc ${documentId}, falling back to local`, error?.message);
+      }
+    }
     const chunks = this.splitIntoChunks(content, CHUNK_SIZE, CHUNK_OVERLAP);
 
     for (let i = 0; i < chunks.length; i++) {

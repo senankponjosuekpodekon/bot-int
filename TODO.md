@@ -164,7 +164,7 @@
 - [x] pgvector extension for PostgreSQL (pgvector/pg16 image + auto-migration on startup)
 - [x] Semantic search on knowledge base (cosine similarity via pgvector + JS fallback)
 - [x] Context injection: retrieve top-k relevant docs before Ollama call
-- [ ] Python microservice for advanced RAG (FastAPI + LangChain)
+- [x] Python microservice for advanced RAG (apps/rag: FastAPI + LangChain, hybrid search)
 
 ### Agent Intelligence
 - [x] Agent memory (persistent context across conversations — AgentMemory entity + auto-extraction)
