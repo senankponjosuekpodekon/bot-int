@@ -32,6 +32,8 @@ CHUNK_SIZE = int(os.environ.get("CHUNK_SIZE", "1000"))
 CHUNK_OVERLAP = int(os.environ.get("CHUNK_OVERLAP", "200"))
 EMBEDDING_DIMS = int(os.environ.get("EMBEDDING_DIMS", "1536"))
 MAX_K = int(os.environ.get("MAX_SEARCH_RESULTS", "6"))
+RERANK_MODEL = os.environ.get("JINA_RERANK_MODEL", "jina-reranker-v2-base-multilingual")
+RERANK_CANDIDATES = int(os.environ.get("RERANK_CANDIDATES", "12"))
 SIM_THRESHOLD = float(os.environ.get("KNOWLEDGE_SIMILARITY_THRESHOLD", "0.2"))
 
 splitter = RecursiveCharacterTextSplitter(
@@ -143,6 +145,7 @@ async def search(req: SearchReq):
     vec = (await embed([req.query]))[0]
     k = min(req.k, 20)
     scope = "(doc.shared = true OR (doc.scope = 'business' AND doc.\"businessId\" = $4) OR (doc.scope = 'agent' AND doc.\"agentId\" = $5))"
+    k_fetch = max(k, RERANK_CANDIDATES) if EMBED_BASE_URL else k
     async with pool.acquire() as conn:
         rows = await conn.fetch(
             f"""
@@ -180,12 +183,33 @@ async def search(req: SearchReq):
             """,
             req.tenantId,
             "[" + ",".join(str(x) for x in vec) + "]" if vec else None,
-            req.query, req.businessId or None, req.agentId or None, k,
+            req.query, req.businessId or None, req.agentId or None, k_fetch,
         )
     results = [
         {"content": r["content"], "sourceUrl": r["sourceUrl"], "createdAt": str(r["createdAt"]), "score": float(r["rrf"])}
         for r in rows
     ]
+    # Cross-encoder rerank via Jina when available (no local model needed).
+    if EMBED_BASE_URL and EMBED_API_KEY and len(results) > k:
+        try:
+            r = await http.post(
+                f"{EMBED_BASE_URL}/rerank",
+                json={
+                    "model": RERANK_MODEL,
+                    "query": req.query,
+                    "documents": [x["content"] for x in results],
+                    "top_n": k,
+                },
+            )
+            r.raise_for_status()
+            ranked = r.json().get("results", [])
+            results = [
+                {**results[item["index"]], "score": item.get("relevance_score", 0)}
+                for item in ranked
+            ]
+        except Exception as e:
+            log.warning("rerank failed, keeping RRF order: %s", e)
+            results = results[:k]
     return {"results": results}
 
 
